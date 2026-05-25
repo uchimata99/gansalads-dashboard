@@ -206,9 +206,11 @@
       <div class="logo-sub">מערכת ניהול יצור</div>
     </div>
   </div>
-  <div class="topbar-left">
+    <div class="topbar-left">
     <span class="shift-pill">משמרת בוקר</span>
     <div class="live"><div class="live-dot"></div>LIVE</div>
+    <span id="live-status" style="font-size:10px;color:rgba(255,255,255,0.6);font-family:'IBM Plex Mono',monospace;">טוען...</span>
+    <button onclick="loadLiveData()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;">🔄 רענן</button>
     <div class="clock" id="clock">--:--:--</div>
   </div>
 </div>
@@ -227,7 +229,7 @@
     <div class="kpi g"><div class="kpi-label">בוצע היום</div><div class="kpi-num" id="kpi-done">7</div><div class="kpi-sub">פריטים הושלמו</div></div>
     <div class="kpi y"><div class="kpi-label">ממתין היום</div><div class="kpi-num" id="kpi-pending">2</div><div class="kpi-sub">פלפל רצועות · מטבוחה</div></div>
     <div class="kpi b"><div class="kpi-label">סה"כ השבוע</div><div class="kpi-num">37</div><div class="kpi-sub">פריטי יצור שבוצעו</div></div>
-    <div class="kpi g"><div class="kpi-label">ימי יצור</div><div class="kpi-num">4</div><div class="kpi-sub">א׳ ב׳ ה׳ ו׳ (שבוע זה)</div></div>
+    <div class="kpi g"><div class="kpi-label">ימי יצור</div><div class="kpi-num" id="kpi-week-days">—</div><div class="kpi-sub">ראשון–שישי השבוע</div></div>
   </div>
 
   <!-- DAY NAVIGATOR -->
@@ -785,6 +787,160 @@ const weekNum = getWeekNumber(new Date());
 const { sunStr, thuStr } = getWeekDates();
 const weekTitle = document.getElementById('weekly-title');
 if (weekTitle) weekTitle.textContent = `שבוע ${weekNum}  |  ראשון ${sunStr} – חמישי ${thuStr}  |  בוצע בלבד`;
+
+// ===== GOOGLE SHEETS LIVE DATA =====
+const SHEET_ID = '17m-IJoTh8jYlPPK88NHtLF2Lwt4s3LmiF3lSBBBvGFI';
+const API_KEY  = ''; // ציבורי – לא צריך מפתח
+
+// שמות הגיליונות
+const SHEETS = {
+  plan:      'תוכנית',
+  components:'רכיבים ליצור',
+  products:  'מוצר',
+  materials: 'חומר גלם',
+  units:     'יחידת מידה',
+};
+
+// קריאת גיליון אחד → מערך של שורות
+async function fetchSheet(name) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+  const res  = await fetch(url, {cache: 'no-store'});
+  const text = await res.text();
+  const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+  if (!match) { console.warn('No match for sheet:', name); return []; }
+  const json = JSON.parse(match[1]);
+  if (!json.table || !json.table.rows) return [];
+  return json.table.rows.map(r => r.c.map(c => (c ? c.v : null)));
+}
+
+// המרת ערך תאריך מגוגל לפורמט dd/mm/yyyy
+function parseGDate(v) {
+  if (!v) return null;
+  if (typeof v === 'string' && v.includes('/')) return v; // כבר בפורמט
+  // Google מחזיר Date(yyyy,mm,dd) – mm הוא 0-based
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (m) {
+    const d = parseInt(m[3]);
+    const mo = parseInt(m[2]) + 1;
+    const y = parseInt(m[1]);
+    return `${d}/${mo}/${y}`;
+  }
+  return String(v);
+}
+
+function dateFromDMY(str) {
+  if (!str) return null;
+  const parts = String(str).split('/');
+  if (parts.length !== 3) return null;
+  return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+}
+
+function fmtDate(d) { return `${d.getDate()}/${d.getMonth()+1}`; }
+
+async function loadLiveData() {
+  document.getElementById('live-status').textContent = '🔄 טוען נתונים...';
+  try {
+    const [planRows, compRows, prodRows, matRows, unitRows] = await Promise.all([
+      fetchSheet(SHEETS.plan),
+      fetchSheet(SHEETS.components),
+      fetchSheet(SHEETS.products),
+      fetchSheet(SHEETS.materials),
+      fetchSheet(SHEETS.units),
+    ]);
+
+    // מפות ID → שם
+    const productMap  = {};
+    prodRows.forEach(r => { if (r[0]) productMap[r[0]]  = r[1]; });
+    const materialMap = {};
+    matRows.forEach(r  => { if (r[0]) materialMap[r[0]] = r[1]; });
+    const unitMap     = {};
+    unitRows.forEach(r => { if (r[0]) unitMap[r[0]]     = r[1]; });
+
+    // רכיבים לפי ID תוכנית
+    // עמודות: id_רכיבים, ID מתכנית, מוצר מתכנית, חומר גלם, כמות בסיס, כמות ליצור, יחידה, סכין, מידה, מספר חיתוכים, סטאטוס
+    const compByPlan = {};
+    compRows.forEach(r => {
+      const planId = r[1];
+      if (!planId) return;
+      if (!compByPlan[planId]) compByPlan[planId] = [];
+      compByPlan[planId].push({
+        name:   materialMap[r[3]] || r[3] || '',
+        total:  parseFloat(r[5]) || 0,
+        unit:   unitMap[r[6]]    || r[6] || '',
+        status: r[10] || 'ממתין',
+      });
+    });
+
+    // חישוב שבוע נוכחי
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dow   = today.getDay();
+    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+    const wkEnd   = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 5); // שישי
+
+    // עיבוד תוכנית
+    // עמודות: תאריך יצור, id_תוכנית, מוצר_תכנית, כמות מנות, מונה מנות
+    const byDate = {};
+
+    planRows.forEach(r => {
+      const dateStr = parseGDate(r[0]);
+      const rowDate = dateFromDMY(dateStr);
+      if (!rowDate) return;
+      rowDate.setHours(0,0,0,0);
+
+      const planId      = r[1];
+      const productId   = r[2];
+      const qty         = parseInt(r[3]) || 1;
+      const productName = productMap[productId] || productId || '';
+      const comps       = compByPlan[planId] || [];
+      const allDone     = comps.length > 0 && comps.every(c => c.status === 'בוצע');
+      const status      = allDone ? 'בוצע' : 'ממתין';
+
+      const key = fmtDate(rowDate) + '/' + rowDate.getFullYear();
+      if (!byDate[key]) byDate[key] = { date: rowDate, dateStr: dateStr, done: [], pending: [] };
+
+      const entry = { name: productName, qty, ingredients: comps };
+      if (status === 'בוצע') byDate[key].done.push(entry);
+      else                   byDate[key].pending.push(entry);
+    });
+
+    // בניית מערך ימים ממוין
+    const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    const newDays = Object.values(byDate)
+      .filter(d => d.date >= wkStart && d.date <= wkEnd)
+      .sort((a,b) => a.date - b.date)
+      .map(d => {
+        const dn = dayNames[d.date.getDay()];
+        const isToday = d.date.getTime() === today.getTime();
+        return {
+          name: `יום ${dn}`,
+          date: d.dateStr,
+          isToday,
+          done:    d.done,
+          pending: d.pending,
+        };
+      });
+
+    if (newDays.length > 0) {
+      DAYS.length = 0;
+      newDays.forEach(d => DAYS.push(d));
+      currentDayIdx = DAYS.findIndex(d => d.isToday);
+      if (currentDayIdx < 0) currentDayIdx = DAYS.length - 1;
+      renderDay();
+    }
+
+    // עדכון KPI שבועי
+    document.getElementById('kpi-week-days').textContent = newDays.length;
+
+    document.getElementById('live-status').textContent = `עודכן בשעה ${new Date().toLocaleTimeString('he-IL')}`;
+  } catch(e) {
+    document.getElementById('live-status').textContent = '⚠️ שגיאה בטעינת נתונים';
+    console.error(e);
+  }
+}
+
+// רענון כל 2 דקות
+loadLiveData();
+setInterval(loadLiveData, 2 * 60 * 1000);
 
 // Init
 renderDay();
