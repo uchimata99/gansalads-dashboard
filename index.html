@@ -366,25 +366,8 @@
 
   </div>
 
-  <!-- צבירה שבועית ולצדה גרף צבירה שבועי -->
+  <!-- שני גרפים זה לצד זה -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-
-    <!-- צבירה שבועית לפי מוצר -->
-    <div class="card">
-      <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
-          </tr>
-        </thead>
-        <tbody id="pkg-weekly-body">
-          <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-        </tbody>
-      </table>
-    </div>
 
     <!-- גרף אורזות יומי -->
     <div class="card">
@@ -392,12 +375,29 @@
       <canvas id="pkg-chart-daily" height="160"></canvas>
     </div>
 
+    <!-- גרף נצבר לאורזת -->
+    <div class="card">
+      <div class="card-title">אריזה נצברת לאורזת – שבועי</div>
+      <canvas id="pkg-chart-packers" height="160"></canvas>
+    </div>
+
   </div>
 
-  <!-- גרף נצבר לאורזת -->
+  <!-- צבירה שבועית לפי מוצר -->
   <div class="card">
-    <div class="card-title">אריזה נצברת לאורזת – שבועי</div>
-    <canvas id="pkg-chart-packers" height="160"></canvas>
+    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-weekly-body">
+        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
   </div>
 
 </div>
@@ -542,6 +542,15 @@ function toggleWeekly(key) {
     const isOpen = document.getElementById(`wdet_${key}_1`)?.style.display !== 'none';
     arr.textContent = isOpen ? '▼' : '▶';
   }
+}
+
+function toggleRepBatch(idx) {
+  const rows = document.querySelectorAll(`tr[id="rep-det-${idx}"]`);
+  const arr = document.getElementById(`rep-arr-${idx}`);
+  if (!rows.length) return;
+  const open = rows[0].style.display === 'none';
+  rows.forEach(r => r.style.display = open ? 'table-row' : 'none');
+  if (arr) arr.textContent = open ? '▼' : '▶';
 }
 
 function toggleIng(id) {
@@ -926,26 +935,62 @@ async function loadPackagingData() {
       batchSummary[bid].kg += parseFloat(r[8]) || 0;
     });
 
-    // רשימת דיווחים יומית
+    // רשימת דיווחים יומית – מקובצת לפי אצווה עם dropdown
     const reportsBody = document.getElementById('pkg-reports-body');
     if (todayReports.length === 0) {
       reportsBody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים היום</td></tr>';
     } else {
-      reportsBody.innerHTML = todayReports.map(r => {
-        const b = batchMap[r[1]] || {};
-        const productName = b.product || prodMap[r[5]] || r[5] || '—';
-        const packName = packMap[r[6]] || r[6] || '—';
-        const kg = parseFloat(r[8]) || 0;
-        const time = fmtTime(r[3]);
-        return `
-          <tr style="border-bottom:1px solid var(--surface2);">
-            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
-            <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
-            <td style="padding:9px 8px;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">${time}</td>
+      // קיבוץ לפי אצווה
+      const byBatch = {};
+      todayReports.forEach(r => {
+        const bid = r[1];
+        if (!byBatch[bid]) {
+          const b = batchMap[bid] || {};
+          byBatch[bid] = {
+            product: b.product || prodMap[r[5]] || r[5] || '—',
+            rows: [],
+            totalKg: 0,
+            totalQty: 0,
+          };
+        }
+        byBatch[bid].rows.push(r);
+        byBatch[bid].totalKg += parseFloat(r[8]) || 0;
+        byBatch[bid].totalQty += parseInt(r[7]) || 0;
+      });
+
+      let batchIdx = 0;
+      reportsBody.innerHTML = Object.entries(byBatch).map(([bid, b]) => {
+        const idx = batchIdx++;
+        const hasMultiple = b.rows.length > 1;
+        const arrow = hasMultiple ? `<span id="rep-arr-${idx}" style="font-size:9px;color:var(--text-muted);margin-left:4px;">▶</span>` : '';
+        const onclick = hasMultiple ? `onclick="toggleRepBatch('${idx}')" style="cursor:pointer;"` : '';
+
+        // שורת סיכום
+        const summaryRow = `
+          <tr ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
+            <td style="padding:9px 8px;font-weight:700;font-size:13px;">${b.product} ${arrow}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);" colspan="2">${hasMultiple ? b.rows.length + ' אריזות' : b.rows[0][4] || '—'}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${b.totalQty}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${b.totalKg.toFixed(1)}</td>
+            <td style="padding:9px 8px;font-size:11px;color:var(--text-muted);">${hasMultiple ? '' : fmtTime(b.rows[0][3])}</td>
           </tr>`;
+
+        // שורות פירוט (מוסתרות אם יש יותר מאחת)
+        const detailRows = hasMultiple ? b.rows.map(r => {
+          const packName = packMap[r[6]] || r[6] || '—';
+          const kg = parseFloat(r[8]) || 0;
+          return `
+            <tr id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
+              <td style="padding:7px 8px 7px 20px;font-size:12px;color:var(--text-muted);">↳ ${r[4] || '—'}</td>
+              <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
+              <td style="padding:7px 8px;font-size:11px;color:var(--text-muted);"></td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
+              <td style="padding:7px 8px;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">${fmtTime(r[3])}</td>
+            </tr>`;
+        }).join('') : '';
+
+        return summaryRow + detailRows;
       }).join('');
     }
 
