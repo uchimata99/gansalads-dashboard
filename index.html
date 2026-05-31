@@ -229,7 +229,7 @@
   <div class="kpi-row">
     <div class="kpi g"><div class="kpi-label">בוצע היום</div><div class="kpi-num" id="kpi-done">7</div><div class="kpi-sub">פריטים הושלמו</div></div>
     <div class="kpi y"><div class="kpi-label">ממתין היום</div><div class="kpi-num" id="kpi-pending">2</div><div class="kpi-sub">פלפל רצועות · מטבוחה</div></div>
-    <div class="kpi b"><div class="kpi-label">סה"כ השבוע</div><div class="kpi-num">37</div><div class="kpi-sub">פריטי יצור שבוצעו</div></div>
+    <div class="kpi b"><div class="kpi-label">סה"כ השבוע</div><div class="kpi-num" id="kpi-week-total">0</div><div class="kpi-sub">פריטי יצור שבוצעו</div></div>
     <div class="kpi g"><div class="kpi-label">ימי יצור</div><div class="kpi-num" id="kpi-week-days">—</div><div class="kpi-sub">ראשון–שישי השבוע</div></div>
   </div>
 
@@ -286,106 +286,12 @@
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;width:90px;">יחידה</th>
         </tr>
       </thead>
-      <tbody>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🌿 פטרוזיליה</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">63</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🔴 סלק</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">27</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <!-- חציל (ירק גולמי) – דרופדאון -->
-        <tr onclick="toggleWeekly('hatzil')" style="cursor:pointer;border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:700;font-size:13px;">🍆 חציל (ירק גולמי) <span id="warr_hatzil" style="font-size:9px;color:var(--text-muted);">▶</span></td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">—</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">כמה סוגים</td>
-        </tr>
-        <tr id="wdet_hatzil_1" style="display:none;background:var(--surface2);">
-          <td style="padding:6px 8px 6px 24px;font-size:12px;color:var(--text-muted);">↳ חציל שלם</td>
-          <td style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">19</td>
-          <td style="padding:6px 8px;font-size:11px;color:var(--text-muted);">אמבטיה גדולה</td>
-        </tr>
-        <tr id="wdet_hatzil_2" style="display:none;background:var(--surface2);">
-          <td style="padding:6px 8px 6px 24px;font-size:12px;color:var(--text-muted);">↳ חציל מקולף</td>
-          <td style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">2</td>
-          <td style="padding:6px 8px;font-size:11px;color:var(--text-muted);">אמבטיה גדולה</td>
-        </tr>
-        <!-- חציל קלוי – שורה עצמאית -->
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🥫 חציל קלוי (שימורים)</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">4</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🔴 פלפל אדום (גמבה)</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">12</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">ארגז</td>
-        </tr>
-        <!-- פלפל חריף – דרופדאון -->
-        <tr onclick="toggleWeekly('pflharyf')" style="cursor:pointer;border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:700;font-size:13px;">🌶️ פלפל חריף <span id="warr_pflharyf" style="font-size:9px;color:var(--text-muted);">▶</span></td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">—</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">כמה סוגים</td>
-        </tr>
-        <tr id="wdet_pflharyf_1" style="display:none;background:var(--surface2);">
-          <td style="padding:6px 8px 6px 24px;font-size:12px;color:var(--text-muted);">↳ ארגז</td>
-          <td style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">10.25</td>
-          <td style="padding:6px 8px;font-size:11px;color:var(--text-muted);">ארגז</td>
-        </tr>
-        <tr id="wdet_pflharyf_2" style="display:none;background:var(--surface2);">
-          <td style="padding:6px 8px 6px 24px;font-size:12px;color:var(--text-muted);">↳ אמבטיה</td>
-          <td style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">7.5</td>
-          <td style="padding:6px 8px;font-size:11px;color:var(--text-muted);">אמבטיה</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🧅 בצל</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">12</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">שקית</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🐟 טונה</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">16</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🌺 ארטישוק</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">8</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🥑 אבוקדו קפוא</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">8</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🥒 מלפפון חמוץ</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">8</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קופסה</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🌱 בזיליקום</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">10</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🍅 עגבניה</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">3</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">אמבטיה</td>
-        </tr>
-        <tr>
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">🌿 כוסברה</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">2</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">קרטון</td>
-        </tr>
+      <tbody id="weekly-materials-body">
+        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
       </tbody>
     </table>
 
-    <div class="warn-box" style="margin-top:14px;">
-      ⚠️ לא כלול: פלפל רצועות ×2 + מטבוחה ×1 – עדיין ממתינים
-    </div>
+    <div class="warn-box" style="margin-top:14px;display:none;" id="weekly-warn-box"></div>
 
   </div>
 
@@ -471,168 +377,27 @@
 
 <script>
 // ===== DATA =====
-const DAYS = [
-  {
-    key:'sun', name:'יום א׳ – ראשון', date:'20/05/2026', isToday:false,
-    done:[
-      {name:'פלפל סיני פעם אחת', qty:1, ingredients:[
-        {name:'פלפל אדום', total:6, unit:'ארגז'},
-      ]},
-    ],
-    pending:[]
-  },
-  {
-    key:'mon', name:'יום ב׳ – שני הקודם', date:'21/05/2026', isToday:false,
-    done:[
-      {name:'פלפל סיני פעם אחת', qty:7, ingredients:[
-        {name:'פלפל אדום', total:42, unit:'ארגז'},
-      ]},
-      {name:'סלט טורקי', qty:4, ingredients:[
-        {name:'פלפל אדום', total:20, unit:'ארגז'},
-        {name:'בצל', total:48, unit:'שקית'},
-      ]},
-      {name:'משאוויאה', qty:1, ingredients:[
-        {name:'פלפל אדום', total:4, unit:'ארגז'},
-        {name:'פלפל חריף', total:2, unit:'ארגז'},
-      ]},
-      {name:'פלפל רצועות', qty:2, ingredients:[
-        {name:'פלפל רצועות', total:20, unit:'קרטון'},
-      ]},
-      {name:'חציל לתנור', qty:2, ingredients:[
-        {name:'חציל', total:5, unit:'אמבטיה גדולה'},
-      ]},
-    ],
-    pending:[]
-  },
-  {
-    key:'thu', name:'יום ה׳ – חמישי', date:'24/05/2026', isToday:false,
-    done:[
-      {name:'סביח רגיל', qty:8, ingredients:[
-        {name:'חציל', total:8, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'פטרוזיליה', qty:4, ingredients:[
-        {name:'פטרוזיליה', total:32, unit:'קרטון'},
-      ]},
-      {name:'סלק צ\'יפס', qty:3, ingredients:[
-        {name:'סלק', total:21, unit:'קרטון'},
-      ]},
-      {name:'סלט ארטישוק', qty:2, ingredients:[
-        {name:'ארטישוק', total:8, unit:'קרטון'},
-      ]},
-      {name:'פלפל קצוץ', qty:2, ingredients:[
-        {name:'פלפל חריף', total:10, unit:'ארגז'},
-      ]},
-      {name:'חציל תחמיץ', qty:2, ingredients:[
-        {name:'חציל', total:2, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'קוביות לבן', qty:2, ingredients:[
-        {name:'חציל מקולף', total:2, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'קוביות שחור', qty:2, ingredients:[
-        {name:'חציל', total:2, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'כרמלה', qty:2, ingredients:[
-        {name:'חציל', total:2, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'פסטו', qty:2, ingredients:[
-        {name:'בזיליקום', total:10, unit:'קרטון'},
-        {name:'פטרוזיליה', total:4, unit:'קרטון'},
-      ]},
-      {name:'סלסה', qty:1, ingredients:[
-        {name:'עגבניה', total:3, unit:'אמבטיה קטנה'},
-        {name:'כוסברה', total:1, unit:'קרטון'},
-        {name:'פלפל חריף', total:0.25, unit:'ארגז'},
-      ]},
-      {name:'סחוג', qty:1, ingredients:[
-        {name:'פטרוזיליה', total:3, unit:'קרטון'},
-        {name:'כוסברה', total:1, unit:'קרטון'},
-        {name:'פלפל חריף', total:3.5, unit:'אמבטיה'},
-      ]},
-      {name:'פלפל טחון', qty:1, ingredients:[
-        {name:'פלפל חריף', total:4, unit:'אמבטיה'},
-      ]},
-      {name:'פלפל סיני פעמיים', qty:1, ingredients:[
-        {name:'פלפל אדום', total:7, unit:'ארגז'},
-      ]},
-      {name:'סלק קוביות מוכן', qty:1, ingredients:[
-        {name:'סלק', total:6, unit:'קרטון'},
-      ]},
-      {name:'אבוקדו', qty:1, ingredients:[
-        {name:'אבוקדו קפוא', total:4, unit:'קרטון'},
-      ]},
-      {name:'חציל טבעי', qty:1, ingredients:[
-        {name:'חציל קלוי', total:4, unit:'קרטון'},
-      ]},
-      {name:'חציל לתנור', qty:1, ingredients:[
-        {name:'חציל', total:2.5, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'פלפל רצועות', qty:2, ingredients:[
-        {name:'פלפל רצועות', total:20, unit:'קרטון'},
-      ]},
-    ],
-    pending:[]
-  },
-  {
-    key:'mon2', name:'יום ב׳ – שני', date:'25/05/2026', isToday:true,
-    done:[
-      {name:'פטרוזיליה', qty:3, ingredients:[
-        {name:'פטרוזיליה', total:24, unit:'קרטון'},
-      ]},
-      {name:'טונה ירקות', qty:1, ingredients:[
-        {name:'טונה', total:6, unit:'קרטון'},
-        {name:'מלפפון חמוץ', total:8, unit:'קופסה'},
-      ]},
-      {name:'טונה סלרי', qty:1, ingredients:[
-        {name:'טונה', total:10, unit:'קרטון'},
-      ]},
-      {name:'סלט טורקי', qty:1, ingredients:[
-        {name:'פלפל אדום', total:5, unit:'ארגז'},
-        {name:'בצל', total:12, unit:'שקית'},
-      ]},
-      {name:'חציל לתנור', qty:1, ingredients:[
-        {name:'חציל', total:2.5, unit:'אמבטיה גדולה'},
-      ]},
-      {name:'אבוקדו', qty:1, ingredients:[
-        {name:'אבוקדו קפוא', total:4, unit:'קרטון'},
-      ]},
-    ],
-    pending:[
-      {name:'פלפל רצועות', qty:2, ingredients:[
-        {name:'פלפל רצועות', total:20, unit:'קרטון'},
-      ]},
-      {name:'מטבוחה', qty:1, ingredients:[
-        {name:'עגבניה', total:14, unit:'אמבטיה קטנה'},
-      ]},
-    ]
-  }
-];
+const DAYS = [];
 
-// Weight placeholder data
-const weightData = [
-  {label:'פלפל אדום', kg:1680},
-  {label:'פטרוזיליה', kg:315},
-  {label:'בצל', kg:720},
-  {label:'חציל', kg:960},
-  {label:'פלפל רצועות', kg:500},
-  {label:'טונה', kg:256},
-  {label:'סלק', kg:810},
-  {label:'ארטישוק', kg:120},
-  {label:'אבוקדו קפוא', kg:128},
-  {label:'בזיליקום', kg:50},
-];
-
-let currentDayIdx = DAYS.findIndex(d => d.isToday);
+let currentDayIdx = 0;
 
 function renderDay() {
+  const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const today = new Date();
+
   if (DAYS.length === 0) {
-    document.getElementById('nav-dayname').innerHTML = 'אין נתונים השבוע';
-    document.getElementById('nav-date').textContent = '';
+    const dn = dayNames[today.getDay()];
+    const dateStr = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+    document.getElementById('nav-dayname').innerHTML = `יום ${dn} <span class="today-badge">היום</span>`;
+    document.getElementById('nav-date').textContent = dateStr;
     document.getElementById('done-list').innerHTML = '<div class="empty-msg">אין פריטים שבוצעו</div>';
-    document.getElementById('pending-list').innerHTML = '<div class="empty-msg">אין פריטים ממתינים</div>';
+    document.getElementById('pending-list').innerHTML = '<div class="empty-msg">✓ אין פריטים ממתינים</div>';
     document.getElementById('done-count').textContent = '0';
     document.getElementById('pending-count').textContent = '0';
     document.getElementById('sum-done').textContent = '0';
     document.getElementById('sum-pending').textContent = '0';
+    document.getElementById('kpi-done').textContent = '0';
+    document.getElementById('kpi-pending').textContent = '0';
     return;
   }
   const day = DAYS[currentDayIdx];
@@ -730,18 +495,9 @@ function goToDay(idx) {
 
 // Weight chart
 function renderWeightChart() {
-  const max = Math.max(...weightData.map(d => d.kg));
   const el = document.getElementById('weight-bars');
-  el.innerHTML = weightData.map(d => {
-    const h = Math.max(4, Math.round((d.kg / max) * 90));
-    return `
-      <div class="w-bar-wrap">
-        <div class="w-val">${d.kg}</div>
-        <div class="w-bar" style="height:${h}px" title="${d.label}: ${d.kg} ק&quot;ג"></div>
-        <div class="w-label">${d.label}</div>
-      </div>
-    `;
-  }).join('');
+  if (!el) return;
+  el.innerHTML = '';
 }
 
 function toggleWeekly(key) {
@@ -955,8 +711,38 @@ async function loadLiveData() {
     }
     renderDay();
 
+    // צבירה שבועית
+    const weeklyMaterials = {};
+    Object.values(byDate).forEach(d => {
+      if (d.date < wkStart || d.date > wkEnd) return;
+      d.done.forEach(p => {
+        p.ingredients.forEach(ing => {
+          const key = ing.name + '|' + ing.unit;
+          if (!weeklyMaterials[key]) weeklyMaterials[key] = {name: ing.name, unit: ing.unit, total: 0};
+          weeklyMaterials[key].total += ing.total * p.qty;
+        });
+      });
+    });
+
     // עדכון KPI שבועי
     document.getElementById('kpi-week-days').textContent = newDays.length;
+    const weekTotal = newDays.reduce((s,d) => s + d.done.length + d.pending.length, 0);
+    document.getElementById('kpi-week-total').textContent = weekTotal;
+
+    // עדכון צבירה שבועית
+    const weeklyBody = document.getElementById('weekly-materials-body');
+    if (Object.keys(weeklyMaterials).length === 0) {
+      weeklyBody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
+    } else {
+      weeklyBody.innerHTML = Object.values(weeklyMaterials)
+        .sort((a,b) => b.total - a.total)
+        .map(m => `
+          <tr style="border-bottom:1px solid var(--surface2);">
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${m.name}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${m.total % 1 === 0 ? m.total : m.total.toFixed(2)}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${m.unit}</td>
+          </tr>`).join('');
+    }
 
     document.getElementById('live-status').textContent = `עודכן בשעה ${new Date().toLocaleTimeString('he-IL')}`;
   } catch(e) {
