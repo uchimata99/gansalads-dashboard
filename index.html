@@ -772,12 +772,17 @@ async function fetchPkgSheet(sheetId, name) {
 
 function parseDate(v) {
   if (!v) return null;
+  // פורמט Date(yyyy,mm,dd) מ-gviz
   const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
   if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
-  if (typeof v === 'string' && v.includes('/')) {
+  // פורמט dd/mm/yyyy
+  if (typeof v === 'string' && v.match(/^\d+\/\d+\/\d+$/)) {
     const p = v.split('/');
     return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
   }
+  // פורמט "Sun May 31 2026 ..."
+  const d = new Date(v);
+  if (!isNaN(d.getTime())) return d;
   return null;
 }
 
