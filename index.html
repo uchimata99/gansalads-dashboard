@@ -544,6 +544,48 @@ function toggleWeekly(key) {
   }
 }
 
+function showPackerPopup(packer, products, period) {
+  const existing = document.getElementById('packer-popup');
+  if (existing) existing.remove();
+
+  const rows = Object.entries(products)
+    .sort((a,b) => b[1].kg - a[1].kg)
+    .map(([name, d]) => `
+      <tr style="border-bottom:1px solid var(--surface2);">
+        <td style="padding:8px 10px;font-weight:600;font-size:13px;">${name}</td>
+        <td style="padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
+        <td style="padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
+      </tr>`).join('');
+
+  const popup = document.createElement('div');
+  popup.id = 'packer-popup';
+  popup.style.cssText = `
+    position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;
+    background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;
+  `;
+  popup.innerHTML = `
+    <div style="background:var(--surface);border-radius:12px;padding:24px;min-width:360px;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,0.25);direction:rtl;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:800;">${packer} – ${period}</div>
+        <button onclick="document.getElementById('packer-popup').remove()"
+          style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 10px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 10px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזות</th>
+            <th style="padding:6px 10px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody>${rows || '<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--text-muted);">אין נתונים</td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
+  popup.addEventListener('click', e => { if (e.target === popup) popup.remove(); });
+  document.body.appendChild(popup);
+}
+
 function toggleRepBatch(idx) {
   const rows = document.querySelectorAll(`tr[id="rep-det-${idx}"]`);
   const arr = document.getElementById(`rep-arr-${idx}`);
@@ -1060,6 +1102,35 @@ async function loadPackagingData() {
       return ctx.createPattern(canvas, 'repeat');
     }
 
+    // שמירת נתוני אורזות לשימוש בpopup
+    window._packerDetails = {}; // שבועי
+    window._dailyPackerDetails = {}; // יומי
+
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      const b = batchMap[r[1]] || {};
+      const productName = b.product || prodMap[r[5]] || r[5] || '—';
+      const packer = r[4] || 'אחר';
+      const kg = parseFloat(r[8]) || 0;
+      const qty = parseInt(r[7]) || 0;
+
+      // שבועי
+      if (d && d >= wkStart && d <= today) {
+        if (!window._packerDetails[packer]) window._packerDetails[packer] = {};
+        if (!window._packerDetails[packer][productName]) window._packerDetails[packer][productName] = {kg:0, qty:0};
+        window._packerDetails[packer][productName].kg += kg;
+        window._packerDetails[packer][productName].qty += qty;
+      }
+
+      // יומי
+      if (d && d.getTime() === today.getTime()) {
+        if (!window._dailyPackerDetails[packer]) window._dailyPackerDetails[packer] = {};
+        if (!window._dailyPackerDetails[packer][productName]) window._dailyPackerDetails[packer][productName] = {kg:0, qty:0};
+        window._dailyPackerDetails[packer][productName].kg += kg;
+        window._dailyPackerDetails[packer][productName].qty += qty;
+      }
+    });
+
     // גרף יומי לפי אורזת (ק"ג מלא + כמות מנוקד)
     const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
     if (window._pkgChart1) window._pkgChart1.destroy();
@@ -1087,6 +1158,11 @@ async function loadPackagingData() {
       },
       options: {
         responsive: true,
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const packer = dailyPackers[els[0].index];
+          showPackerPopup(packer, window._dailyPackerDetails[packer] || {}, 'יומי');
+        },
         plugins: {
           legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } }
         },
@@ -1121,6 +1197,11 @@ async function loadPackagingData() {
       },
       options: {
         responsive: true,
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const packer = weeklyPackers[els[0].index];
+          showPackerPopup(packer, window._packerDetails[packer] || {}, 'שבועי');
+        },
         plugins: {
           legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } }
         },
