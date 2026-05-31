@@ -400,6 +400,9 @@
     </table>
   </div>
 
+  <!-- טבלות פירוט יומי לכל אורזת -->
+  <div id="pkg-packer-tables"></div>
+
 </div>
 </div>
 
@@ -1011,21 +1014,22 @@ async function loadPackagingData() {
         const summaryRow = `
           <tr ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
             <td style="padding:9px 8px;font-weight:700;font-size:13px;">${b.product} ${arrow}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);" colspan="2">${hasMultiple ? b.rows.length + ' אריזות' : b.rows[0][4] || '—'}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? b.rows.length + ' אריזות' : (b.rows[0][4] || '—')}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? '' : (packMap[b.rows[0][6]] || b.rows[0][6] || '—')}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${b.totalQty}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${b.totalKg.toFixed(1)}</td>
             <td style="padding:9px 8px;font-size:11px;color:var(--text-muted);">${hasMultiple ? '' : fmtTime(b.rows[0][3])}</td>
           </tr>`;
 
-        // שורות פירוט (מוסתרות אם יש יותר מאחת)
+        // שורות פירוט
         const detailRows = hasMultiple ? b.rows.map(r => {
           const packName = packMap[r[6]] || r[6] || '—';
           const kg = parseFloat(r[8]) || 0;
           return `
             <tr id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
               <td style="padding:7px 8px 7px 20px;font-size:12px;color:var(--text-muted);">↳ ${r[4] || '—'}</td>
+              <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);"></td>
               <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
-              <td style="padding:7px 8px;font-size:11px;color:var(--text-muted);"></td>
               <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
               <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
               <td style="padding:7px 8px;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">${fmtTime(r[3])}</td>
@@ -1034,6 +1038,53 @@ async function loadPackagingData() {
 
         return summaryRow + detailRows;
       }).join('');
+    }
+
+    // טבלות פירוט לכל אורזת – מתחת לגרפים
+    const packerTablesEl = document.getElementById('pkg-packer-tables');
+    if (packerTablesEl) {
+      const packerTablesData = {};
+      todayReports.forEach(r => {
+        const packer = r[4] || 'אחר';
+        const b = batchMap[r[1]] || {};
+        const productName = b.product || prodMap[r[5]] || r[5] || '—';
+        const packName = packMap[r[6]] || r[6] || '—';
+        const kg = parseFloat(r[8]) || 0;
+        const qty = parseInt(r[7]) || 0;
+        if (!packerTablesData[packer]) packerTablesData[packer] = [];
+        packerTablesData[packer].push({ productName, packName, kg, qty });
+      });
+
+      if (Object.keys(packerTablesData).length === 0) {
+        packerTablesEl.innerHTML = '';
+      } else {
+        packerTablesEl.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+            ${Object.entries(packerTablesData).map(([packer, rows]) => `
+              <div class="card">
+                <div class="card-title">${packer}</div>
+                <table style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--border);">
+                      <th style="padding:5px 8px 7px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+                      <th style="padding:5px 8px 7px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
+                      <th style="padding:5px 8px 7px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+                      <th style="padding:5px 8px 7px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows.map(row => `
+                      <tr style="border-bottom:1px solid var(--surface2);">
+                        <td style="padding:8px;font-weight:600;font-size:12px;">${row.productName}</td>
+                        <td style="padding:8px;font-size:11px;color:var(--text-muted);">${row.packName}</td>
+                        <td style="padding:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);">${row.qty}</td>
+                        <td style="padding:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green);">${row.kg.toFixed(1)}</td>
+                      </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>`).join('')}
+          </div>`;
+      }
     }
 
     // צבירה שבועית לפי מוצר
