@@ -870,7 +870,6 @@ async function loadPackagingData() {
     document.getElementById('pkg-kpi-batches').textContent = batchesToday;
     document.getElementById('pkg-kpi-reports').textContent = todayReports.length;
     document.getElementById('pkg-kpi-kg').textContent = totalKg.toFixed(1);
-    document.getElementById('pkg-kpi-packers').textContent = packersToday;
     document.getElementById('pkg-date-pill').textContent = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
 
     // פירוט אצוות יומי
@@ -979,9 +978,22 @@ async function loadPackagingData() {
     });
 
     const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
-    const colorsLight = ['rgba(45,106,63,0.4)','rgba(42,90,136,0.4)','rgba(107,63,160,0.4)','rgba(184,137,14,0.4)','rgba(176,48,48,0.4)','rgba(45,122,106,0.4)','rgba(139,69,19,0.4)'];
 
-    // גרף יומי לפי אורזת (ק"ג + כמות אריזות)
+    // פונקציה ליצירת תבנית נקודות
+    function createDotPattern(color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 8; canvas.height = 8;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'transparent';
+      ctx.fillRect(0,0,8,8);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(4, 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+      return ctx.createPattern(canvas, 'repeat');
+    }
+
+    // גרף יומי לפי אורזת (ק"ג מלא + כמות מנוקד)
     const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
     if (window._pkgChart1) window._pkgChart1.destroy();
     const dailyPackers = Object.keys(dailyPackerData);
@@ -991,7 +1003,7 @@ async function loadPackagingData() {
         labels: dailyPackers,
         datasets: [
           {
-            label: 'ק"ג',
+            label: 'ק"ג נטו',
             data: dailyPackers.map(p => dailyPackerData[p].kg),
             backgroundColor: dailyPackers.map((_, i) => colors[i % colors.length]),
             borderRadius: 4,
@@ -999,7 +1011,9 @@ async function loadPackagingData() {
           {
             label: 'כמות אריזות',
             data: dailyPackers.map(p => dailyPackerData[p].qty),
-            backgroundColor: dailyPackers.map((_, i) => colorsLight[i % colorsLight.length]),
+            backgroundColor: dailyPackers.map((_, i) => createDotPattern(colors[i % colors.length])),
+            borderColor: dailyPackers.map((_, i) => colors[i % colors.length]),
+            borderWidth: 1,
             borderRadius: 4,
           }
         ]
@@ -1013,7 +1027,7 @@ async function loadPackagingData() {
       }
     });
 
-    // גרף נצבר לאורזת (ק"ג + כמות אריזות)
+    // גרף נצבר לאורזת (ק"ג מלא + כמות מנוקד)
     const ctx2 = document.getElementById('pkg-chart-packers').getContext('2d');
     if (window._pkgChart2) window._pkgChart2.destroy();
     const weeklyPackers = Object.keys(packerData);
@@ -1031,7 +1045,9 @@ async function loadPackagingData() {
           {
             label: 'כמות אריזות',
             data: weeklyPackers.map(p => packerData[p].qty),
-            backgroundColor: weeklyPackers.map((_, i) => colorsLight[i % colorsLight.length]),
+            backgroundColor: weeklyPackers.map((_, i) => createDotPattern(colors[i % colors.length])),
+            borderColor: weeklyPackers.map((_, i) => colors[i % colors.length]),
+            borderWidth: 1,
             borderRadius: 4,
           }
         ]
