@@ -315,63 +315,84 @@
 <!-- ===== אריזה ===== -->
 <div class="page" id="page-packaging">
 <div class="main">
+
+  <!-- KPI – שורה עליונה -->
   <div class="kpi-row">
     <div class="kpi p"><div class="kpi-label">אצוות היום</div><div class="kpi-num" id="pkg-kpi-batches">—</div><div class="kpi-sub">אצוות שנפתחו היום</div></div>
-    <div class="kpi g"><div class="kpi-label">דיווחים היום</div><div class="kpi-num" id="pkg-kpi-reports">—</div><div class="kpi-sub">דיווחי אריזה</div></div>
     <div class="kpi b"><div class="kpi-label">סה"כ ק"ג היום</div><div class="kpi-num" id="pkg-kpi-kg">—</div><div class="kpi-sub">משקל כולל</div></div>
-    <div class="kpi p"><div class="kpi-label">אורזות פעילות</div><div class="kpi-num" id="pkg-kpi-packers">—</div><div class="kpi-sub">היום</div></div>
+    <div class="kpi g"><div class="kpi-label">אריזות היום</div><div class="kpi-num" id="pkg-kpi-reports">—</div><div class="kpi-sub">כמות אריזות</div></div>
+    <!-- גרף אורזות יומי במקום "אורזות פעילות" -->
+    <div class="kpi" style="border-color:rgba(107,63,160,0.3);flex:2;min-width:260px;padding:0;overflow:hidden;">
+      <canvas id="pkg-chart-daily" style="width:100%;height:100px;"></canvas>
+    </div>
   </div>
 
-  <!-- אצוות יומיות -->
-  <div class="card">
-    <div class="card-title">פירוט אצוות יומי <span class="pill pb" id="pkg-date-pill">—</span></div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">תאריך ייצור</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">פג תוקף</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">דיווחים</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-        </tr>
-      </thead>
-      <tbody id="pkg-batches-body">
-        <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- דיווחים יומיים -->
-  <div class="card">
-    <div class="card-title">רשימת דיווחים יומית</div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">שעה</th>
-        </tr>
-      </thead>
-      <tbody id="pkg-reports-body">
-        <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- גרפים שבועיים -->
+  <!-- שתי טבלאות זה לצד זה -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- אצוות יומיות -->
     <div class="card">
-      <div class="card-title">ק"ג ליום – שבועי <span class="pill pb" id="pkg-week-pill">—</span></div>
-      <canvas id="pkg-chart-daily" height="200"></canvas>
+      <div class="card-title">פירוט אצוות יומי <span class="pill pb" id="pkg-date-pill">—</span></div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מס׳ אצווה</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">פג תוקף</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-batches-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
     </div>
+
+    <!-- דיווחים יומיים -->
     <div class="card">
-      <div class="card-title">ק"ג נצבר לאורזת – שבועי</div>
-      <canvas id="pkg-chart-packers" height="200"></canvas>
+      <div class="card-title">רשימת דיווחים יומית</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">שעה</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-reports-body">
+          <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
     </div>
+
   </div>
+
+  <!-- צבירה שבועית לפי מוצר -->
+  <div class="card">
+    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-weekly-body">
+        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- גרף נצבר לאורזת -->
+  <div class="card">
+    <div class="card-title">אריזה נצברת לאורזת – שבועי</div>
+    <canvas id="pkg-chart-packers" height="220"></canvas>
+  </div>
+
 </div>
 </div>
 
@@ -872,14 +893,14 @@ async function loadPackagingData() {
 
     const batchBody = document.getElementById('pkg-batches-body');
     if (Object.keys(batchSummary).length === 0) {
-      batchBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות היום</td></tr>';
+      batchBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות היום</td></tr>';
     } else {
-      batchBody.innerHTML = Object.values(batchSummary).map(b => `
+      let batchNum = 1;
+      batchBody.innerHTML = Object.entries(batchSummary).map(([bid, b]) => `
         <tr style="border-bottom:1px solid var(--surface2);">
           <td style="padding:9px 8px;font-weight:600;font-size:13px;">${b.product}</td>
-          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.mfgDate)}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);">#${batchNum++}</td>
           <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.expDate)}</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${b.reports}</td>
           <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${b.kg.toFixed(1)}</td>
         </tr>`).join('');
     }
@@ -907,76 +928,127 @@ async function loadPackagingData() {
       }).join('');
     }
 
-    // גרפים שבועיים
+    // צבירה שבועית לפי מוצר
     const dow = today.getDay();
     const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
-    const dayLabels = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
-    const kgPerDay = {};
-    const kgPerPacker = {};
-
+    const weeklyProducts = {};
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
       if (!d) return;
-      d.setHours(0,0,0,0);
       if (d < wkStart || d > today) return;
-      const dayIdx = d.getDay();
-      if (dayIdx === 6) return;
-      const key = dayLabels[dayIdx];
-      const kg = parseFloat(r[8]) || 0;
-      kgPerDay[key] = (kgPerDay[key] || 0) + kg;
-      const packer = r[4] || 'אחר';
-      if (!kgPerPacker[packer]) kgPerPacker[packer] = 0;
-      kgPerPacker[packer] += kg;
+      const b = batchMap[r[1]] || {};
+      const productName = b.product || prodMap[r[5]] || r[5] || '—';
+      if (!weeklyProducts[productName]) weeklyProducts[productName] = {qty: 0, kg: 0};
+      weeklyProducts[productName].qty += parseInt(r[7]) || 0;
+      weeklyProducts[productName].kg += parseFloat(r[8]) || 0;
     });
 
-    // גרף ק"ג ליום
+    const weeklyBody = document.getElementById('pkg-weekly-body');
+    if (Object.keys(weeklyProducts).length === 0) {
+      weeklyBody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
+    } else {
+      weeklyBody.innerHTML = Object.entries(weeklyProducts)
+        .sort((a,b) => b[1].kg - a[1].kg)
+        .map(([name, d]) => `
+          <tr style="border-bottom:1px solid var(--surface2);">
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${name}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
+          </tr>`).join('');
+    }
+
+    // נתוני גרפים לפי אורזת
+    const packerData = {};
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d) return;
+      if (d < wkStart || d > today) return;
+      const packer = r[4] || 'אחר';
+      if (!packerData[packer]) packerData[packer] = {kg: 0, qty: 0};
+      packerData[packer].kg += parseFloat(r[8]) || 0;
+      packerData[packer].qty += parseInt(r[7]) || 0;
+    });
+
+    // נתוני גרף יומי לפי אורזת (היום בלבד)
+    const dailyPackerData = {};
+    todayReports.forEach(r => {
+      const packer = r[4] || 'אחר';
+      if (!dailyPackerData[packer]) dailyPackerData[packer] = {kg: 0, qty: 0};
+      dailyPackerData[packer].kg += parseFloat(r[8]) || 0;
+      dailyPackerData[packer].qty += parseInt(r[7]) || 0;
+    });
+
+    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
+    const colorsLight = ['rgba(45,106,63,0.4)','rgba(42,90,136,0.4)','rgba(107,63,160,0.4)','rgba(184,137,14,0.4)','rgba(176,48,48,0.4)','rgba(45,122,106,0.4)','rgba(139,69,19,0.4)'];
+
+    // גרף יומי לפי אורזת (ק"ג + כמות אריזות)
     const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
     if (window._pkgChart1) window._pkgChart1.destroy();
+    const dailyPackers = Object.keys(dailyPackerData);
     window._pkgChart1 = new Chart(ctx1, {
       type: 'bar',
       data: {
-        labels: dayLabels.slice(0, dow+1),
-        datasets: [{
-          label: 'ק"ג',
-          data: dayLabels.slice(0, dow+1).map(d => kgPerDay[d] || 0),
-          backgroundColor: '#2d6a3f',
-          borderRadius: 6,
-        }]
+        labels: dailyPackers,
+        datasets: [
+          {
+            label: 'ק"ג',
+            data: dailyPackers.map(p => dailyPackerData[p].kg),
+            backgroundColor: dailyPackers.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: dailyPackers.map(p => dailyPackerData[p].qty),
+            backgroundColor: dailyPackers.map((_, i) => colorsLight[i % colorsLight.length]),
+            borderRadius: 4,
+          }
+        ]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: true, position: 'top', labels: { font: { size: 10 } } }
+        },
         scales: { y: { beginAtZero: true } }
       }
     });
 
-    // גרף נצבר לאורזת
+    // גרף נצבר לאורזת (ק"ג + כמות אריזות)
     const ctx2 = document.getElementById('pkg-chart-packers').getContext('2d');
     if (window._pkgChart2) window._pkgChart2.destroy();
-    const packerNames = Object.keys(kgPerPacker);
-    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a'];
+    const weeklyPackers = Object.keys(packerData);
     window._pkgChart2 = new Chart(ctx2, {
       type: 'bar',
       data: {
-        labels: packerNames,
-        datasets: [{
-          label: 'ק"ג',
-          data: packerNames.map(p => kgPerPacker[p]),
-          backgroundColor: packerNames.map((_, i) => colors[i % colors.length]),
-          borderRadius: 6,
-        }]
+        labels: weeklyPackers,
+        datasets: [
+          {
+            label: 'ק"ג נטו',
+            data: weeklyPackers.map(p => packerData[p].kg),
+            backgroundColor: weeklyPackers.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: weeklyPackers.map(p => packerData[p].qty),
+            backgroundColor: weeklyPackers.map((_, i) => colorsLight[i % colorsLight.length]),
+            borderRadius: 4,
+          }
+        ]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: true, position: 'top', labels: { font: { size: 11 } } }
+        },
         scales: { y: { beginAtZero: true } }
       }
     });
 
     // מספר שבוע
     const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const weekNum = Math.ceil(((today - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
-    document.getElementById('pkg-week-pill').textContent = `שבוע ${weekNum}`;
+    const weekNum2 = Math.ceil(((today - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+    document.getElementById('pkg-week-pill').textContent = `שבוע ${weekNum2}`;
 
   } catch(e) {
     console.error('Packaging data error:', e);
