@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>דשבורד | סלטי גן</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
     --bg:#f4f0e8; --surface:#fdfaf4; --surface2:#ece7db; --border:#d3ccb6;
@@ -409,48 +410,60 @@
 <div class="page" id="page-packaging">
 <div class="main">
   <div class="kpi-row">
-    <div class="kpi p"><div class="kpi-label">עובדי אריזה</div><div class="kpi-num">7</div><div class="kpi-sub">מירה, גלינה, יוליה + עוד</div></div>
-    <div class="kpi g"><div class="kpi-label">מוצרים בקטלוג</div><div class="kpi-num">150+</div><div class="kpi-sub">סלטים, ממרחים, רוטבים</div></div>
-    <div class="kpi b"><div class="kpi-label">דיווחים שבועיים</div><div class="kpi-num">80+</div><div class="kpi-sub">דיווחי בקרת מוצר</div></div>
-    <div class="kpi g"><div class="kpi-label">בקרת איכות</div><div class="kpi-num">100%</div><div class="kpi-sub">כל הדיווחים תקינים</div></div>
+    <div class="kpi p"><div class="kpi-label">אצוות היום</div><div class="kpi-num" id="pkg-kpi-batches">—</div><div class="kpi-sub">אצוות שנפתחו היום</div></div>
+    <div class="kpi g"><div class="kpi-label">דיווחים היום</div><div class="kpi-num" id="pkg-kpi-reports">—</div><div class="kpi-sub">דיווחי אריזה</div></div>
+    <div class="kpi b"><div class="kpi-label">סה"כ ק"ג היום</div><div class="kpi-num" id="pkg-kpi-kg">—</div><div class="kpi-sub">משקל כולל</div></div>
+    <div class="kpi p"><div class="kpi-label">אורזות פעילות</div><div class="kpi-num" id="pkg-kpi-packers">—</div><div class="kpi-sub">היום</div></div>
   </div>
-  <div class="grid-2">
+
+  <!-- אצוות יומיות -->
+  <div class="card">
+    <div class="card-title">פירוט אצוות יומי <span class="pill pb" id="pkg-date-pill">—</span></div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">תאריך ייצור</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">פג תוקף</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">דיווחים</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-batches-body">
+        <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- דיווחים יומיים -->
+  <div class="card">
+    <div class="card-title">רשימת דיווחים יומית</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">שעה</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-reports-body">
+        <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- גרפים שבועיים -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
     <div class="card">
-      <div class="card-title">דיווחי אריזה אחרונים <span class="pill pp">כל הבדיקות תקינות</span></div>
-      <table class="pack-tbl">
-        <thead><tr><th>אורזת</th><th>מוצר</th><th>משקל</th><th>כמות</th><th>ת׳ ייצור</th><th>QA</th></tr></thead>
-        <tbody>
-          <tr><td><span class="w-chip wm">מ</span></td><td style="font-weight:600">פסטו קשיו</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">54</span></td><td style="font-size:11px;color:var(--text-muted)">16/02</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wg">ג</span></td><td style="font-weight:600">סלט משוואיה</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">38</span></td><td style="font-size:11px;color:var(--text-muted)">09/03</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wm">מ</span></td><td style="font-weight:600">סלק אבאל'ה</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">23</span></td><td style="font-size:11px;color:var(--text-muted)">09/03</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wy">ב</span></td><td style="font-weight:600">טחינה אמיגה</td><td><span class="mono">4 ק"ג</span></td><td><span class="mono">36</span></td><td style="font-size:11px;color:var(--text-muted)">01/04</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wm">מ</span></td><td style="font-weight:600">טונה ירקות</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">89</span></td><td style="font-size:11px;color:var(--text-muted)">16/02</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wg">ג</span></td><td style="font-weight:600">חציל יפני</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">31</span></td><td style="font-size:11px;color:var(--text-muted)">16/02</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wy">ב</span></td><td style="font-weight:600">סלסה</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">69</span></td><td style="font-size:11px;color:var(--text-muted)">16/02</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-          <tr><td><span class="w-chip wb">י</span></td><td style="font-weight:600">טורקי מיוחד</td><td><span class="mono">2 ק"ג</span></td><td><span class="mono">72</span></td><td style="font-size:11px;color:var(--text-muted)">16/02</td><td><span class="chip chip-g"><span class="chip-dot"></span>תקין</span></td></tr>
-        </tbody>
-      </table>
+      <div class="card-title">ק"ג ליום – שבועי <span class="pill pb" id="pkg-week-pill">—</span></div>
+      <canvas id="pkg-chart-daily" height="200"></canvas>
     </div>
-    <div style="display:grid;gap:20px;">
-      <div class="card">
-        <div class="card-title">צוות האריזה</div>
-        <div class="worker-grid">
-          <div class="worker-card"><div class="w-avatar wm">מ</div><div class="w-name">מירה</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--green)">89</div><div class="w-clabel">טונה ירקות</div></div>
-          <div class="worker-card"><div class="w-avatar wg">ג</div><div class="w-name">גלינה</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--blue)">69</div><div class="w-clabel">סלסה</div></div>
-          <div class="worker-card"><div class="w-avatar wb">י</div><div class="w-name">יוליה</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--purple)">72</div><div class="w-clabel">טורקי</div></div>
-          <div class="worker-card"><div class="w-avatar wy">ב</div><div class="w-name">ברטוקאן</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--yellow)">119</div><div class="w-clabel">סלק צ'יפס</div></div>
-          <div class="worker-card"><div class="w-avatar wk">ק</div><div class="w-name">קידיס</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--red)">43</div><div class="w-clabel">פלפל רצועות</div></div>
-          <div class="worker-card"><div class="w-avatar wi">א</div><div class="w-name">אילנה</div><div class="w-role">אורזת</div><div class="w-count" style="color:var(--green)">200</div><div class="w-clabel">חומוס</div></div>
-          <div class="worker-card" style="grid-column:span 2"><div class="w-avatar" style="background:#e8e8e8;color:#555;margin:0 auto 8px">ח</div><div class="w-name">חלן אברהם</div><div class="w-role">מנהלת אריזה</div><div class="w-count" style="color:var(--green)">✓</div><div class="w-clabel">מנהלת</div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">בקרת איכות <span class="pill pg">הכל תקין</span></div>
-        <div class="mat-row"><span style="flex:1;font-weight:600">טעם · ריח · מרקם</span><span class="chip chip-g"><span class="chip-dot"></span>תקין ✓</span></div>
-        <div class="mat-row"><span style="flex:1;font-weight:600">אריזה · תווית</span><span class="chip chip-g"><span class="chip-dot"></span>תקין ✓</span></div>
-        <div class="mat-row"><span style="flex:1;font-weight:600">תאריך ייצור · פג תוקף</span><span class="chip chip-g"><span class="chip-dot"></span>תקין ✓</span></div>
-        <div class="mat-row" style="border:none"><span style="flex:1;font-weight:600">אימות סופי</span><span class="chip chip-g"><span class="chip-dot"></span>מאומת ✓</span></div>
-      </div>
+    <div class="card">
+      <div class="card-title">ק"ג נצבר לאורזת – שבועי</div>
+      <canvas id="pkg-chart-packers" height="200"></canvas>
     </div>
   </div>
 </div>
@@ -941,6 +954,228 @@ async function loadLiveData() {
 // רענון כל 2 דקות
 loadLiveData();
 setInterval(loadLiveData, 2 * 60 * 1000);
+
+// ===== PACKAGING LIVE DATA =====
+const PKG_SHEET_ID = '16Eq8L6mH6Bcvj7aEE9h0yIy_uLbeB7eV9DWJhJq_6MU';
+const PRODUCTS_SHEET_ID = '1LYrzHk6EqdnbP_7KGl6pSH_0_ZaTE0A6WlgXIFadbh0';
+
+async function fetchPkgSheet(sheetId, name) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+  const res = await fetch(url, {cache:'no-store'});
+  const text = await res.text();
+  const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+  if (!match) return [];
+  const json = JSON.parse(match[1]);
+  if (!json.table || !json.table.rows) return [];
+  return json.table.rows.map(r => r.c.map(c => (c ? c.v : null)));
+}
+
+function parseDate(v) {
+  if (!v) return null;
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+  if (typeof v === 'string' && v.includes('/')) {
+    const p = v.split('/');
+    return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+  }
+  return null;
+}
+
+function fmtD(d) { return d ? `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}` : '—'; }
+function fmtTime(v) {
+  if (!v) return '—';
+  const m = String(v).match(/(\d+):(\d+):(\d+)/);
+  if (m) return `${m[1].padStart(2,'0')}:${m[2].padStart(2,'0')}`;
+  return '—';
+}
+
+async function loadPackagingData() {
+  try {
+    const [reportRows, batchRows, packRows, productRows, uniqueRows] = await Promise.all([
+      fetchPkgSheet(PKG_SHEET_ID, 'דיווח'),
+      fetchPkgSheet(PKG_SHEET_ID, 'אצוות'),
+      fetchPkgSheet(PKG_SHEET_ID, 'אריזות'),
+      fetchPkgSheet(PRODUCTS_SHEET_ID, 'וריאציות'),
+      fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים'),
+    ]);
+
+    // מפות עזר
+    // אריזות: מפתח → שם
+    const packMap = {};
+    packRows.forEach(r => { if (r[0]) packMap[r[0]] = r[1]; });
+
+    // מוצרים ייחודיים: קוד → שם
+    const prodMap = {};
+    uniqueRows.forEach(r => { if (r[0]) prodMap[r[0]] = r[1]; });
+
+    // אצוות: מזהה → {מוצר, תאריך_יצור, פג_תוקף}
+    const batchMap = {};
+    batchRows.forEach(r => {
+      if (r[0]) batchMap[r[0]] = {
+        id: r[0],
+        packer: r[1] || '',
+        product: prodMap[r[2]] || r[2] || '',
+        mfgDate: parseDate(r[4]),
+        expDate: parseDate(r[5]),
+      };
+    });
+
+    // היום
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    // דיווח: עמודות: מזהה_דיווח, מזהה_אצווה, תאריך, שעה, אורזת, מוצר, משקל_אריזה, כמות_אריזות, סהכ_משקל_קג
+    const todayReports = reportRows.filter(r => {
+      const d = parseDate(r[2]);
+      if (!d) return false;
+      d.setHours(0,0,0,0);
+      return d.getTime() === today.getTime();
+    });
+
+    // KPIs
+    const batchesToday = new Set(todayReports.map(r => r[1])).size;
+    const totalKg = todayReports.reduce((s,r) => s + (parseFloat(r[8]) || 0), 0);
+    const packersToday = new Set(todayReports.map(r => r[4]).filter(Boolean)).size;
+
+    document.getElementById('pkg-kpi-batches').textContent = batchesToday;
+    document.getElementById('pkg-kpi-reports').textContent = todayReports.length;
+    document.getElementById('pkg-kpi-kg').textContent = totalKg.toFixed(1);
+    document.getElementById('pkg-kpi-packers').textContent = packersToday;
+    document.getElementById('pkg-date-pill').textContent = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+
+    // פירוט אצוות יומי
+    const batchSummary = {};
+    todayReports.forEach(r => {
+      const bid = r[1];
+      if (!batchSummary[bid]) {
+        const b = batchMap[bid] || {};
+        batchSummary[bid] = {
+          product: b.product || prodMap[r[5]] || r[5] || '—',
+          mfgDate: b.mfgDate,
+          expDate: b.expDate,
+          reports: 0,
+          kg: 0,
+        };
+      }
+      batchSummary[bid].reports++;
+      batchSummary[bid].kg += parseFloat(r[8]) || 0;
+    });
+
+    const batchBody = document.getElementById('pkg-batches-body');
+    if (Object.keys(batchSummary).length === 0) {
+      batchBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות היום</td></tr>';
+    } else {
+      batchBody.innerHTML = Object.values(batchSummary).map(b => `
+        <tr style="border-bottom:1px solid var(--surface2);">
+          <td style="padding:9px 8px;font-weight:600;font-size:13px;">${b.product}</td>
+          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.mfgDate)}</td>
+          <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.expDate)}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${b.reports}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${b.kg.toFixed(1)}</td>
+        </tr>`).join('');
+    }
+
+    // רשימת דיווחים יומית
+    const reportsBody = document.getElementById('pkg-reports-body');
+    if (todayReports.length === 0) {
+      reportsBody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים היום</td></tr>';
+    } else {
+      reportsBody.innerHTML = todayReports.map(r => {
+        const b = batchMap[r[1]] || {};
+        const productName = b.product || prodMap[r[5]] || r[5] || '—';
+        const packName = packMap[r[6]] || r[6] || '—';
+        const kg = parseFloat(r[8]) || 0;
+        const time = fmtTime(r[3]);
+        return `
+          <tr style="border-bottom:1px solid var(--surface2);">
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
+            <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
+            <td style="padding:9px 8px;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;">${time}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    // גרפים שבועיים
+    const dow = today.getDay();
+    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+    const dayLabels = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+    const kgPerDay = {};
+    const kgPerPacker = {};
+
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d) return;
+      d.setHours(0,0,0,0);
+      if (d < wkStart || d > today) return;
+      const dayIdx = d.getDay();
+      if (dayIdx === 6) return;
+      const key = dayLabels[dayIdx];
+      const kg = parseFloat(r[8]) || 0;
+      kgPerDay[key] = (kgPerDay[key] || 0) + kg;
+      const packer = r[4] || 'אחר';
+      if (!kgPerPacker[packer]) kgPerPacker[packer] = 0;
+      kgPerPacker[packer] += kg;
+    });
+
+    // גרף ק"ג ליום
+    const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
+    if (window._pkgChart1) window._pkgChart1.destroy();
+    window._pkgChart1 = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: dayLabels.slice(0, dow+1),
+        datasets: [{
+          label: 'ק"ג',
+          data: dayLabels.slice(0, dow+1).map(d => kgPerDay[d] || 0),
+          backgroundColor: '#2d6a3f',
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // גרף נצבר לאורזת
+    const ctx2 = document.getElementById('pkg-chart-packers').getContext('2d');
+    if (window._pkgChart2) window._pkgChart2.destroy();
+    const packerNames = Object.keys(kgPerPacker);
+    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a'];
+    window._pkgChart2 = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: packerNames,
+        datasets: [{
+          label: 'ק"ג',
+          data: packerNames.map(p => kgPerPacker[p]),
+          backgroundColor: packerNames.map((_, i) => colors[i % colors.length]),
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // מספר שבוע
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((today - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+    document.getElementById('pkg-week-pill').textContent = `שבוע ${weekNum}`;
+
+  } catch(e) {
+    console.error('Packaging data error:', e);
+  }
+}
+
+// טעינה ורענון כל 5 דקות
+loadPackagingData();
+setInterval(loadPackagingData, 5 * 60 * 1000);
 
 // Init
 renderDay();
