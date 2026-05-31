@@ -624,6 +624,17 @@ const weightData = [
 let currentDayIdx = DAYS.findIndex(d => d.isToday);
 
 function renderDay() {
+  if (DAYS.length === 0) {
+    document.getElementById('nav-dayname').innerHTML = 'אין נתונים השבוע';
+    document.getElementById('nav-date').textContent = '';
+    document.getElementById('done-list').innerHTML = '<div class="empty-msg">אין פריטים שבוצעו</div>';
+    document.getElementById('pending-list').innerHTML = '<div class="empty-msg">אין פריטים ממתינים</div>';
+    document.getElementById('done-count').textContent = '0';
+    document.getElementById('pending-count').textContent = '0';
+    document.getElementById('sum-done').textContent = '0';
+    document.getElementById('sum-pending').textContent = '0';
+    return;
+  }
   const day = DAYS[currentDayIdx];
 
   // Nav info
@@ -938,8 +949,11 @@ async function loadLiveData() {
       newDays.forEach(d => DAYS.push(d));
       currentDayIdx = DAYS.findIndex(d => d.isToday);
       if (currentDayIdx < 0) currentDayIdx = DAYS.length - 1;
-      renderDay();
+    } else {
+      DAYS.length = 0;
+      currentDayIdx = 0;
     }
+    renderDay();
 
     // עדכון KPI שבועי
     document.getElementById('kpi-week-days').textContent = newDays.length;
