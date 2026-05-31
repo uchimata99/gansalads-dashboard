@@ -772,18 +772,24 @@ async function fetchPkgSheet(sheetId, name) {
 
 function parseDate(v) {
   if (!v) return null;
-  // פורמט Date(yyyy,mm,dd) מ-gviz
+  let d = null;
+  // פורמט Date(yyyy,mm,dd) מ-gviz – חודש 0-based
   const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
-  if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
-  // פורמט dd/mm/yyyy
-  if (typeof v === 'string' && v.match(/^\d+\/\d+\/\d+$/)) {
+  if (m) {
+    d = new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+  } else if (typeof v === 'string' && v.match(/^\d+\/\d+\/\d+$/)) {
+    // פורמט dd/mm/yyyy
     const p = v.split('/');
-    return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+    d = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+  } else {
+    // פורמט "Sun May 31 2026 ..." – מחלץ תאריך בלבד
+    const raw = new Date(v);
+    if (!isNaN(raw.getTime())) {
+      d = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
+    }
   }
-  // פורמט "Sun May 31 2026 ..."
-  const d = new Date(v);
-  if (!isNaN(d.getTime())) return d;
-  return null;
+  if (d) d.setHours(0,0,0,0);
+  return d;
 }
 
 function fmtD(d) { return d ? `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}` : '—'; }
@@ -796,12 +802,11 @@ function fmtTime(v) {
 
 async function loadPackagingData() {
   try {
-    const [reportRows, batchRows, packRows, productRows, uniqueRows] = await Promise.all([
-      fetchPkgSheet(PKG_SHEET_ID, 'דיווח'),
-      fetchPkgSheet(PKG_SHEET_ID, 'אצוות'),
-      fetchPkgSheet(PKG_SHEET_ID, 'אריזות'),
-      fetchPkgSheet(PRODUCTS_SHEET_ID, 'וריאציות'),
-      fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים'),
+    const [reportRows, batchRows, packRows, uniqueRows] = await Promise.all([
+      fetchPkgSheet(PKG_SHEET_ID, 'דיווח').catch(()=>[]),
+      fetchPkgSheet(PKG_SHEET_ID, 'אצוות').catch(()=>[]),
+      fetchPkgSheet(PKG_SHEET_ID, 'אריזות').catch(()=>[]),
+      fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים').catch(()=>[]),
     ]);
 
     // מפות עזר
