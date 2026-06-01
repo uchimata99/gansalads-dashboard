@@ -1361,6 +1361,7 @@ async function loadPackagingData() {
     });
 
     // שמירת נתוני אורזות לpopup
+    const htDow = today.getDay();
     const htWkStart = new Date(today); htWkStart.setDate(today.getDate() - htDow);
     const htDailyProducts = {};
     const htWeeklyProducts = {};
