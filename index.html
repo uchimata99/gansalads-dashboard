@@ -1231,7 +1231,32 @@ async function loadPackagingData() {
       }
     }
 
-    // צבעים קבועים לפי שם אורזת
+    // נתוני גרפים לפי אורזת – שבועי
+    const dow = today.getDay();
+    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+
+    const packerData = {};
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d || d < wkStart || d > today) return;
+      const packer = r[4] || 'אחר';
+      if (packer === 'אילנה') return;
+      if (!packerData[packer]) packerData[packer] = {kg: 0, qty: 0};
+      packerData[packer].kg += parseFloat(r[8]) || 0;
+      packerData[packer].qty += parseInt(r[7]) || 0;
+    });
+
+    // נתוני גרף יומי לפי אורזת
+    const dailyPackerData = {};
+    todayReports.forEach(r => {
+      const packer = r[4] || 'אחר';
+      if (packer === 'אילנה') return;
+      if (!dailyPackerData[packer]) dailyPackerData[packer] = {kg: 0, qty: 0};
+      dailyPackerData[packer].kg += parseFloat(r[8]) || 0;
+      dailyPackerData[packer].qty += parseInt(r[7]) || 0;
+    });
+
+    // צבעים קבועים לפי שם אורזת – רשימה מאוחדת לשמירת עקביות
     const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
     const packerColorMap = {};
     let colorIdx = 0;
@@ -1243,11 +1268,12 @@ async function loadPackagingData() {
       return packerColorMap[packer];
     }
 
-    // בונה מפת צבעים מכל האורזות (יומי + שבועי) כדי שיהיו עקביים
-    [...new Set([
+    // רשימת כל האורזות לסדר קבוע בציר X
+    const allPackers = [...new Set([
       ...Object.keys(dailyPackerData),
       ...Object.keys(packerData)
-    ])].forEach(p => getPackerColor(p));
+    ])].sort();
+    allPackers.forEach(p => getPackerColor(p));
 
     function createDotPattern(color) {
       const canvas = document.createElement('canvas');
@@ -1262,7 +1288,79 @@ async function loadPackagingData() {
       return ctx.createPattern(canvas, 'repeat');
     }
 
-    const htDow = today.getDay();
+    // גרף יומי – כל האורזות בציר X (אפילו אלו שלא ארזו היום)
+    const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
+    if (window._pkgChart1) window._pkgChart1.destroy();
+    window._pkgChart1 = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: allPackers,
+        datasets: [
+          {
+            label: 'ק"ג נטו',
+            data: allPackers.map(p => dailyPackerData[p]?.kg || 0),
+            backgroundColor: allPackers.map(p => getPackerColor(p)),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: allPackers.map(p => dailyPackerData[p]?.qty || 0),
+            backgroundColor: allPackers.map(p => createDotPattern(getPackerColor(p))),
+            borderColor: allPackers.map(p => getPackerColor(p)),
+            borderWidth: 1,
+            borderRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const packer = allPackers[els[0].index];
+          showPackerPopup(packer, window._dailyPackerDetails[packer] || {}, 'יומי');
+        },
+        plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } } },
+        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
+      }
+    });
+
+    // גרף שבועי – אותו ציר X
+    const ctx2 = document.getElementById('pkg-chart-packers').getContext('2d');
+    if (window._pkgChart2) window._pkgChart2.destroy();
+    window._pkgChart2 = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: allPackers,
+        datasets: [
+          {
+            label: 'ק"ג נטו',
+            data: allPackers.map(p => packerData[p]?.kg || 0),
+            backgroundColor: allPackers.map(p => getPackerColor(p)),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: allPackers.map(p => packerData[p]?.qty || 0),
+            backgroundColor: allPackers.map(p => createDotPattern(getPackerColor(p))),
+            borderColor: allPackers.map(p => getPackerColor(p)),
+            borderWidth: 1,
+            borderRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const packer = allPackers[els[0].index];
+          showPackerPopup(packer, window._packerDetails[packer] || {}, 'שבועי');
+        },
+        plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } } },
+        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
+      }
+    });
+
+    // שמירת נתוני אורזות לpopup
     const htWkStart = new Date(today); htWkStart.setDate(today.getDate() - htDow);
     const htDailyProducts = {};
     const htWeeklyProducts = {};
@@ -1357,7 +1455,6 @@ async function loadPackagingData() {
       }
     });
     const dow = today.getDay();
-    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
     const weeklyProducts = {};
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
@@ -1384,32 +1481,9 @@ async function loadPackagingData() {
           </tr>`).join('');
     }
 
-    // נתוני גרפים לפי אורזת
-    const packerData = {};
-    reportRows.forEach(r => {
-      const d = parseDate(r[2]);
-      if (!d) return;
-      if (d < wkStart || d > today) return;
-      const packer = r[4] || 'אחר';
-      if (packer === 'אילנה') return; // לא מציג אילנה בגרף
-      if (!packerData[packer]) packerData[packer] = {kg: 0, qty: 0};
-      packerData[packer].kg += parseFloat(r[8]) || 0;
-      packerData[packer].qty += parseInt(r[7]) || 0;
-    });
-
-    // נתוני גרף יומי לפי אורזת (היום בלבד)
-    const dailyPackerData = {};
-    todayReports.forEach(r => {
-      const packer = r[4] || 'אחר';
-      if (packer === 'אילנה') return; // לא מציג אילנה בגרף
-      if (!dailyPackerData[packer]) dailyPackerData[packer] = {kg: 0, qty: 0};
-      dailyPackerData[packer].kg += parseFloat(r[8]) || 0;
-      dailyPackerData[packer].qty += parseInt(r[7]) || 0;
-    });
-
     // שמירת נתוני אורזות לשימוש בpopup
-    window._packerDetails = {}; // שבועי
-    window._dailyPackerDetails = {}; // יומי
+    window._packerDetails = {};
+    window._dailyPackerDetails = {};
 
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
@@ -1419,7 +1493,6 @@ async function loadPackagingData() {
       const kg = parseFloat(r[8]) || 0;
       const qty = parseInt(r[7]) || 0;
 
-      // שבועי
       if (d && d >= wkStart && d <= today) {
         if (!window._packerDetails[packer]) window._packerDetails[packer] = {};
         if (!window._packerDetails[packer][productName]) window._packerDetails[packer][productName] = {kg:0, qty:0};
@@ -1427,90 +1500,11 @@ async function loadPackagingData() {
         window._packerDetails[packer][productName].qty += qty;
       }
 
-      // יומי
       if (d && d.getTime() === today.getTime()) {
         if (!window._dailyPackerDetails[packer]) window._dailyPackerDetails[packer] = {};
         if (!window._dailyPackerDetails[packer][productName]) window._dailyPackerDetails[packer][productName] = {kg:0, qty:0};
         window._dailyPackerDetails[packer][productName].kg += kg;
         window._dailyPackerDetails[packer][productName].qty += qty;
-      }
-    });
-
-    // גרף יומי לפי אורזת (ק"ג מלא + כמות מנוקד)
-    const ctx1 = document.getElementById('pkg-chart-daily').getContext('2d');
-    if (window._pkgChart1) window._pkgChart1.destroy();
-    const dailyPackers = Object.keys(dailyPackerData);
-    window._pkgChart1 = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: dailyPackers,
-        datasets: [
-          {
-            label: 'ק"ג נטו',
-            data: dailyPackers.map(p => dailyPackerData[p].kg),
-            backgroundColor: dailyPackers.map(p => getPackerColor(p)),
-            borderRadius: 4,
-          },
-          {
-            label: 'כמות אריזות',
-            data: dailyPackers.map(p => dailyPackerData[p].qty),
-            backgroundColor: dailyPackers.map(p => createDotPattern(getPackerColor(p))),
-            borderColor: dailyPackers.map(p => getPackerColor(p)),
-            borderWidth: 1,
-            borderRadius: 4,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        onClick: (e, els) => {
-          if (!els.length) return;
-          const packer = dailyPackers[els[0].index];
-          showPackerPopup(packer, window._dailyPackerDetails[packer] || {}, 'יומי');
-        },
-        plugins: {
-          legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } }
-        },
-        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
-      }
-    });
-
-    // גרף נצבר לאורזת (ק"ג מלא + כמות מנוקד)
-    const ctx2 = document.getElementById('pkg-chart-packers').getContext('2d');
-    if (window._pkgChart2) window._pkgChart2.destroy();
-    const weeklyPackers = Object.keys(packerData);
-    window._pkgChart2 = new Chart(ctx2, {
-      type: 'bar',
-      data: {
-        labels: weeklyPackers,
-        datasets: [
-          {
-            label: 'ק"ג נטו',
-            data: weeklyPackers.map(p => packerData[p].kg),
-            backgroundColor: weeklyPackers.map(p => getPackerColor(p)),
-            borderRadius: 4,
-          },
-          {
-            label: 'כמות אריזות',
-            data: weeklyPackers.map(p => packerData[p].qty),
-            backgroundColor: weeklyPackers.map(p => createDotPattern(getPackerColor(p))),
-            borderColor: weeklyPackers.map(p => getPackerColor(p)),
-            borderWidth: 1,
-            borderRadius: 4,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        onClick: (e, els) => {
-          if (!els.length) return;
-          const packer = weeklyPackers[els[0].index];
-          showPackerPopup(packer, window._packerDetails[packer] || {}, 'שבועי');
-        },
-        plugins: {
-          legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } }
-        },
-        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
       }
     });
 
