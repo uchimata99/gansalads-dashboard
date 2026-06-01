@@ -1170,6 +1170,21 @@ async function loadPackagingData() {
     }
 
     // גרפי חומוס וטחינה
+    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
+
+    function createDotPattern(color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 8; canvas.height = 8;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'transparent';
+      ctx.fillRect(0,0,8,8);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(4, 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+      return ctx.createPattern(canvas, 'repeat');
+    }
+
     const htDow = today.getDay();
     const htWkStart = new Date(today); htWkStart.setDate(today.getDate() - htDow);
     const htDailyPackers = {};
@@ -1312,22 +1327,6 @@ async function loadPackagingData() {
       dailyPackerData[packer].kg += parseFloat(r[8]) || 0;
       dailyPackerData[packer].qty += parseInt(r[7]) || 0;
     });
-
-    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
-
-    // פונקציה ליצירת תבנית נקודות
-    function createDotPattern(color) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 8; canvas.height = 8;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'transparent';
-      ctx.fillRect(0,0,8,8);
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(4, 4, 2, 0, Math.PI * 2);
-      ctx.fill();
-      return ctx.createPattern(canvas, 'repeat');
-    }
 
     // שמירת נתוני אורזות לשימוש בpopup
     window._packerDetails = {}; // שבועי
