@@ -1232,8 +1232,8 @@ async function loadPackagingData() {
     }
 
     // נתוני גרפים לפי אורזת – שבועי
-    const dow = today.getDay();
-    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+    const pkgDow = today.getDay();
+    const wkStart = new Date(today); wkStart.setDate(today.getDate() - pkgDow);
 
     const packerData = {};
     reportRows.forEach(r => {
@@ -1454,7 +1454,6 @@ async function loadPackagingData() {
         scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
       }
     });
-    const dow = today.getDay();
     const weeklyProducts = {};
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
