@@ -1033,16 +1033,26 @@ async function loadPackagingData() {
     if (displayBatches.length === 0) {
       batchBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות פתוחות</td></tr>';
     } else {
-      batchBody.innerHTML = displayBatches.map(r => {
+      // מיון: פתוחות קודם, סגורות אחר כך
+      const sortedBatches = [...displayBatches].sort((a, b) => {
+        const aOpen = (reportedTubs[a[0]] || 0) < (parseFloat(a[3]) || 0);
+        const bOpen = (reportedTubs[b[0]] || 0) < (parseFloat(b[3]) || 0);
+        if (aOpen && !bOpen) return -1;
+        if (!aOpen && bOpen) return 1;
+        return 0;
+      });
+
+      batchBody.innerHTML = sortedBatches.map(r => {
         const b = batchMap[r[0]] || {};
         const planned = parseFloat(r[3]) || 0;
         const reported = reportedTubs[r[0]] || 0;
         const isOpen = reported < planned;
         const openDate = parseDate(r[4]);
+        const rowBg = isOpen ? '' : 'background:rgba(45,106,63,0.06);';
         const textColor = isOpen ? 'var(--text)' : 'var(--green)';
         const tubsColor = isOpen ? 'var(--yellow)' : 'var(--green)';
         return `
-          <tr style="border-bottom:1px solid var(--surface2);">
+          <tr style="border-bottom:1px solid var(--surface2);${rowBg}">
             <td style="padding:9px 8px;font-weight:600;font-size:13px;color:${textColor};">${b.product || '—'}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${isOpen ? 'var(--blue)' : 'var(--green)'};">${r[0]}</td>
             <td style="padding:9px 8px;font-size:12px;color:${textColor};">${fmtD(openDate)}</td>
@@ -1221,8 +1231,23 @@ async function loadPackagingData() {
       }
     }
 
-    // גרפי חומוס וטחינה
+    // צבעים קבועים לפי שם אורזת
     const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
+    const packerColorMap = {};
+    let colorIdx = 0;
+    function getPackerColor(packer) {
+      if (!packerColorMap[packer]) {
+        packerColorMap[packer] = colors[colorIdx % colors.length];
+        colorIdx++;
+      }
+      return packerColorMap[packer];
+    }
+
+    // בונה מפת צבעים מכל האורזות (יומי + שבועי) כדי שיהיו עקביים
+    [...new Set([
+      ...Object.keys(dailyPackerData),
+      ...Object.keys(packerData)
+    ])].forEach(p => getPackerColor(p));
 
     function createDotPattern(color) {
       const canvas = document.createElement('canvas');
@@ -1423,14 +1448,14 @@ async function loadPackagingData() {
           {
             label: 'ק"ג נטו',
             data: dailyPackers.map(p => dailyPackerData[p].kg),
-            backgroundColor: dailyPackers.map((_, i) => colors[i % colors.length]),
+            backgroundColor: dailyPackers.map(p => getPackerColor(p)),
             borderRadius: 4,
           },
           {
             label: 'כמות אריזות',
             data: dailyPackers.map(p => dailyPackerData[p].qty),
-            backgroundColor: dailyPackers.map((_, i) => createDotPattern(colors[i % colors.length])),
-            borderColor: dailyPackers.map((_, i) => colors[i % colors.length]),
+            backgroundColor: dailyPackers.map(p => createDotPattern(getPackerColor(p))),
+            borderColor: dailyPackers.map(p => getPackerColor(p)),
             borderWidth: 1,
             borderRadius: 4,
           }
@@ -1462,14 +1487,14 @@ async function loadPackagingData() {
           {
             label: 'ק"ג נטו',
             data: weeklyPackers.map(p => packerData[p].kg),
-            backgroundColor: weeklyPackers.map((_, i) => colors[i % colors.length]),
+            backgroundColor: weeklyPackers.map(p => getPackerColor(p)),
             borderRadius: 4,
           },
           {
             label: 'כמות אריזות',
             data: weeklyPackers.map(p => packerData[p].qty),
-            backgroundColor: weeklyPackers.map((_, i) => createDotPattern(colors[i % colors.length])),
-            borderColor: weeklyPackers.map((_, i) => colors[i % colors.length]),
+            backgroundColor: weeklyPackers.map(p => createDotPattern(getPackerColor(p))),
+            borderColor: weeklyPackers.map(p => getPackerColor(p)),
             borderWidth: 1,
             borderRadius: 4,
           }
