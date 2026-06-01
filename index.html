@@ -1170,6 +1170,8 @@ async function loadPackagingData() {
     }
 
     // גרפי חומוס וטחינה
+    const htDow = today.getDay();
+    const htWkStart = new Date(today); htWkStart.setDate(today.getDate() - htDow);
     const htDailyPackers = {};
     const htWeeklyPackers = {};
 
@@ -1187,7 +1189,7 @@ async function loadPackagingData() {
 
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < htWkStart || d > today) return;
       const b = batchMap[r[1]] || {};
       const productCode = b.productCode || r[5];
       if (!hummusTahiniProducts.includes(productCode)) return;
@@ -1262,6 +1264,7 @@ async function loadPackagingData() {
         scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
       }
     });
+    const dow = today.getDay();
     const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
     const weeklyProducts = {};
     reportRows.forEach(r => {
