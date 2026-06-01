@@ -387,23 +387,45 @@
   <!-- טבלות פירוט יומי לכל אורזת -->
   <div id="pkg-packer-tables"></div>
 
-  <!-- חומוס וטחינה -->
-  <div class="card">
-    <div class="card-title">חומוס וטחינה – יומי 🥙</div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-        </tr>
-      </thead>
-      <tbody id="pkg-hummus-tahini-body">
-        <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-      </tbody>
-    </table>
+  <!-- חומוס וטחינה – שתי טבלאות -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- חומוס -->
+    <div class="card">
+      <div class="card-title">חומוס – יומי 🫘</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-hummus-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- טחינה -->
+    <div class="card">
+      <div class="card-title">טחינה – יומי 🫙</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-tahini-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- גרפי חומוס וטחינה -->
@@ -1030,38 +1052,51 @@ async function loadPackagingData() {
       }).join('');
     }
 
-    // טבלת חומוס וטחינה
-    const hummusTahiniProducts = [
-      'p011','p017','p018','p019','p020','p021','p022','p023', // חומוס
-      'p012','p013','p014','p056','p057','p058','p059','p060'  // טחינה
-    ];
+    const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
+    const tahiniProducts = ['p012','p013','p014','p056','p057','p058','p059','p060'];
+    const hummusTahiniProducts = [...hummusProducts, ...tahiniProducts];
 
-    const htBody = document.getElementById('pkg-hummus-tahini-body');
-    const htRows = todayReports.filter(r => {
-      const b = batchMap[r[1]] || {};
-      const productCode = b.productCode || r[5];
-      return hummusTahiniProducts.includes(productCode);
-    });
-
-    if (htRows.length === 0) {
-      htBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים של חומוס וטחינה היום</td></tr>';
-    } else {
-      htBody.innerHTML = htRows.map(r => {
+    function buildHtTable(bodyId, rows) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      if (rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים היום</td></tr>`;
+        return;
+      }
+      let totalQty = 0, totalKg = 0;
+      const rowsHtml = rows.map(r => {
         const b = batchMap[r[1]] || {};
         const productName = b.product || prodMap[r[5]] || r[5] || '—';
-        const packName = packMap[r[6]] || r[6] || '—';
         const kg = parseFloat(r[8]) || 0;
-        return `
-          <tr style="border-bottom:1px solid var(--surface2);">
-            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
-            <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
-          </tr>`;
+        const qty = parseInt(r[7]) || 0;
+        totalQty += qty;
+        totalKg += kg;
+        return `<tr style="border-bottom:1px solid var(--surface2);">
+          <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
+          <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${qty}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
+        </tr>`;
       }).join('');
+      const totalRow = `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+        <td style="padding:9px 8px;font-weight:800;font-size:13px;" colspan="2">סה"כ</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--blue);">${totalQty}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
+      </tr>`;
+      body.innerHTML = rowsHtml + totalRow;
     }
 
+    const hummusRows = todayReports.filter(r => {
+      const b = batchMap[r[1]] || {};
+      return hummusProducts.includes(b.productCode || r[5]);
+    });
+    const tahiniRows = todayReports.filter(r => {
+      const b = batchMap[r[1]] || {};
+      return tahiniProducts.includes(b.productCode || r[5]);
+    });
+
+    buildHtTable('pkg-hummus-body', hummusRows);
+    buildHtTable('pkg-tahini-body', tahiniRows);
     // סיכום אצוות יומי לשימוש פנימי
     const batchSummary = {};
     todayReports.forEach(r => {
