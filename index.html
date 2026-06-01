@@ -354,8 +354,9 @@
           <tr style="border-bottom:2px solid var(--border);">
             <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
             <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">קוד אצווה</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">תאריך פתיחה</th>
             <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">פג תוקף</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">🛁</th>
           </tr>
         </thead>
         <tbody id="pkg-batches-body">
@@ -402,6 +403,25 @@
 
   <!-- טבלות פירוט יומי לכל אורזת -->
   <div id="pkg-packer-tables"></div>
+
+  <!-- חומוס וטחינה -->
+  <div class="card">
+    <div class="card-title">חומוס וטחינה – יומי 🥙</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אריזה</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-hummus-tahini-body">
+        <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
+  </div>
 
 </div>
 </div>
@@ -909,6 +929,7 @@ async function loadPackagingData() {
       if (r[0]) batchMap[r[0]] = {
         id: r[0],
         packer: r[1] || '',
+        productCode: r[2] || '',
         product: prodMap[r[2]] || r[2] || '',
         mfgDate: parseDate(r[4]),
         expDate: parseDate(r[5]),
@@ -942,13 +963,18 @@ async function loadPackagingData() {
       const bid = r[1];
       if (!bid) return;
       if (!reportedTubs[bid]) reportedTubs[bid] = 0;
-      reportedTubs[bid] += parseFloat(r[16]) || 0;
+      const tubs = parseFloat(r[16]);
+      // מסנן ערכים חריגים (מעל 50 כנראה שגיאה מהנתונים הישנים)
+      if (!isNaN(tubs) && tubs > 0 && tubs <= 50) {
+        reportedTubs[bid] += tubs;
+      }
     });
 
     // עמודה 3 באצוות = כמות_אמבטיות
     const openBatches = batchRows.filter(r => {
       if (!r[0]) return false;
       const planned = parseFloat(r[3]) || 0;
+      if (planned === 0) return false;
       const reported = reportedTubs[r[0]] || 0;
       return reported < planned;
     });
@@ -957,18 +983,52 @@ async function loadPackagingData() {
 
     const batchBody = document.getElementById('pkg-batches-body');
     if (openBatches.length === 0) {
-      batchBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות פתוחות</td></tr>';
+      batchBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות פתוחות</td></tr>';
     } else {
       batchBody.innerHTML = openBatches.map(r => {
         const b = batchMap[r[0]] || {};
         const planned = parseFloat(r[3]) || 0;
         const reported = reportedTubs[r[0]] || 0;
+        const openDate = parseDate(r[4]); // תאריך_יצור = עמודה 4
         return `
           <tr style="border-bottom:1px solid var(--surface2);">
             <td style="padding:9px 8px;font-weight:600;font-size:13px;">${b.product || '—'}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);">${r[0]}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(openDate)}</td>
             <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.expDate)}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--yellow);font-weight:700;">${reported}/${planned} 🛁</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--yellow);font-weight:700;">${reported}/${planned}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    // טבלת חומוס וטחינה
+    const hummusTahiniProducts = [
+      'p011','p017','p018','p019','p020','p021','p022','p023', // חומוס
+      'p012','p013','p014','p056','p057','p058','p059','p060'  // טחינה
+    ];
+
+    const htBody = document.getElementById('pkg-hummus-tahini-body');
+    const htRows = todayReports.filter(r => {
+      const b = batchMap[r[1]] || {};
+      const productCode = b.productCode || r[5];
+      return hummusTahiniProducts.includes(productCode);
+    });
+
+    if (htRows.length === 0) {
+      htBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים של חומוס וטחינה היום</td></tr>';
+    } else {
+      htBody.innerHTML = htRows.map(r => {
+        const b = batchMap[r[1]] || {};
+        const productName = b.product || prodMap[r[5]] || r[5] || '—';
+        const packName = packMap[r[6]] || r[6] || '—';
+        const kg = parseFloat(r[8]) || 0;
+        return `
+          <tr style="border-bottom:1px solid var(--surface2);">
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
+            <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
+            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${r[7] || 0}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
           </tr>`;
       }).join('');
     }
