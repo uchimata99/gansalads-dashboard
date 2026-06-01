@@ -983,32 +983,49 @@ async function loadPackagingData() {
     });
 
     // עמודה 3 באצוות = כמות_אמבטיות
-    const openBatches = batchRows.filter(r => {
+    // אצוות פתוחות = לא הושלמו
+    // + אצוות שנפתחו היום (גם סגורות)
+    const todayBatchIds = new Set(todayReports.map(r => r[1]).filter(Boolean));
+
+    const displayBatches = batchRows.filter(r => {
       if (!r[0]) return false;
       const planned = parseFloat(r[3]) || 0;
       if (planned === 0) return false;
       const reported = reportedTubs[r[0]] || 0;
-      return reported < planned;
+      const isOpen = reported < planned;
+      const isToday = todayBatchIds.has(r[0]);
+      // הצג אם פתוחה, או אם נפתחה/נסגרה היום
+      return isOpen || isToday;
     });
 
-    document.getElementById('pkg-kpi-batches').textContent = openBatches.length;
+    // ספירת אצוות פתוחות בלבד ל-KPI
+    const openCount = displayBatches.filter(r => {
+      const planned = parseFloat(r[3]) || 0;
+      const reported = reportedTubs[r[0]] || 0;
+      return reported < planned;
+    }).length;
+
+    document.getElementById('pkg-kpi-batches').textContent = openCount;
 
     const batchBody = document.getElementById('pkg-batches-body');
-    if (openBatches.length === 0) {
+    if (displayBatches.length === 0) {
       batchBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">אין אצוות פתוחות</td></tr>';
     } else {
-      batchBody.innerHTML = openBatches.map(r => {
+      batchBody.innerHTML = displayBatches.map(r => {
         const b = batchMap[r[0]] || {};
         const planned = parseFloat(r[3]) || 0;
         const reported = reportedTubs[r[0]] || 0;
-        const openDate = parseDate(r[4]); // תאריך_יצור = עמודה 4
+        const isOpen = reported < planned;
+        const openDate = parseDate(r[4]);
+        const textColor = isOpen ? 'var(--text)' : 'var(--green)';
+        const tubsColor = isOpen ? 'var(--yellow)' : 'var(--green)';
         return `
           <tr style="border-bottom:1px solid var(--surface2);">
-            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${b.product || '—'}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);">${r[0]}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(openDate)}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${fmtD(b.expDate)}</td>
-            <td style="padding:9px 8px;font-size:12px;color:var(--yellow);font-weight:700;">${reported}/${planned}</td>
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;color:${textColor};">${b.product || '—'}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${isOpen ? 'var(--blue)' : 'var(--green)'};">${r[0]}</td>
+            <td style="padding:9px 8px;font-size:12px;color:${textColor};">${fmtD(openDate)}</td>
+            <td style="padding:9px 8px;font-size:12px;color:${textColor};">${fmtD(b.expDate)}</td>
+            <td style="padding:9px 8px;font-size:12px;color:${tubsColor};font-weight:700;">${isOpen ? reported + '/' + planned : '✓ ' + planned + '/' + planned}</td>
           </tr>`;
       }).join('');
     }
@@ -1187,19 +1204,19 @@ async function loadPackagingData() {
 
     const htDow = today.getDay();
     const htWkStart = new Date(today); htWkStart.setDate(today.getDate() - htDow);
-    const htDailyPackers = {};
-    const htWeeklyPackers = {};
+    const htDailyProducts = {};
+    const htWeeklyProducts = {};
 
     todayReports.forEach(r => {
       const b = batchMap[r[1]] || {};
       const productCode = b.productCode || r[5];
       if (!hummusTahiniProducts.includes(productCode)) return;
-      const packer = r[4] || 'אחר';
+      const productName = b.product || prodMap[r[5]] || r[5] || '—';
       const kg = parseFloat(r[8]) || 0;
       const qty = parseInt(r[7]) || 0;
-      if (!htDailyPackers[packer]) htDailyPackers[packer] = {kg:0, qty:0};
-      htDailyPackers[packer].kg += kg;
-      htDailyPackers[packer].qty += qty;
+      if (!htDailyProducts[productName]) htDailyProducts[productName] = {kg:0, qty:0};
+      htDailyProducts[productName].kg += kg;
+      htDailyProducts[productName].qty += qty;
     });
 
     reportRows.forEach(r => {
@@ -1208,18 +1225,18 @@ async function loadPackagingData() {
       const b = batchMap[r[1]] || {};
       const productCode = b.productCode || r[5];
       if (!hummusTahiniProducts.includes(productCode)) return;
-      const packer = r[4] || 'אחר';
+      const productName = b.product || prodMap[r[5]] || r[5] || '—';
       const kg = parseFloat(r[8]) || 0;
       const qty = parseInt(r[7]) || 0;
-      if (!htWeeklyPackers[packer]) htWeeklyPackers[packer] = {kg:0, qty:0};
-      htWeeklyPackers[packer].kg += kg;
-      htWeeklyPackers[packer].qty += qty;
+      if (!htWeeklyProducts[productName]) htWeeklyProducts[productName] = {kg:0, qty:0};
+      htWeeklyProducts[productName].kg += kg;
+      htWeeklyProducts[productName].qty += qty;
     });
 
-    // גרף יומי חומוס וטחינה
+    // גרף יומי חומוס וטחינה לפי מוצר
     const ctxHT1 = document.getElementById('pkg-chart-ht-daily').getContext('2d');
     if (window._pkgChartHT1) window._pkgChartHT1.destroy();
-    const htDailyLabels = Object.keys(htDailyPackers);
+    const htDailyLabels = Object.keys(htDailyProducts);
     window._pkgChartHT1 = new Chart(ctxHT1, {
       type: 'bar',
       data: {
@@ -1227,13 +1244,13 @@ async function loadPackagingData() {
         datasets: [
           {
             label: 'ק"ג נטו',
-            data: htDailyLabels.map(p => htDailyPackers[p].kg),
+            data: htDailyLabels.map(p => htDailyProducts[p].kg),
             backgroundColor: htDailyLabels.map((_, i) => colors[i % colors.length]),
             borderRadius: 4,
           },
           {
             label: 'כמות אריזות',
-            data: htDailyLabels.map(p => htDailyPackers[p].qty),
+            data: htDailyLabels.map(p => htDailyProducts[p].qty),
             backgroundColor: htDailyLabels.map((_, i) => createDotPattern(colors[i % colors.length])),
             borderColor: htDailyLabels.map((_, i) => colors[i % colors.length]),
             borderWidth: 1,
@@ -1248,10 +1265,10 @@ async function loadPackagingData() {
       }
     });
 
-    // גרף שבועי חומוס וטחינה
+    // גרף שבועי חומוס וטחינה לפי מוצר
     const ctxHT2 = document.getElementById('pkg-chart-ht-weekly').getContext('2d');
     if (window._pkgChartHT2) window._pkgChartHT2.destroy();
-    const htWeeklyLabels = Object.keys(htWeeklyPackers);
+    const htWeeklyLabels = Object.keys(htWeeklyProducts);
     window._pkgChartHT2 = new Chart(ctxHT2, {
       type: 'bar',
       data: {
@@ -1259,13 +1276,13 @@ async function loadPackagingData() {
         datasets: [
           {
             label: 'ק"ג נטו',
-            data: htWeeklyLabels.map(p => htWeeklyPackers[p].kg),
+            data: htWeeklyLabels.map(p => htWeeklyProducts[p].kg),
             backgroundColor: htWeeklyLabels.map((_, i) => colors[i % colors.length]),
             borderRadius: 4,
           },
           {
             label: 'כמות אריזות',
-            data: htWeeklyLabels.map(p => htWeeklyPackers[p].qty),
+            data: htWeeklyLabels.map(p => htWeeklyProducts[p].qty),
             backgroundColor: htWeeklyLabels.map((_, i) => createDotPattern(colors[i % colors.length])),
             borderColor: htWeeklyLabels.map((_, i) => colors[i % colors.length]),
             borderWidth: 1,
@@ -1314,6 +1331,7 @@ async function loadPackagingData() {
       if (!d) return;
       if (d < wkStart || d > today) return;
       const packer = r[4] || 'אחר';
+      if (packer === 'אילנה') return; // לא מציג אילנה בגרף
       if (!packerData[packer]) packerData[packer] = {kg: 0, qty: 0};
       packerData[packer].kg += parseFloat(r[8]) || 0;
       packerData[packer].qty += parseInt(r[7]) || 0;
@@ -1323,6 +1341,7 @@ async function loadPackagingData() {
     const dailyPackerData = {};
     todayReports.forEach(r => {
       const packer = r[4] || 'אחר';
+      if (packer === 'אילנה') return; // לא מציג אילנה בגרף
       if (!dailyPackerData[packer]) dailyPackerData[packer] = {kg: 0, qty: 0};
       dailyPackerData[packer].kg += parseFloat(r[8]) || 0;
       dailyPackerData[packer].qty += parseInt(r[7]) || 0;
