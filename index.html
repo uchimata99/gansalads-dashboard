@@ -384,23 +384,6 @@
 
   </div>
 
-  <!-- צבירה שבועית לפי מוצר -->
-  <div class="card">
-    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
-        </tr>
-      </thead>
-      <tbody id="pkg-weekly-body">
-        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
   <!-- טבלות פירוט יומי לכל אורזת -->
   <div id="pkg-packer-tables"></div>
 
@@ -419,6 +402,35 @@
       </thead>
       <tbody id="pkg-hummus-tahini-body">
         <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- גרפי חומוס וטחינה -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-title">חומוס וטחינה – יומי לפי אורזת</div>
+      <canvas id="pkg-chart-ht-daily" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">חומוס וטחינה – נצבר שבועי לפי אורזת</div>
+      <canvas id="pkg-chart-ht-weekly" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- צבירה שבועית לפי מוצר -->
+  <div class="card">
+    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-weekly-body">
+        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
       </tbody>
     </table>
   </div>
@@ -1157,8 +1169,99 @@ async function loadPackagingData() {
       }
     }
 
-    // צבירה שבועית לפי מוצר
-    const dow = today.getDay();
+    // גרפי חומוס וטחינה
+    const htDailyPackers = {};
+    const htWeeklyPackers = {};
+
+    todayReports.forEach(r => {
+      const b = batchMap[r[1]] || {};
+      const productCode = b.productCode || r[5];
+      if (!hummusTahiniProducts.includes(productCode)) return;
+      const packer = r[4] || 'אחר';
+      const kg = parseFloat(r[8]) || 0;
+      const qty = parseInt(r[7]) || 0;
+      if (!htDailyPackers[packer]) htDailyPackers[packer] = {kg:0, qty:0};
+      htDailyPackers[packer].kg += kg;
+      htDailyPackers[packer].qty += qty;
+    });
+
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d || d < wkStart || d > today) return;
+      const b = batchMap[r[1]] || {};
+      const productCode = b.productCode || r[5];
+      if (!hummusTahiniProducts.includes(productCode)) return;
+      const packer = r[4] || 'אחר';
+      const kg = parseFloat(r[8]) || 0;
+      const qty = parseInt(r[7]) || 0;
+      if (!htWeeklyPackers[packer]) htWeeklyPackers[packer] = {kg:0, qty:0};
+      htWeeklyPackers[packer].kg += kg;
+      htWeeklyPackers[packer].qty += qty;
+    });
+
+    // גרף יומי חומוס וטחינה
+    const ctxHT1 = document.getElementById('pkg-chart-ht-daily').getContext('2d');
+    if (window._pkgChartHT1) window._pkgChartHT1.destroy();
+    const htDailyLabels = Object.keys(htDailyPackers);
+    window._pkgChartHT1 = new Chart(ctxHT1, {
+      type: 'bar',
+      data: {
+        labels: htDailyLabels,
+        datasets: [
+          {
+            label: 'ק"ג נטו',
+            data: htDailyLabels.map(p => htDailyPackers[p].kg),
+            backgroundColor: htDailyLabels.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: htDailyLabels.map(p => htDailyPackers[p].qty),
+            backgroundColor: htDailyLabels.map((_, i) => createDotPattern(colors[i % colors.length])),
+            borderColor: htDailyLabels.map((_, i) => colors[i % colors.length]),
+            borderWidth: 1,
+            borderRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } } },
+        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
+      }
+    });
+
+    // גרף שבועי חומוס וטחינה
+    const ctxHT2 = document.getElementById('pkg-chart-ht-weekly').getContext('2d');
+    if (window._pkgChartHT2) window._pkgChartHT2.destroy();
+    const htWeeklyLabels = Object.keys(htWeeklyPackers);
+    window._pkgChartHT2 = new Chart(ctxHT2, {
+      type: 'bar',
+      data: {
+        labels: htWeeklyLabels,
+        datasets: [
+          {
+            label: 'ק"ג נטו',
+            data: htWeeklyLabels.map(p => htWeeklyPackers[p].kg),
+            backgroundColor: htWeeklyLabels.map((_, i) => colors[i % colors.length]),
+            borderRadius: 4,
+          },
+          {
+            label: 'כמות אריזות',
+            data: htWeeklyLabels.map(p => htWeeklyPackers[p].qty),
+            backgroundColor: htWeeklyLabels.map((_, i) => createDotPattern(colors[i % colors.length])),
+            borderColor: htWeeklyLabels.map((_, i) => colors[i % colors.length]),
+            borderWidth: 1,
+            borderRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10 } } },
+        scales: { y: { beginAtZero: true, ticks: { font: { size: 9 }, maxTicksLimit: 5 } } }
+      }
+    });
     const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
     const weeklyProducts = {};
     reportRows.forEach(r => {
