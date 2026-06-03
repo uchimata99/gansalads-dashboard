@@ -447,12 +447,13 @@
       <thead>
         <tr style="border-bottom:2px solid var(--border);">
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
         </tr>
       </thead>
       <tbody id="pkg-weekly-body">
-        <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
       </tbody>
     </table>
   </div>
@@ -993,16 +994,21 @@ async function loadPackagingData() {
     // אצוות פתוחות = סכום כמות_אמבטיות_מדווח < כמות_אמבטיות באצווה
     // עמודה 16 בדיווח = כמות_אמבטיות_מדווח
     const reportedTubs = {};
+    const hasDivooch = new Set(); // אצוות שיש להן דיווח כלשהו
     reportRows.forEach(r => {
       const bid = r[1];
       if (!bid) return;
-      if (!reportedTubs[bid]) reportedTubs[bid] = 0;
+      hasDivooch.add(bid);
       const tubs = parseFloat(r[16]);
-      // מסנן ערכים חריגים (מעל 50 כנראה שגיאה מהנתונים הישנים)
-      if (!isNaN(tubs) && tubs > 0 && tubs <= 50) {
+      // סופר רק ערכים חיוביים
+      if (!isNaN(tubs) && tubs > 0) {
+        if (!reportedTubs[bid]) reportedTubs[bid] = 0;
         reportedTubs[bid] += tubs;
       }
     });
+
+    // אצווה פתוחה = סכום אמבטיות שדווחו < מתוכנן
+    // אצווה עם דיווח של 0 אמבטיות עדיין נחשבת פתוחה!
 
     // עמודה 3 באצוות = כמות_אמבטיות
     // אצוות פתוחות = לא הושלמו
@@ -1456,6 +1462,18 @@ async function loadPackagingData() {
       }
     });
     const weeklyProducts = {};
+    // ספירת אצוות לפי מוצר בשבוע
+    const weeklyBatchesByProduct = {};
+    batchRows.forEach(r => {
+      if (!r[0]) return;
+      const openDate = parseDate(r[4]);
+      if (!openDate || openDate < wkStart || openDate > today) return;
+      const b = batchMap[r[0]] || {};
+      const productName = b.product || '—';
+      if (!weeklyBatchesByProduct[productName]) weeklyBatchesByProduct[productName] = new Set();
+      weeklyBatchesByProduct[productName].add(r[0]);
+    });
+
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
       if (!d) return;
@@ -1469,16 +1487,30 @@ async function loadPackagingData() {
 
     const weeklyBody = document.getElementById('pkg-weekly-body');
     if (Object.keys(weeklyProducts).length === 0) {
-      weeklyBody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
+      weeklyBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
     } else {
-      weeklyBody.innerHTML = Object.entries(weeklyProducts)
+      let totalQty = 0, totalKg = 0, totalBatches = 0;
+      const rowsHtml = Object.entries(weeklyProducts)
         .sort((a,b) => b[1].kg - a[1].kg)
-        .map(([name, d]) => `
-          <tr style="border-bottom:1px solid var(--surface2);">
+        .map(([name, d]) => {
+          const batches = weeklyBatchesByProduct[name] ? weeklyBatchesByProduct[name].size : 0;
+          totalQty += d.qty;
+          totalKg += d.kg;
+          totalBatches += batches;
+          return `<tr style="border-bottom:1px solid var(--surface2);">
             <td style="padding:9px 8px;font-weight:600;font-size:13px;">${name}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);">${batches}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
-          </tr>`).join('');
+          </tr>`;
+        }).join('');
+      const totalRow = `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+        <td style="padding:9px 8px;font-weight:800;font-size:13px;">סה"כ</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--purple);">${totalBatches}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--blue);">${totalQty}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
+      </tr>`;
+      weeklyBody.innerHTML = rowsHtml + totalRow;
     }
 
     // שמירת נתוני אורזות לשימוש בpopup
