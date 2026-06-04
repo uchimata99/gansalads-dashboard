@@ -401,59 +401,6 @@
   <!-- טבלות פירוט יומי לכל אורזת -->
   <div id="pkg-packer-tables"></div>
 
-  <!-- חומוס וטחינה – שתי טבלאות -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-
-    <!-- חומוס -->
-    <div class="card">
-      <div class="card-title">חומוס – יומי 🫘</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-          </tr>
-        </thead>
-        <tbody id="pkg-hummus-body">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- טחינה -->
-    <div class="card">
-      <div class="card-title">טחינה – יומי 🫙</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-          </tr>
-        </thead>
-        <tbody id="pkg-tahini-body">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <!-- גרפי חומוס וטחינה -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-    <div class="card">
-      <div class="card-title">חומוס וטחינה – יומי לפי אורזת</div>
-      <canvas id="pkg-chart-ht-daily" height="160"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title">חומוס וטחינה – נצבר שבועי לפי אורזת</div>
-      <canvas id="pkg-chart-ht-weekly" height="160"></canvas>
-    </div>
-  </div>
-
   <!-- צבירה שבועית – שתי טבלאות -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
@@ -1279,11 +1226,19 @@ async function loadPackagingData() {
     const today = new Date(); today.setHours(0,0,0,0);
 
     // דיווח: עמודות: מזהה_דיווח, מזהה_אצווה, תאריך, שעה, אורזת, מוצר, משקל_אריזה, כמות_אריזות, סהכ_משקל_קג
+    const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
+    const tahiniProducts = ['p012','p013','p014','p056','p057','p058','p059','p060'];
+    const hummusTahiniProducts = [...hummusProducts, ...tahiniProducts];
+
     const todayReports = reportRows.filter(r => {
       const d = parseDate(r[2]);
       if (!d) return false;
       d.setHours(0,0,0,0);
-      return d.getTime() === today.getTime();
+      if (d.getTime() !== today.getTime()) return false;
+      // סינון חומוס וטחינה – יופיעו בטאב הנפרד
+      const b = batchMap[r[1]] || {};
+      const code = b.productCode || r[5];
+      return !hummusTahiniProducts.includes(code);
     });
 
     // KPIs
@@ -1377,10 +1332,6 @@ async function loadPackagingData() {
           </tr>`;
       }).join('');
     }
-
-    const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
-    const tahiniProducts = ['p012','p013','p014','p056','p057','p058','p059','p060'];
-    const hummusTahiniProducts = [...hummusProducts, ...tahiniProducts];
 
     function buildHtTable(bodyId, rows) {
       const body = document.getElementById(bodyId);
