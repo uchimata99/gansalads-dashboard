@@ -219,6 +219,7 @@
 <div class="tabs">
   <div class="tab active" onclick="switchTab('processing')">🥦 מחלקת עיבוד ירקות</div>
   <div class="tab" onclick="switchTab('packaging')">📦 מחלקת אריזה</div>
+  <div class="tab" onclick="switchTab('hummus')">🫘 חומוס וטחינה</div>
 </div>
 
 <!-- ===== עיבוד ירקות ===== -->
@@ -453,28 +454,133 @@
     </div>
   </div>
 
-  <!-- צבירה שבועית לפי מוצר -->
-  <div class="card">
-    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות אריזות</th>
-          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">סה"כ ק"ג</th>
-        </tr>
-      </thead>
-      <tbody id="pkg-weekly-body">
-        <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-      </tbody>
-    </table>
+  <!-- צבירה שבועית – שתי טבלאות -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- שאר המוצרים -->
+    <div class="card">
+      <div class="card-title">צבירה שבועית – שאר מוצרים <span class="pill pb" id="pkg-week-pill">—</span></div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-weekly-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- חומוס וטחינה -->
+    <div class="card">
+      <div class="card-title">צבירה שבועית – חומוס וטחינה 🫘🫙</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-weekly-ht-body">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- גרף השוואת ק"ג היום לשבועות קודמים -->
   <div class="card">
     <div class="card-title">השוואת ק"ג לאותו יום בשבועות קודמים</div>
     <canvas id="pkg-chart-weekly-compare" height="160"></canvas>
+  </div>
+
+</div>
+</div>
+
+<!-- ===== חומוס וטחינה ===== -->
+<div class="page" id="page-hummus">
+<div class="main">
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi b"><div class="kpi-label">סה"כ ק"ג היום</div><div class="kpi-num" id="ht-kpi-kg">—</div><div class="kpi-sub">חומוס וטחינה</div></div>
+    <div class="kpi g"><div class="kpi-label">אריזות היום</div><div class="kpi-num" id="ht-kpi-qty">—</div><div class="kpi-sub">כמות אריזות</div></div>
+    <div class="kpi p"><div class="kpi-label">אצוות פתוחות</div><div class="kpi-num" id="ht-kpi-batches">—</div><div class="kpi-sub">חומוס וטחינה</div></div>
+  </div>
+
+  <!-- טבלאות יומיות -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-title">חומוס – יומי 🫘</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr></thead>
+        <tbody id="ht-hummus-body"><tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">טחינה – יומי 🫙</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אורזת</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr></thead>
+        <tbody id="ht-tahini-body"><tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- גרפים יומי ושבועי -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-title">חומוס וטחינה – יומי לפי מוצר</div>
+      <canvas id="ht-chart-daily" height="180"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">חומוס וטחינה – נצבר שבועי לפי מוצר</div>
+      <canvas id="ht-chart-weekly" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- צבירה שבועית -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-title">צבירה שבועית – חומוס 🫘</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr></thead>
+        <tbody id="ht-weekly-hummus-body"><tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">צבירה שבועית – טחינה 🫙</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr></thead>
+        <tbody id="ht-weekly-tahini-body"><tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -621,6 +727,184 @@ function toggleWeekly(key) {
   }
 }
 
+async function loadHummusTahiniTab() {
+  try {
+    const [reportRows, batchRows, packRows, uniqueRows] = await Promise.all([
+      fetchPkgSheet(PKG_SHEET_ID, 'דיווח').catch(()=>[]),
+      fetchPkgSheet(PKG_SHEET_ID, 'אצוות').catch(()=>[]),
+      fetchPkgSheet(PKG_SHEET_ID, 'אריזות').catch(()=>[]),
+      fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים').catch(()=>[]),
+    ]);
+
+    const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
+    const tahiniProducts = ['p012','p013','p014','p056','p057','p058','p059','p060'];
+    const htProducts = [...hummusProducts, ...tahiniProducts];
+
+    const prodMap = {};
+    uniqueRows.forEach(r => { if (r[0]) prodMap[r[0]] = r[1]; });
+    const packMap = {};
+    packRows.forEach(r => { if (r[0]) packMap[r[0]] = r[1]; });
+    const batchMap = {};
+    batchRows.forEach(r => {
+      if (r[0]) batchMap[r[0]] = { product: prodMap[r[2]] || r[2] || '—', productCode: r[2] || '' };
+    });
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dow = today.getDay();
+    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+
+    const todayRows = reportRows.filter(r => { const d = parseDate(r[2]); return d && d.getTime() === today.getTime(); });
+
+    // פילטור חומוס וטחינה
+    const htTodayRows = todayRows.filter(r => { const b = batchMap[r[1]] || {}; return htProducts.includes(b.productCode || r[5]); });
+    const hummusRows = htTodayRows.filter(r => { const b = batchMap[r[1]] || {}; return hummusProducts.includes(b.productCode || r[5]); });
+    const tahiniRows = htTodayRows.filter(r => { const b = batchMap[r[1]] || {}; return tahiniProducts.includes(b.productCode || r[5]); });
+
+    // KPI
+    const htKg = htTodayRows.reduce((s,r) => s + (parseFloat(r[8]) || 0), 0);
+    const htQty = htTodayRows.reduce((s,r) => s + (parseInt(r[7]) || 0), 0);
+    const reportedTubs = {};
+    reportRows.forEach(r => { if (r[1]) { if (!reportedTubs[r[1]]) reportedTubs[r[1]] = 0; const t = parseFloat(r[16]); if (!isNaN(t) && t > 0) reportedTubs[r[1]] += t; } });
+    const htOpenBatches = batchRows.filter(r => {
+      if (!r[0]) return false;
+      const b = batchMap[r[0]] || {};
+      if (!htProducts.includes(b.productCode)) return false;
+      const planned = parseFloat(r[3]) || 0;
+      return (reportedTubs[r[0]] || 0) < planned;
+    }).length;
+
+    document.getElementById('ht-kpi-kg').textContent = htKg.toFixed(1);
+    document.getElementById('ht-kpi-qty').textContent = htQty;
+    document.getElementById('ht-kpi-batches').textContent = htOpenBatches;
+
+    // טבלאות יומיות
+    function buildTable(bodyId, rows) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      if (!rows.length) { body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים היום</td></tr>'; return; }
+      let tKg = 0, tQty = 0;
+      const html = rows.map(r => {
+        const b = batchMap[r[1]] || {};
+        const kg = parseFloat(r[8]) || 0;
+        const qty = parseInt(r[7]) || 0;
+        tKg += kg; tQty += qty;
+        return `<tr style="border-bottom:1px solid var(--surface2);">
+          <td style="padding:9px 8px;font-weight:600;font-size:13px;">${b.product || '—'}</td>
+          <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${qty}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = html + `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+        <td colspan="2" style="padding:9px 8px;font-weight:800;">סה"כ</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--blue);">${tQty}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--green);">${tKg.toFixed(1)}</td>
+      </tr>`;
+    }
+
+    buildTable('ht-hummus-body', hummusRows);
+    buildTable('ht-tahini-body', tahiniRows);
+
+    // גרפים יומי ושבועי לפי מוצר
+    const colors = ['#2d6a3f','#2a5a88','#6b3fa0','#b8890e','#b03030','#2d7a6a','#8b4513'];
+    function createDotPat(color) {
+      const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+      const x = c.getContext('2d');
+      x.fillStyle = color; x.beginPath(); x.arc(4,4,2,0,Math.PI*2); x.fill();
+      return x.createPattern(c,'repeat');
+    }
+
+    const dailyByProd = {}, weeklyByProd = {};
+    htTodayRows.forEach(r => {
+      const b = batchMap[r[1]] || {};
+      const n = b.product || '—';
+      if (!dailyByProd[n]) dailyByProd[n] = {kg:0,qty:0};
+      dailyByProd[n].kg += parseFloat(r[8]) || 0;
+      dailyByProd[n].qty += parseInt(r[7]) || 0;
+    });
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d || d < wkStart || d > today) return;
+      const b = batchMap[r[1]] || {};
+      if (!htProducts.includes(b.productCode || r[5])) return;
+      const n = b.product || prodMap[r[5]] || '—';
+      if (!weeklyByProd[n]) weeklyByProd[n] = {kg:0,qty:0};
+      weeklyByProd[n].kg += parseFloat(r[8]) || 0;
+      weeklyByProd[n].qty += parseInt(r[7]) || 0;
+    });
+
+    function buildChart(canvasId, dataObj, chartRef) {
+      const ctx = document.getElementById(canvasId)?.getContext('2d');
+      if (!ctx) return;
+      if (window[chartRef]) window[chartRef].destroy();
+      const labels = Object.keys(dataObj);
+      window[chartRef] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: 'ק"ג', data: labels.map(p => dataObj[p].kg), backgroundColor: labels.map((_,i) => colors[i%colors.length]), borderRadius: 4 },
+          { label: 'כמות', data: labels.map(p => dataObj[p].qty), backgroundColor: labels.map((_,i) => createDotPat(colors[i%colors.length])), borderColor: labels.map((_,i) => colors[i%colors.length]), borderWidth:1, borderRadius:4 }
+        ]},
+        options: { responsive:true, plugins:{ legend:{ display:true, position:'top', labels:{ font:{size:10}, boxWidth:10 }}}, scales:{ y:{ beginAtZero:true, ticks:{ font:{size:9}, maxTicksLimit:5 }}}}
+      });
+    }
+
+    buildChart('ht-chart-daily', dailyByProd, '_htChartDaily');
+    buildChart('ht-chart-weekly', weeklyByProd, '_htChartWeekly');
+
+    // צבירה שבועית נפרדת לחומוס וטחינה
+    const weeklyHummus = {}, weeklyTahini = {};
+    const batchByProd = {};
+    batchRows.forEach(r => {
+      if (!r[0]) return;
+      const d = parseDate(r[4]);
+      if (!d || d < wkStart || d > today) return;
+      const b = batchMap[r[0]] || {};
+      const n = b.product || '—';
+      if (!batchByProd[n]) batchByProd[n] = new Set();
+      batchByProd[n].add(r[0]);
+    });
+    reportRows.forEach(r => {
+      const d = parseDate(r[2]);
+      if (!d || d < wkStart || d > today) return;
+      const b = batchMap[r[1]] || {};
+      const code = b.productCode || r[5];
+      const n = b.product || prodMap[r[5]] || '—';
+      const target = hummusProducts.includes(code) ? weeklyHummus : tahiniProducts.includes(code) ? weeklyTahini : null;
+      if (!target) return;
+      if (!target[n]) target[n] = {qty:0, kg:0};
+      target[n].qty += parseInt(r[7]) || 0;
+      target[n].kg += parseFloat(r[8]) || 0;
+    });
+
+    function buildWeeklyTable(bodyId, products) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      if (!Object.keys(products).length) { body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>'; return; }
+      let tQty=0, tKg=0, tBatch=0;
+      const html = Object.entries(products).sort((a,b)=>b[1].kg-a[1].kg).map(([n,d])=>{
+        const b = batchByProd[n]?.size || 0;
+        tQty+=d.qty; tKg+=d.kg; tBatch+=b;
+        return `<tr style="border-bottom:1px solid var(--surface2);">
+          <td style="padding:9px 8px;font-weight:600;font-size:13px;">${n}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);">${b}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
+          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = html + `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+        <td style="padding:9px 8px;font-weight:800;">סה"כ</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--purple);">${tBatch}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--blue);">${tQty}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--green);">${tKg.toFixed(1)}</td>
+      </tr>`;
+    }
+
+    buildWeeklyTable('ht-weekly-hummus-body', weeklyHummus);
+    buildWeeklyTable('ht-weekly-tahini-body', weeklyTahini);
+
+  } catch(e) { console.error('HT tab error:', e); }
+}
+
 function showPackerPopup(packer, products, period) {
   const existing = document.getElementById('packer-popup');
   if (existing) existing.remove();
@@ -690,12 +974,13 @@ setInterval(tick,1000); tick();
 
 function switchTab(name){
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    const names=['processing','packaging'];
+    const names=['processing','packaging','hummus'];
     t.classList.toggle('active',names[i]===name);
   });
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id==='page-'+name);
   });
+  if (name === 'hummus') loadHummusTahiniTab();
 }
 
 // Week number and dates calculation
@@ -1034,6 +1319,10 @@ async function loadPackagingData() {
     // + אצוות שנפתחו היום (גם סגורות)
     const todayBatchIds = new Set(todayReports.map(r => r[1]).filter(Boolean));
 
+    // אתמול
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
     const displayBatches = batchRows.filter(r => {
       if (!r[0]) return false;
       const planned = parseFloat(r[3]) || 0;
@@ -1041,8 +1330,10 @@ async function loadPackagingData() {
       const reported = reportedTubs[r[0]] || 0;
       const isOpen = reported < planned;
       const isToday = todayBatchIds.has(r[0]);
-      // הצג אם פתוחה, או אם נפתחה/נסגרה היום
-      return isOpen || isToday;
+      // בדוק אם נפתחה אתמול
+      const openDate = parseDate(r[4]);
+      const isYesterday = openDate && openDate.getTime() === yesterday.getTime();
+      return isOpen || isToday || isYesterday;
     });
 
     // ספירת אצוות פתוחות בלבד ל-KPI
@@ -1481,7 +1772,8 @@ async function loadPackagingData() {
       }
     });
     const weeklyProducts = {};
-    // ספירת אצוות לפי מוצר בשבוע
+    const weeklyProductsHT = {};
+
     const weeklyBatchesByProduct = {};
     batchRows.forEach(r => {
       if (!r[0]) return;
@@ -1495,21 +1787,26 @@ async function loadPackagingData() {
 
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d) return;
-      if (d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > today) return;
       const b = batchMap[r[1]] || {};
+      const productCode = b.productCode || r[5];
       const productName = b.product || prodMap[r[5]] || r[5] || '—';
-      if (!weeklyProducts[productName]) weeklyProducts[productName] = {qty: 0, kg: 0};
-      weeklyProducts[productName].qty += parseInt(r[7]) || 0;
-      weeklyProducts[productName].kg += parseFloat(r[8]) || 0;
+      const isHT = hummusTahiniProducts.includes(productCode);
+      const target = isHT ? weeklyProductsHT : weeklyProducts;
+      if (!target[productName]) target[productName] = {qty: 0, kg: 0};
+      target[productName].qty += parseInt(r[7]) || 0;
+      target[productName].kg += parseFloat(r[8]) || 0;
     });
 
-    const weeklyBody = document.getElementById('pkg-weekly-body');
-    if (Object.keys(weeklyProducts).length === 0) {
-      weeklyBody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
-    } else {
+    function renderWeeklyTable(bodyId, products) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      if (Object.keys(products).length === 0) {
+        body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
+        return;
+      }
       let totalQty = 0, totalKg = 0, totalBatches = 0;
-      const rowsHtml = Object.entries(weeklyProducts)
+      const rowsHtml = Object.entries(products)
         .sort((a,b) => b[1].kg - a[1].kg)
         .map(([name, d]) => {
           const batches = weeklyBatchesByProduct[name] ? weeklyBatchesByProduct[name].size : 0;
@@ -1529,8 +1826,11 @@ async function loadPackagingData() {
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--blue);">${totalQty}</td>
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
       </tr>`;
-      weeklyBody.innerHTML = rowsHtml + totalRow;
+      body.innerHTML = rowsHtml + totalRow;
     }
+
+    renderWeeklyTable('pkg-weekly-body', weeklyProducts);
+    renderWeeklyTable('pkg-weekly-ht-body', weeklyProductsHT);
 
     // שמירת נתוני אורזות לשימוש בpopup
     window._packerDetails = {};
@@ -1568,9 +1868,6 @@ async function loadPackagingData() {
     document.getElementById('pkg-kpi-batches-today').textContent = batchesOpenedToday;
 
     // חישוב אתמול
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
     const yesterdayReports = reportRows.filter(r => {
       const d = parseDate(r[2]);
       return d && d.getTime() === yesterday.getTime();
