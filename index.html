@@ -401,45 +401,22 @@
   <!-- טבלות פירוט יומי לכל אורזת -->
   <div id="pkg-packer-tables"></div>
 
-  <!-- צבירה שבועית – שתי טבלאות -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-
-    <!-- שאר המוצרים -->
-    <div class="card">
-      <div class="card-title">צבירה שבועית – שאר מוצרים <span class="pill pb" id="pkg-week-pill">—</span></div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-          </tr>
-        </thead>
-        <tbody id="pkg-weekly-body">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- חומוס וטחינה -->
-    <div class="card">
-      <div class="card-title">צבירה שבועית – חומוס וטחינה 🫘🫙</div>
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
-            <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
-          </tr>
-        </thead>
-        <tbody id="pkg-weekly-ht-body">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
+  <!-- צבירה שבועית -->
+  <div class="card">
+    <div class="card-title">צבירה שבועית לפי מוצר <span class="pill pb" id="pkg-week-pill">—</span></div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">אצוות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">כמות</th>
+          <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">ק"ג</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-weekly-body">
+        <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">טוען...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- גרף השוואת ק"ג היום לשבועות קודמים -->
@@ -1682,9 +1659,8 @@ async function loadPackagingData() {
       }
     });
     const weeklyProducts = {};
-    const weeklyProductsHT = {};
-
     const weeklyBatchesByProduct = {};
+
     batchRows.forEach(r => {
       if (!r[0]) return;
       const openDate = parseDate(r[4]);
@@ -1700,12 +1676,11 @@ async function loadPackagingData() {
       if (!d || d < wkStart || d > today) return;
       const b = batchMap[r[1]] || {};
       const productCode = b.productCode || r[5];
+      if (hummusTahiniProducts.includes(productCode)) return; // מסנן חומוס וטחינה
       const productName = b.product || prodMap[r[5]] || r[5] || '—';
-      const isHT = hummusTahiniProducts.includes(productCode);
-      const target = isHT ? weeklyProductsHT : weeklyProducts;
-      if (!target[productName]) target[productName] = {qty: 0, kg: 0};
-      target[productName].qty += parseInt(r[7]) || 0;
-      target[productName].kg += parseFloat(r[8]) || 0;
+      if (!weeklyProducts[productName]) weeklyProducts[productName] = {qty: 0, kg: 0};
+      weeklyProducts[productName].qty += parseInt(r[7]) || 0;
+      weeklyProducts[productName].kg += parseFloat(r[8]) || 0;
     });
 
     function renderWeeklyTable(bodyId, products) {
@@ -1720,9 +1695,7 @@ async function loadPackagingData() {
         .sort((a,b) => b[1].kg - a[1].kg)
         .map(([name, d]) => {
           const batches = weeklyBatchesByProduct[name] ? weeklyBatchesByProduct[name].size : 0;
-          totalQty += d.qty;
-          totalKg += d.kg;
-          totalBatches += batches;
+          totalQty += d.qty; totalKg += d.kg; totalBatches += batches;
           return `<tr style="border-bottom:1px solid var(--surface2);">
             <td style="padding:9px 8px;font-weight:600;font-size:13px;">${name}</td>
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);">${batches}</td>
@@ -1730,17 +1703,15 @@ async function loadPackagingData() {
             <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
           </tr>`;
         }).join('');
-      const totalRow = `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
-        <td style="padding:9px 8px;font-weight:800;font-size:13px;">סה"כ</td>
-        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--purple);">${totalBatches}</td>
-        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--blue);">${totalQty}</td>
-        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
+      body.innerHTML = rowsHtml + `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+        <td style="padding:9px 8px;font-weight:800;">סה"כ</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--purple);">${totalBatches}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--blue);">${totalQty}</td>
+        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
       </tr>`;
-      body.innerHTML = rowsHtml + totalRow;
     }
 
     renderWeeklyTable('pkg-weekly-body', weeklyProducts);
-    renderWeeklyTable('pkg-weekly-ht-body', weeklyProductsHT);
 
     // שמירת נתוני אורזות לשימוש בpopup
     window._packerDetails = {};
