@@ -1333,47 +1333,6 @@ async function loadPackagingData() {
       }).join('');
     }
 
-    function buildHtTable(bodyId, rows) {
-      const body = document.getElementById(bodyId);
-      if (!body) return;
-      if (rows.length === 0) {
-        body.innerHTML = `<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין דיווחים היום</td></tr>`;
-        return;
-      }
-      let totalQty = 0, totalKg = 0;
-      const rowsHtml = rows.map(r => {
-        const b = batchMap[r[1]] || {};
-        const productName = b.product || prodMap[r[5]] || r[5] || '—';
-        const kg = parseFloat(r[8]) || 0;
-        const qty = parseInt(r[7]) || 0;
-        totalQty += qty;
-        totalKg += kg;
-        return `<tr style="border-bottom:1px solid var(--surface2);">
-          <td style="padding:9px 8px;font-weight:600;font-size:13px;">${productName}</td>
-          <td style="padding:9px 8px;font-size:12px;">${r[4] || '—'}</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${qty}</td>
-          <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${kg.toFixed(1)}</td>
-        </tr>`;
-      }).join('');
-      const totalRow = `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
-        <td style="padding:9px 8px;font-weight:800;font-size:13px;" colspan="2">סה"כ</td>
-        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--blue);">${totalQty}</td>
-        <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:800;color:var(--green);">${totalKg.toFixed(1)}</td>
-      </tr>`;
-      body.innerHTML = rowsHtml + totalRow;
-    }
-
-    const hummusRows = todayReports.filter(r => {
-      const b = batchMap[r[1]] || {};
-      return hummusProducts.includes(b.productCode || r[5]);
-    });
-    const tahiniRows = todayReports.filter(r => {
-      const b = batchMap[r[1]] || {};
-      return tahiniProducts.includes(b.productCode || r[5]);
-    });
-
-    buildHtTable('pkg-hummus-body', hummusRows);
-    buildHtTable('pkg-tahini-body', tahiniRows);
     // סיכום אצוות יומי לשימוש פנימי
     const batchSummary = {};
     todayReports.forEach(r => {
