@@ -8,6 +8,12 @@
 <meta name="theme-color" content="#173f30">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D7%A0%D7%99%D7%94%D7%95%D7%9C%20%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%20%E2%80%94%20%D7%A1%D7%9C%D7%98%D7%99%20%D7%92%D7%9F%22%2C%22short_name%22%3A%22%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%22%2C%22display%22%3A%22standalone%22%2C%22theme_color%22%3A%22%23173f30%22%2C%22background_color%22%3A%22%23f4f0e8%22%7D">
 <title>ניהול רצפת ייצור | סלטי גן</title>
+<script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
+<style>
+html.nofin .fin{display:none!important}
+#finToggle{margin-inline-start:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:3px 9px;font-size:16px;line-height:1.3;cursor:pointer;font-family:inherit}
+#finToggle:hover{background:rgba(255,255,255,.22)}
+</style>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -206,7 +212,8 @@
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">רצפת ייצור</span>
   <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
-  <a href="finance.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <a href="finance.html" class="fin" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <button id="finToggle" onclick="toggleFin()">🙂</button>
 </div>
 
 
@@ -1756,6 +1763,18 @@ setInterval(loadPackagingData, 5 * 60 * 1000);
 // Init
 renderDay();
 renderWeightChart();
+</script>
+<script>
+function toggleFin(){
+  const h=document.documentElement.classList.toggle('nofin');
+  try{localStorage.setItem('gsHideFin',h?'1':'0');}catch(e){}
+  updateFinBtn();
+}
+function updateFinBtn(){
+  const b=document.getElementById('finToggle');
+  if(b)b.textContent=document.documentElement.classList.contains('nofin')?'😊':'🙂';
+}
+updateFinBtn();
 </script>
 </body>
 </html>
