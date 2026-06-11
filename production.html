@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סלטי גן — ניתוח ייצור שבועי 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#1a3a5c;--blue:#2563a8;--lblue:#4a90d9;--sky:#e8f2fb;
+  --green:#16a34a;--lgreen:#dcfce7;--dgreen:#0d5f2c;
+  --amber:#d97706;--lamber:#fef3c7;
+  --red:#dc2626;--lred:#fee2e2;--gray:#64748b;--lgray:#f1f5f9;
+  --white:#fff;--border:#cbd5e1;--text:#1e293b;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+  --teal:#0d9488;--lteal:#ccfbf1;
+  --purple:#7c3aed;--lpurple:#ede9fe;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text);direction:rtl;min-width:320px}
+.header{background:linear-gradient(135deg,var(--dgreen) 0%,var(--green) 100%);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header-brand{display:flex;align-items:center;gap:14px}
+.brand-icon{font-size:36px}
+.brand-name{font-size:22px;font-weight:800;letter-spacing:.3px}
+.brand-sub{font-size:11px;opacity:.8;margin-top:2px}
+.header-kpis{display:flex;gap:10px;flex-wrap:wrap}
+.hkpi{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);padding:8px 14px;border-radius:9px;min-width:120px;text-align:center}
+.hkpi-lbl{font-size:9px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.5px}
+.hkpi-val{font-size:17px;font-weight:800;margin-top:1px}
+/* Main tabs */
+.tabs{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 20px;overflow-x:auto;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.tab{padding:13px 18px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--gray);white-space:nowrap;transition:color .15s,border-color .15s}
+.tab:hover{color:var(--green)}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+/* Sub-tabs */
+.subtabs{display:flex;gap:4px;margin-bottom:18px;background:#f8fafc;padding:5px;border-radius:10px;width:fit-content}
+.subtab{padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:none;border-radius:7px;color:var(--gray);transition:all .15s}
+.subtab:hover{color:var(--navy)}
+.subtab.active{background:#fff;color:var(--green);box-shadow:0 1px 6px rgba(0,0,0,.1)}
+.subpage{display:none}.subpage.active{display:block}
+/* Layout */
+.main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:#fff;border-radius:12px;padding:18px 22px;box-shadow:var(--shadow);margin-bottom:18px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sky);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.card-badge{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--lteal);color:var(--teal)}
+.card-badge.g{background:var(--lgreen);color:var(--green)}
+.card-badge.p{background:var(--lpurple);color:var(--purple)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
+@media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:13px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:11px;padding:15px 17px;box-shadow:var(--shadow);border-top:4px solid var(--blue)}
+.kpi.g{border-top-color:var(--green)}.kpi.a{border-top-color:var(--amber)}.kpi.t{border-top-color:var(--teal)}.kpi.n{border-top-color:var(--navy)}.kpi.r{border-top-color:var(--red)}.kpi.p{border-top-color:var(--purple)}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:800;color:var(--text);line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--gray);margin-top:4px}
+.kpi-sub.g{color:var(--green);font-weight:600}
+.kpi-sub.p{color:var(--purple);font-weight:600}
+.cw{position:relative;height:230px}.cw.t{height:290px}.cw.xt{height:340px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ctrl-lbl{font-size:12px;font-weight:700;color:var(--gray)}
+.ctrl-select{border:2px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:#fff;cursor:pointer;outline:none}
+.ctrl-select:focus{border-color:var(--green)}
+.ctrl-btn{border:2px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-family:inherit;color:var(--text);background:#fff;cursor:pointer;transition:all .15s}
+.ctrl-btn:hover,.ctrl-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
+.ins{background:var(--lteal);border-right:4px solid var(--teal);padding:9px 13px;border-radius:0 8px 8px 0;font-size:11.5px;color:var(--navy);margin-top:9px;line-height:1.7}
+.ins.g{background:var(--lgreen);border-right-color:var(--green)}
+.ins.a{background:var(--lamber);border-right-color:var(--amber)}
+.ins.p{background:var(--lpurple);border-right-color:var(--purple)}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{background:var(--navy);color:#fff;padding:9px 13px;font-weight:700;font-size:11.5px;white-space:nowrap;text-align:center}
+.tbl th:first-child{text-align:right}
+.tbl td{padding:7px 13px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap}
+.tbl td:first-child{text-align:right;font-weight:600;color:var(--navy)}
+.tbl tr:hover td{background:#f8fafc}
+.tbl tr.total td{background:#e0f7ef;font-weight:800;color:var(--dgreen);border-top:2px solid var(--green)}
+.tbl .hol{font-size:10px;color:var(--amber);font-weight:600}
+.chg{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.chg.up{background:var(--lgreen);color:#15803d}
+.chg.dn{background:var(--lred);color:#b91c1c}
+.prod-bar-wrap{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;min-width:80px;margin-top:3px}
+.prod-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px}
+.metric-highlight{font-size:28px;font-weight:900;color:var(--green);line-height:1}
+.metric-highlight.p{color:var(--purple)}
+@media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}.tab{padding:10px 12px;font-size:12px}}
+</style>
+</head>
+<body>
+<div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:-16px -16px 14px -16px">
+  <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
+  <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">ייצור שבועי</span>
+  <a href="finance.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+</div>
+
+
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">🥗</div>
+    <div>
+      <div class="brand-name">סלטי גן — ניתוח ייצור שבועי</div>
+      <div class="brand-sub">שבועות 15–23 | אפריל–יוני 2026 | 9 שבועות פעילות</div>
+    </div>
+  </div>
+  <div class="header-kpis">
+    <div class="hkpi"><div class="hkpi-lbl">סה"כ אריזות</div><div class="hkpi-val">98,561</div></div>
+    <div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג</div><div class="hkpi-val">233,396</div></div>
+    <div class="hkpi"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">₪3.75M</div></div>
+    <div class="hkpi"><div class="hkpi-lbl">ממוצע שבועי</div><div class="hkpi-val">₪416K</div></div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active"  onclick="showPage('summary',this)">📊 סיכום</button>
+  <button class="tab"         onclick="showPage('pkg_analysis',this)">📦 ניתוח לפי אריזות</button>
+  <button class="tab"         onclick="showPage('kg_analysis',this)">⚖️ ניתוח לפי ק"ג</button>
+  <button class="tab"         onclick="showPage('products',this)">🏆 מוצרים</button>
+  <button class="tab"         onclick="showPage('packaging',this)">🗂️ סוגי אריזה</button>
+</nav>
+
+<div class="main">
+
+<!-- ═══════ TAB 1: SUMMARY ═══════ -->
+<div id="page-summary" class="page active">
+  <div class="kpi-grid">
+    <div class="kpi g"><div class="kpi-lbl">סה"כ אריזות</div><div class="kpi-val">98,561</div><div class="kpi-sub">ממוצע 10,951/שבוע</div></div>
+    <div class="kpi t"><div class="kpi-lbl">סה"כ ק"ג</div><div class="kpi-val">233,396</div><div class="kpi-sub">ממוצע 25,933/שבוע</div></div>
+    <div class="kpi a"><div class="kpi-lbl">סה"כ הכנסות</div><div class="kpi-val">₪3.75M</div><div class="kpi-sub">ממוצע ₪416,511/שבוע</div></div>
+    <div class="kpi n"><div class="kpi-lbl">₪ לק"ג ממוצע</div><div class="kpi-val">₪16.06</div><div class="kpi-sub">כולל כל המוצרים</div></div>
+    <div class="kpi"><div class="kpi-lbl">חומוס/טחינה</div><div class="kpi-val">26,643</div><div class="kpi-sub g">27% מהאריזות | ₪1.24M</div></div>
+    <div class="kpi"><div class="kpi-lbl">מוצרים אחרים</div><div class="kpi-val">71,919</div><div class="kpi-sub">73% מהאריזות | ₪2.51M</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      מגמה שבועית
+      <div style="display:flex;gap:6px">
+        <button class="ctrl-btn active" id="btn-pkg" onclick="toggleMetric('pkg')">אריזות</button>
+        <button class="ctrl-btn" id="btn-kg" onclick="toggleMetric('kg')">ק"ג</button>
+        <button class="ctrl-btn" id="btn-rev" onclick="toggleMetric('rev')">הכנסות</button>
+      </div>
+    </div>
+    <div class="cw t"><canvas id="weeklyTrendChart"></canvas></div>
+    <div class="ins">📈 שבוע 16 — שיא ייצור עם 13,272 אריזות. שבוע 15 — נמוך ביותר עם 8,862. פערים של עד 50% בין שבועות.</div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">פילוח קבוצות — אריזות שבועי <span class="card-badge">ריבוד</span></div>
+      <div class="cw"><canvas id="groupStackChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">הכנסות שבועיות (₪) <span class="card-badge g">9 שבועות</span></div>
+      <div class="cw"><canvas id="revenueChart"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">טבלת סיכום שבועי מלא</div>
+    <div class="tbl-wrap"><table class="tbl" id="weeklyTable"></table></div>
+  </div>
+</div>
+
+<!-- ═══════ TAB 2: ניתוח לפי אריזות ═══════ -->
+<div id="page-pkg_analysis" class="page">
+
+  <div class="subtabs">
+    <button class="subtab active" onclick="showSub('pkg','weekly',this)">📅 שבועי</button>
+    <button class="subtab"        onclick="showSub('pkg','daily',this)">🗓️ יומי</button>
+  </div>
+
+  <!-- pkg / weekly -->
+  <div id="sub-pkg-weekly" class="subpage active">
+    <div class="kpi-grid" id="pkgW-kpis">
+      <div class="kpi g"><div class="kpi-lbl">סה"כ אריזות</div><div class="kpi-val">98,561</div><div class="kpi-sub">9 שבועות</div></div>
+      <div class="kpi g"><div class="kpi-lbl">ממוצע שבועי</div><div class="kpi-val">10,951</div><div class="kpi-sub">אריזות לשבוע</div></div>
+      <div class="kpi a"><div class="kpi-lbl">שיא — שבוע 16</div><div class="kpi-val">13,272</div><div class="kpi-sub">עם יום עצמאות</div></div>
+      <div class="kpi r"><div class="kpi-lbl">שפל — שבוע 15</div><div class="kpi-val">8,862</div><div class="kpi-sub">שבוע השואה</div></div>
+      <div class="kpi"><div class="kpi-lbl">חומוס/טחינה</div><div class="kpi-val">26,643</div><div class="kpi-sub g">27% מהאריזות</div></div>
+      <div class="kpi"><div class="kpi-lbl">מוצרים אחרים</div><div class="kpi-val">71,919</div><div class="kpi-sub">73% מהאריזות</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">אריזות לפי שבוע <span class="card-badge g">כולל פילוח קבוצות</span></div>
+      <div class="cw t"><canvas id="pkgW-trendChart"></canvas></div>
+      <div class="ins g">📦 שיא ב-שבוע 16 (13,272 ארז). ממוצע שבועי: 10,951. שבועות 15 ו-18 נמוכים בשל חגים.</div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">חומוס/טחינה vs. אחר — שבועי <span class="card-badge">ריבוד</span></div>
+        <div class="cw"><canvas id="pkgW-stackChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">% חומוס/טחינה מסך האריזות <span class="card-badge g">לפי שבוע</span></div>
+        <div class="cw"><canvas id="pkgW-htPctChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">אריזות לפי שבוע — טבלה מפורטת</div>
+      <div class="tbl-wrap"><table class="tbl" id="pkgW-table"></table></div>
+    </div>
+  </div>
+
+  <!-- pkg / daily -->
+  <div id="sub-pkg-daily" class="subpage">
+    <div class="kpi-grid">
+      <div class="kpi r"><div class="kpi-lbl">ראשון</div><div class="kpi-val">17,578</div><div class="kpi-sub">17.8% מהסך</div></div>
+      <div class="kpi p"><div class="kpi-lbl">שני</div><div class="kpi-val">24,397</div><div class="kpi-sub p">24.8% — יום שיא</div></div>
+      <div class="kpi n"><div class="kpi-lbl">שלישי</div><div class="kpi-val">22,307</div><div class="kpi-sub">22.6%</div></div>
+      <div class="kpi g"><div class="kpi-lbl">רביעי</div><div class="kpi-val">15,208</div><div class="kpi-sub">15.4%</div></div>
+      <div class="kpi a"><div class="kpi-lbl">חמישי</div><div class="kpi-val">16,558</div><div class="kpi-sub">16.8%</div></div>
+      <div class="kpi"><div class="kpi-lbl">שישי</div><div class="kpi-val">2,515</div><div class="kpi-sub">2.6%</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">סך אריזות לפי יום בשבוע <span class="card-badge g">9 שבועות</span></div>
+        <div class="cw t"><canvas id="pkgD-dayTotalChart"></canvas></div>
+        <div class="ins g">🔵 יום שני — 24,397 ארז (24.8%). יום שישי — 2,515 ארז (2.6%) בלבד.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">אריזות יומי — ריבוד שבועי</div>
+        <div class="cw t"><canvas id="pkgD-stackedChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        בחר שבוע — פירוט יומי
+        <div class="controls" style="margin-bottom:0">
+          <select class="ctrl-select" id="pkgD-weekSelect" onchange="updatePkgDailyCharts()">
+            <option value="15">שבוע 15</option><option value="16">שבוע 16</option>
+            <option value="17">שבוע 17</option><option value="18" selected>שבוע 18</option>
+            <option value="19">שבוע 19</option><option value="20">שבוע 20</option>
+            <option value="21">שבוע 21</option><option value="22">שבוע 22</option><option value="23">שבוע 23</option>
+          </select>
+        </div>
+      </div>
+      <div class="cw t"><canvas id="pkgD-weekChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">פירוט אריזות לפי יום × שבוע</div>
+      <div class="tbl-wrap"><table class="tbl" id="pkgD-table"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TAB 3: ניתוח לפי ק"ג ═══════ -->
+<div id="page-kg_analysis" class="page">
+
+  <div class="subtabs">
+    <button class="subtab active" onclick="showSub('kg','weekly',this)">📅 שבועי</button>
+    <button class="subtab"        onclick="showSub('kg','daily',this)">🗓️ יומי</button>
+  </div>
+
+  <!-- kg / weekly -->
+  <div id="sub-kg-weekly" class="subpage active">
+    <div class="kpi-grid">
+      <div class="kpi t"><div class="kpi-lbl">סה"כ ק"ג</div><div class="kpi-val">233,396</div><div class="kpi-sub">9 שבועות</div></div>
+      <div class="kpi t"><div class="kpi-lbl">ממוצע שבועי</div><div class="kpi-val">25,933</div><div class="kpi-sub">ק"ג לשבוע</div></div>
+      <div class="kpi a"><div class="kpi-lbl">שיא — שבוע 16</div><div class="kpi-val">31,995</div><div class="kpi-sub">ק"ג</div></div>
+      <div class="kpi r"><div class="kpi-lbl">שפל — שבוע 15</div><div class="kpi-val">21,660</div><div class="kpi-sub">ק"ג</div></div>
+      <div class="kpi"><div class="kpi-lbl">ממוצע ק"ג/ארז</div><div class="kpi-val">2.37</div><div class="kpi-sub">כלל המוצרים</div></div>
+      <div class="kpi n"><div class="kpi-lbl">חומוס/טחינה ק"ג</div><div class="kpi-val">98,053</div><div class="kpi-sub p">42% מסך הק"ג</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">ק"ג לפי שבוע <span class="card-badge p">כולל פילוח קבוצות</span></div>
+      <div class="cw t"><canvas id="kgW-trendChart"></canvas></div>
+      <div class="ins p">⚖️ שיא ב-שבוע 16 (31,995 ק"ג). חומוס/טחינה מהווים 42% מהק"ג למרות 27% מהאריזות — אריזות גדולות יותר.</div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">חומוס/טחינה vs. אחר — ק"ג שבועי <span class="card-badge">ריבוד</span></div>
+        <div class="cw"><canvas id="kgW-stackChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">ק"ג לאריזה — מגמה שבועית <span class="card-badge p">ממוצע</span></div>
+        <div class="cw"><canvas id="kgW-ratioChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">ק"ג לפי שבוע — טבלה מפורטת</div>
+      <div class="tbl-wrap"><table class="tbl" id="kgW-table"></table></div>
+    </div>
+  </div>
+
+  <!-- kg / daily -->
+  <div id="sub-kg-daily" class="subpage">
+    <div class="kpi-grid">
+      <div class="kpi r"><div class="kpi-lbl">ראשון</div><div class="kpi-val">41,780</div><div class="kpi-sub">ק"ג | 17.9%</div></div>
+      <div class="kpi p"><div class="kpi-lbl">שני</div><div class="kpi-val">59,640</div><div class="kpi-sub p">ק"ג | 25.5% — שיא</div></div>
+      <div class="kpi n"><div class="kpi-lbl">שלישי</div><div class="kpi-val">54,919</div><div class="kpi-sub">ק"ג | 23.5%</div></div>
+      <div class="kpi g"><div class="kpi-lbl">רביעי</div><div class="kpi-val">33,263</div><div class="kpi-sub">ק"ג | 14.2%</div></div>
+      <div class="kpi a"><div class="kpi-lbl">חמישי</div><div class="kpi-val">43,522</div><div class="kpi-sub">ק"ג | 18.6%</div></div>
+      <div class="kpi"><div class="kpi-lbl">שישי</div><div class="kpi-val">6,900</div><div class="kpi-sub">ק"ג | 3.0%</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">סך ק"ג לפי יום בשבוע <span class="card-badge p">9 שבועות</span></div>
+        <div class="cw t"><canvas id="kgD-dayTotalChart"></canvas></div>
+        <div class="ins p">⚖️ יום שני — 59,640 ק"ג (25.5%). יום שישי — 6,900 ק"ג (3%). שלישי מעט גבוה מחמישי בק"ג.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">ק"ג יומי — ריבוד שבועי</div>
+        <div class="cw t"><canvas id="kgD-stackedChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        בחר שבוע — פירוט יומי ק"ג
+        <div class="controls" style="margin-bottom:0">
+          <select class="ctrl-select" id="kgD-weekSelect" onchange="updateKgDailyCharts()">
+            <option value="15">שבוע 15</option><option value="16">שבוע 16</option>
+            <option value="17">שבוע 17</option><option value="18" selected>שבוע 18</option>
+            <option value="19">שבוע 19</option><option value="20">שבוע 20</option>
+            <option value="21">שבוע 21</option><option value="22">שבוע 22</option><option value="23">שבוע 23</option>
+          </select>
+        </div>
+      </div>
+      <div class="cw t"><canvas id="kgD-weekChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">פירוט ק"ג לפי יום × שבוע</div>
+      <div class="tbl-wrap"><table class="tbl" id="kgD-table"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TAB 4: PRODUCTS ═══════ -->
+<div id="page-products" class="page">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">טופ 15 מוצרים — הכנסות <span class="card-badge g">₪</span></div>
+      <div class="cw xt"><canvas id="productsChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">פילוח קבוצות — הכנסות</div>
+      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <div style="position:relative;height:220px;flex:1;min-width:200px"><canvas id="groupDonutChart"></canvas></div>
+        <div id="groupDonutLegend" style="font-size:12px;line-height:2.2"></div>
+      </div>
+      <div class="ins">💡 חומוס/טחינה: 27% מהאריזות → 33.1% מההכנסות. ₪/ק"ג גבוה יותר ממוצרים אחרים.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">טבלת מוצרים — טופ 15</div>
+    <div class="tbl-wrap"><table class="tbl" id="productsTable"></table></div>
+  </div>
+</div>
+
+<!-- ═══════ TAB 5: PACKAGING ═══════ -->
+<div id="page-packaging" class="page">
+  <div class="kpi-grid" id="pkgKpiGrid"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">פילוח סוגי אריזה — סה"כ <span class="card-badge">98,419 ארז</span></div>
+      <div style="position:relative;height:260px"><canvas id="pkgDonutChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">סוגי אריזה — שבועי <span class="card-badge">מגמה</span></div>
+      <div class="cw t"><canvas id="pkgWeeklyChart"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">טבלת סוגי אריזה לפי שבוע</div>
+    <div class="tbl-wrap"><table class="tbl" id="pkgTable"></table></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════ DATA ═══════════════════════════════
+let WEEKS=[
+  {w:15,pkg:8861.5,kg:21659.75,rev:353908,ht_pkg:2373,ot_pkg:6488.5,ht_kg:9002.25,ot_kg:12657.5,ht_rev:118744,ot_rev:235164,days:6,hol:'יום השואה (14/4)'},
+  {w:16,pkg:13271.5,kg:31994.5,rev:520360,ht_pkg:3673,ot_pkg:9598.5,ht_kg:13677.75,ot_kg:18316.75,ht_rev:180350,ot_rev:340010,days:5,hol:'יום הזיכרון + עצמאות (22/4)'},
+  {w:17,pkg:12261,kg:29620,rev:463523,ht_pkg:3572,ot_pkg:8689,ht_kg:12964.25,ot_kg:16655.75,ht_rev:163919,ot_rev:299604,days:6,hol:'—'},
+  {w:18,pkg:10247,kg:24097.5,rev:378389,ht_pkg:2655,ot_pkg:7592,ht_kg:9797.25,ot_kg:14300.25,ht_rev:119653,ot_rev:258736,days:6,hol:'ל"ג בעומר (5/5)'},
+  {w:19,pkg:10502,kg:24878.5,rev:389746,ht_pkg:2981,ot_pkg:7521,ht_kg:10995.5,ot_kg:13883,ht_rev:138018,ot_rev:251728,days:6,hol:'יום ירושלים (15/5)'},
+  {w:20,pkg:11210,kg:26584,rev:423302,ht_pkg:3009,ot_pkg:8201,ht_kg:11024.5,ot_kg:15559.5,ht_rev:135545,ot_rev:287757,days:5,hol:'שבועות (22/5)'},
+  {w:21,pkg:10531.5,kg:23692,rev:417867,ht_pkg:2577,ot_pkg:7954.5,ht_kg:9472.75,ot_kg:14219.25,ht_rev:124617,ot_rev:293251,days:6,hol:'—'},
+  {w:22,pkg:11343.5,kg:25680.75,rev:394697,ht_pkg:3072.5,ot_pkg:8271,ht_kg:10989.5,ot_kg:14691.25,ht_rev:135220,ot_rev:259478,days:6,hol:'—'},
+  {w:23,pkg:10333,kg:25189,rev:406811,ht_pkg:2730,ot_pkg:7603,ht_kg:10128.75,ot_kg:15060.25,ht_rev:126233,ot_rev:280578,days:6,hol:'—'},
+];
+let DAILY={
+  15:{'ראשון':{p:1714.5,k:5109},'שני':{p:2262,k:6127},'שלישי':{p:1289,k:2605.2},'רביעי':{p:0,k:0},'חמישי':{p:3118,k:6368.5},'שישי':{p:524,k:1594}},
+  16:{'ראשון':{p:1718,k:4264.5},'שני':{p:2421.5,k:6083},'שלישי':{p:3311,k:8244.2},'רביעי':{p:2639,k:5505.5},'חמישי':{p:2739,k:6725.2},'שישי':{p:487,k:1300}},
+  17:{'ראשון':{p:2648,k:6896},'שני':{p:5072,k:10804.2},'שלישי':{p:2576,k:6082.2},'רביעי':{p:0,k:0},'חמישי':{p:1691,k:4845},'שישי':{p:388,k:1076}},
+  18:{'ראשון':{p:1518,k:3146.2},'שני':{p:2172,k:4613.5},'שלישי':{p:2973,k:7635},'רביעי':{p:2078,k:4194.2},'חמישי':{p:1310,k:3911},'שישי':{p:276,k:760}},
+  19:{'ראשון':{p:1851,k:4260.5},'שני':{p:2350,k:4689.2},'שלישי':{p:2383.5,k:5743.5},'רביעי':{p:2238,k:5229.8},'חמישי':{p:1594.5,k:4735.5},'שישי':{p:147,k:404}},
+  20:{'ראשון':{p:2107,k:4696.5},'שני':{p:2609,k:5113.2},'שלישי':{p:2411,k:5752},'רביעי':{p:1900,k:4894.5},'חמישי':{p:1931,k:5343.8},'שישי':{p:280,k:846}},
+  21:{'ראשון':{p:2159,k:4950},'שני':{p:2737,k:6332.8},'שלישי':{p:2946,k:7002.5},'רביעי':{p:2183.5,k:4715.8},'חמישי':{p:652,k:1203},'שישי':{p:0,k:0}},
+  22:{'ראשון':{p:2226,k:4734.5},'שני':{p:2689,k:4986.5},'שלישי':{p:2542.5,k:6437.8},'רביעי':{p:1797,k:4166.8},'חמישי':{p:1833,k:4676.2},'שישי':{p:304,k:927}},
+  23:{'ראשון':{p:1690,k:3982.5},'שני':{p:2154,k:4893.2},'שלישי':{p:2049,k:5522},'רביעי':{p:2394,k:4556.2},'חמישי':{p:1861,k:5714},'שישי':{p:209,k:593}},
+};
+const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const DAYS_COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706','#ca8a04'];
+let DAYS_TOTAL={'ראשון':{p:17577.5,k:41779.9},'שני':{p:24396.5,k:59639.6},'שלישי':{p:22307,k:54919.2},'רביעי':{p:15207.5,k:33262.8},'חמישי':{p:16557.5,k:43522.2},'שישי':{p:2515,k:6900}};
+const WK_COLORS=['#16a34a','#2563a8','#7c3aed','#d97706','#e11d48','#0d9488','#ca8a04','#0891b2','#9333ea'];
+const PKG_TYPES=['4 ק"ג','2 ק"ג שטוח','2 ק"ג גבוה','3 ק"ג','1 ק"ג','500 גרם','250 גרם'];
+const PKG_COLORS=['#16a34a','#2563a8','#7c3aed','#d97706','#e11d48','#0d9488','#9333ea'];
+let PKG_WEEKLY=[[2932.5,3725,512,228,202,72,1175],[4549.5,5513,681,152,416,168,1790],[3946,4726,541,577,328,120,1980],[3285,3872,511,439,395,164,1580],[3554,3977,563,220,447,152,1588],[3647,4326,600,208,638,162,1604],[3062,4115.5,505,350,651,142,1704],[3659,3912.5,556,324,272,52,2553],[3315,3737,476,646,537,96,1488]];
+let PKG_TOTALS=[31950,37904,4945,3144,3886,1128,15462];
+let PRODUCTS=[
+  {name:'חומוס אמיגה 4 ק"ג',pkg:12556.5,kg:50226,rev:657657,grp:'חומוס/טחינה'},
+  {name:'חומוס מסעדות 4 ק"ג',pkg:3885,kg:15540,rev:158107,grp:'חומוס/טחינה'},
+  {name:'טחינה אמיגה 4 ק"ג',pkg:2782,kg:11128,rev:156593,grp:'חומוס/טחינה'},
+  {name:'חציל במיונז 4 ק"ג',pkg:3125,kg:12500,rev:152762,grp:'אחר'},
+  {name:'חומוס אמיגה צד 4 ק"ג',pkg:2077,kg:8308,rev:100430,grp:'חומוס/טחינה'},
+  {name:'טונה במיונז וירקות 2 ק"ג',pkg:1563,kg:3126,rev:94832,grp:'אחר'},
+  {name:'חציל סביח 1 ק"ג',pkg:3140,kg:3140,rev:93759,grp:'אחר'},
+  {name:'סלט טורקי מיוחד 2 ק"ג',pkg:3706,kg:7412,rev:93156,grp:'אחר'},
+  {name:'סלט ביצים 2 ק"ג',pkg:1394,kg:2788,rev:85766,grp:'אחר'},
+  {name:'הטחינה הירוקה 4 ק"ג',pkg:1460,kg:5840,rev:84134,grp:'חומוס/טחינה'},
+  {name:'פלפל רצועות 2 ק"ג',pkg:1789,kg:3578,rev:74633,grp:'אחר'},
+  {name:"סלק צ'יפס 2 ק\"ג",pkg:2805,kg:5610,rev:73043,grp:'אחר'},
+  {name:'סלט בטטה 2 ק"ג',pkg:1109.5,kg:2219,rev:59275,grp:'אחר'},
+  {name:'טונה סלרי 2 ק"ג',pkg:1063,kg:2126,rev:59083,grp:'אחר'},
+  {name:'מטבוחה מיוחדת 2 ק"ג',pkg:2411,kg:4822,rev:58904,grp:'אחר'},
+];
+
+
+// ═══════════════════════════════ UTILS ═══════════════════════════════
+const fmt=n=>Math.round(n).toLocaleString('he-IL');
+const fmtF=n=>n.toLocaleString('he-IL',{minimumFractionDigits:1,maximumFractionDigits:1});
+const rev=n=>'₪'+Math.round(n).toLocaleString('he-IL');
+const pct=(a,b)=>b?((a/b)*100).toFixed(1)+'%':'—';
+const wLabel=w=>'ש'+w;
+
+let charts={};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function makeChart(id,cfg){destroyChart(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,cfg);return charts[id];}
+
+const gridOpts={color:'rgba(0,0,0,.05)',lineWidth:1};
+const tickOpts={color:'#64748b',font:{size:11}};
+const ttip={backgroundColor:'rgba(15,23,42,.92)',titleColor:'#fff',bodyColor:'#cbd5e1',padding:10,cornerRadius:8};
+
+// ═══════════════════════════════ NAVIGATION ═══════════════════════════════
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav .tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='summary'     &&!charts['weeklyTrendChart'])  initSummary();
+  if(name==='pkg_analysis'&&!charts['pkgW-trendChart'])   initPkgAnalysis();
+  if(name==='kg_analysis' &&!charts['kgW-trendChart'])    initKgAnalysis();
+  if(name==='products'    &&!charts['productsChart'])     initProducts();
+  if(name==='packaging'   &&!charts['pkgDonutChart'])     initPackaging();
+}
+
+function showSub(tab,sub,btn){
+  const prefix='sub-'+tab+'-';
+  document.querySelectorAll('[id^="'+prefix+'"]').forEach(p=>p.classList.remove('active'));
+  btn.closest('.subtabs').querySelectorAll('.subtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(prefix+sub).classList.add('active');
+  btn.classList.add('active');
+  // lazy-init sub-pages
+  if(tab==='pkg'&&sub==='daily'&&!charts['pkgD-dayTotalChart']) initPkgDaily();
+  if(tab==='kg' &&sub==='daily'&&!charts['kgD-dayTotalChart'])  initKgDaily();
+}
+
+// ═══════════════════════════════ TAB 1: SUMMARY ═══════════════════════════════
+let currentMetric='pkg';
+function toggleMetric(m){
+  currentMetric=m;
+  ['pkg','kg','rev'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===m));
+  buildWeeklyTrendChart();
+}
+function initSummary(){buildWeeklyTrendChart();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
+function buildWeeklyTrendChart(){
+  const labels=WEEKS.map(w=>wLabel(w.w));
+  let data,label,color;
+  if(currentMetric==='pkg'){data=WEEKS.map(w=>w.pkg);label='אריזות';color='#16a34a';}
+  else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
+  else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
+  makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:WEEKS.map((_,i)=>i===1?color:color+'CC'),borderColor:color,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
+}
+function buildGroupStackChart(){
+  makeChart('groupStackChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),
+    datasets:[{label:'חומוס/טחינה',data:WEEKS.map(w=>w.ht_pkg),backgroundColor:'#16a34a',borderRadius:3},{label:'אחר',data:WEEKS.map(w=>w.ot_pkg),backgroundColor:'#2563a8',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+}
+function buildRevenueChart(){
+  makeChart('revenueChart',{type:'line',data:{labels:WEEKS.map(w=>wLabel(w.w)),
+    datasets:[
+      {label:'הכנסות ₪',data:WEEKS.map(w=>w.rev),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#d97706',borderWidth:2.5},
+      {label:'ח"ט ₪',data:WEEKS.map(w=>w.ht_rev),borderColor:'#16a34a',borderDash:[5,3],fill:false,tension:.35,pointRadius:3,borderWidth:1.8},
+      {label:'אחר ₪',data:WEEKS.map(w=>w.ot_rev),borderColor:'#2563a8',borderDash:[5,3],fill:false,tension:.35,pointRadius:3,borderWidth:1.8},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>'₪'+fmt(v/1000)+'K'}}}}});
+}
+function buildWeeklyTable(){
+  const tbl=document.getElementById('weeklyTable');
+  let html='<thead><tr><th>שבוע</th><th>ימים</th><th>אריזות</th><th>ממוצע/יום</th><th>ק"ג</th><th>ק"ג/ארז</th><th>הכנסות</th><th>₪/ק"ג</th><th>הערות</th></tr></thead><tbody>';
+  let prev=null;
+  WEEKS.forEach(w=>{
+    let chg='';if(prev!==null){const d=((w.pkg-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.pkg;
+    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td><td>${rev(w.rev)}</td><td>₪${(w.rev/w.kg).toFixed(2)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
+  });
+  const tP=WEEKS.reduce((a,w)=>a+w.pkg,0),tK=WEEKS.reduce((a,w)=>a+w.kg,0),tR=WEEKS.reduce((a,w)=>a+w.rev,0),tD=WEEKS.reduce((a,w)=>a+w.days,0);
+  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(tK)}</td><td>${(tK/tP).toFixed(2)}</td><td>${rev(tR)}</td><td>₪${(tR/tK).toFixed(2)}</td><td></td></tr></tbody>`;
+  tbl.innerHTML=html;
+}
+
+// ═══════════════════════════════ TAB 2: PACKAGES ANALYSIS ═══════════════════════════════
+function initPkgAnalysis(){
+  const labels=WEEKS.map(w=>wLabel(w.w));
+  // Weekly trend bar+line
+  makeChart('pkgW-trendChart',{type:'bar',data:{labels,
+    datasets:[
+      {label:'אריזות סה"כ',data:WEEKS.map(w=>w.pkg),backgroundColor:WEEKS.map((_,i)=>i===1?'#16a34a':'#16a34aCC'),borderColor:'#16a34a',borderWidth:2,borderRadius:6,order:2},
+      {label:'ממוצע',data:WEEKS.map(()=>WEEKS.reduce((a,w)=>a+w.pkg,0)/WEEKS.length),type:'line',borderColor:'#d97706',borderDash:[6,3],pointRadius:0,borderWidth:2,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+  // Stacked HT vs other
+  makeChart('pkgW-stackChart',{type:'bar',data:{labels,
+    datasets:[{label:'חומוס/טחינה',data:WEEKS.map(w=>w.ht_pkg),backgroundColor:'#16a34a',borderRadius:3},{label:'אחר',data:WEEKS.map(w=>w.ot_pkg),backgroundColor:'#2563a8',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+  // HT% line
+  makeChart('pkgW-htPctChart',{type:'line',data:{labels,
+    datasets:[{label:'% חומוס/טחינה',data:WEEKS.map(w=>+(w.ht_pkg/w.pkg*100).toFixed(1)),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.1)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#16a34a',borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,min:20,max:40,ticks:{...tickOpts,callback:v=>v+'%'}}}}});
+  // Table
+  const tbl=document.getElementById('pkgW-table');
+  let html='<thead><tr><th>שבוע</th><th>ימי עבודה</th><th>אריזות סה"כ</th><th>ממוצע/יום</th><th>חומוס/טחינה</th><th>% ח"ט</th><th>מוצרים אחרים</th><th>% אחר</th><th>הערות</th></tr></thead><tbody>';
+  let prev=null;
+  WEEKS.forEach(w=>{
+    let chg='';if(prev!==null){const d=((w.pkg-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.pkg;
+    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.ht_pkg)}</td><td>${pct(w.ht_pkg,w.pkg)}</td><td>${fmtF(w.ot_pkg)}</td><td>${pct(w.ot_pkg,w.pkg)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
+  });
+  const tP=WEEKS.reduce((a,w)=>a+w.pkg,0),htP=WEEKS.reduce((a,w)=>a+w.ht_pkg,0),otP=WEEKS.reduce((a,w)=>a+w.ot_pkg,0),tD=WEEKS.reduce((a,w)=>a+w.days,0);
+  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(htP)}</td><td>${pct(htP,tP)}</td><td>${fmtF(otP)}</td><td>${pct(otP,tP)}</td><td></td></tr></tbody>`;
+  tbl.innerHTML=html;
+}
+
+function initPkgDaily(){
+  const labels=DAYS;
+  const totP=Object.values(DAYS_TOTAL).reduce((a,d)=>a+d.p,0);
+  // Day totals bar
+  makeChart('pkgD-dayTotalChart',{type:'bar',data:{labels,datasets:[{label:'אריזות',data:DAYS.map(d=>DAYS_TOTAL[d].p),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:ctx=>` ${fmtF(ctx.raw)} (${pct(ctx.raw,totP)})`}}},scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+  // Stacked weeks per day
+  makeChart('pkgD-stackedChart',{type:'bar',data:{labels,datasets:WEEKS.map((wk,i)=>({label:'ש'+wk.w,data:DAYS.map(d=>DAILY[wk.w][d].p),backgroundColor:WK_COLORS[i]+'AA',borderColor:WK_COLORS[i],borderWidth:1,borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:6}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+  updatePkgDailyCharts();
+  // Cross-week table
+  buildDayXWeekTable('pkgD-table','p');
+}
+
+function updatePkgDailyCharts(){
+  const w=parseInt(document.getElementById('pkgD-weekSelect').value);
+  const wd=DAILY[w];
+  const active=DAYS.filter(d=>wd[d].p>0);
+  const bgC=active.map(d=>DAYS_COLORS[DAYS.indexOf(d)]);
+  makeChart('pkgD-weekChart',{type:'bar',data:{labels:active,datasets:[{label:'אריזות',data:active.map(d=>wd[d].p),backgroundColor:bgC.map(c=>c+'CC'),borderColor:bgC,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+}
+
+// ═══════════════════════════════ TAB 3: KG ANALYSIS ═══════════════════════════════
+function initKgAnalysis(){
+  const labels=WEEKS.map(w=>wLabel(w.w));
+  const avgKg=WEEKS.reduce((a,w)=>a+w.kg,0)/WEEKS.length;
+  // Weekly trend
+  makeChart('kgW-trendChart',{type:'bar',data:{labels,
+    datasets:[
+      {label:'ק"ג סה"כ',data:WEEKS.map(w=>w.kg),backgroundColor:WEEKS.map((_,i)=>i===1?'#0d9488':'#0d9488CC'),borderColor:'#0d9488',borderWidth:2,borderRadius:6,order:2},
+      {label:'ממוצע',data:WEEKS.map(()=>avgKg),type:'line',borderColor:'#d97706',borderDash:[6,3],pointRadius:0,borderWidth:2,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+  // Stacked HT vs other kg
+  makeChart('kgW-stackChart',{type:'bar',data:{labels,
+    datasets:[{label:'חומוס/טחינה',data:WEEKS.map(w=>w.ht_kg),backgroundColor:'#16a34a',borderRadius:3},{label:'אחר',data:WEEKS.map(w=>w.ot_kg),backgroundColor:'#7c3aed',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+  // kg/pkg ratio line
+  makeChart('kgW-ratioChart',{type:'line',data:{labels,
+    datasets:[{label:'ק"ג לאריזה',data:WEEKS.map(w=>+(w.kg/w.pkg).toFixed(3)),borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.1)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#7c3aed',borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,min:1.8,max:2.7,ticks:{...tickOpts,callback:v=>v.toFixed(2)}}}}});
+  // Table
+  const tbl=document.getElementById('kgW-table');
+  let html='<thead><tr><th>שבוע</th><th>ימים</th><th>ק"ג סה"כ</th><th>ממוצע/יום</th><th>ח"ט ק"ג</th><th>% ח"ט</th><th>אחר ק"ג</th><th>% אחר</th><th>ק"ג/ארז</th></tr></thead><tbody>';
+  let prev=null;
+  WEEKS.forEach(w=>{
+    let chg='';if(prev!==null){const d=((w.kg-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.kg;
+    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.days).toFixed(0)}</td><td>${fmtF(w.ht_kg)}</td><td>${pct(w.ht_kg,w.kg)}</td><td>${fmtF(w.ot_kg)}</td><td>${pct(w.ot_kg,w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td></tr>`;
+  });
+  const tK=WEEKS.reduce((a,w)=>a+w.kg,0),htK=WEEKS.reduce((a,w)=>a+w.ht_kg,0),otK=WEEKS.reduce((a,w)=>a+w.ot_kg,0),tP=WEEKS.reduce((a,w)=>a+w.pkg,0),tD=WEEKS.reduce((a,w)=>a+w.days,0);
+  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tK)}</td><td>${(tK/tD).toFixed(0)}</td><td>${fmtF(htK)}</td><td>${pct(htK,tK)}</td><td>${fmtF(otK)}</td><td>${pct(otK,tK)}</td><td>${(tK/tP).toFixed(2)}</td></tr></tbody>`;
+  tbl.innerHTML=html;
+}
+
+function initKgDaily(){
+  const totK=Object.values(DAYS_TOTAL).reduce((a,d)=>a+d.k,0);
+  makeChart('kgD-dayTotalChart',{type:'bar',data:{labels:DAYS,datasets:[{label:'ק"ג',data:DAYS.map(d=>DAYS_TOTAL[d].k),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:ctx=>` ${fmtF(ctx.raw)} ק"ג (${pct(ctx.raw,totK)})`}}},scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+  makeChart('kgD-stackedChart',{type:'bar',data:{labels:DAYS,datasets:WEEKS.map((wk,i)=>({label:'ש'+wk.w,data:DAYS.map(d=>DAILY[wk.w][d].k),backgroundColor:WK_COLORS[i]+'AA',borderColor:WK_COLORS[i],borderWidth:1,borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:6}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+  updateKgDailyCharts();
+  buildDayXWeekTable('kgD-table','k');
+}
+
+function updateKgDailyCharts(){
+  const w=parseInt(document.getElementById('kgD-weekSelect').value);
+  const wd=DAILY[w];
+  const active=DAYS.filter(d=>wd[d].k>0);
+  const bgC=active.map(d=>DAYS_COLORS[DAYS.indexOf(d)]);
+  makeChart('kgD-weekChart',{type:'bar',data:{labels:active,datasets:[{label:'ק"ג',data:active.map(d=>wd[d].k),backgroundColor:bgC.map(c=>c+'99'),borderColor:bgC,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:tickOpts}}}});
+}
+
+function buildDayXWeekTable(tblId,field){
+  const tbl=document.getElementById(tblId);
+  const isKg=field==='k';
+  const unit=isKg?'ק"ג':'ארז';
+  let html='<thead><tr><th>יום</th>'+WEEKS.map(w=>`<th>ש${w.w}</th>`).join('')+'<th>סה"כ</th><th>ממוצע</th></tr></thead><tbody>';
+  DAYS.forEach(d=>{
+    const vals=WEEKS.map(w=>DAILY[w.w][d][field]);
+    const active=vals.filter(v=>v>0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    html+=`<tr><td>${d}</td>`+vals.map(v=>v>0?`<td>${fmtF(v)}</td>`:`<td style="color:#ccc">—</td>`).join('')+`<td><strong>${fmtF(tot)}</strong></td><td>${fmtF(active.length?tot/active.length:0)}</td></tr>`;
+  });
+  const totRow=DAYS.map(d=>WEEKS.reduce((a,w)=>a+DAILY[w.w][d][field],0));
+  html+=`<tr class="total"><td>סה"כ</td>`+totRow.map(v=>`<td>${fmtF(v)}</td>`).join('')+`<td><strong>${fmtF(totRow.reduce((a,b)=>a+b,0))}</strong></td><td></td></tr></tbody>`;
+  tbl.innerHTML=html;
+}
+
+// ═══════════════════════════════ TAB 4: PRODUCTS ═══════════════════════════════
+function initProducts(){
+  const maxRev=PRODUCTS[0].rev;
+  makeChart('productsChart',{type:'bar',data:{labels:PRODUCTS.map(p=>p.name.length>18?p.name.slice(0,18)+'…':p.name),
+    datasets:[{label:'הכנסות ₪',data:PRODUCTS.map(p=>p.rev),backgroundColor:PRODUCTS.map(p=>p.grp==='חומוס/טחינה'?'rgba(22,163,74,0.75)':'rgba(37,99,168,0.75)'),borderColor:PRODUCTS.map(p=>p.grp==='חומוס/טחינה'?'#16a34a':'#2563a8'),borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:ctx=>' '+rev(ctx.raw)}}},
+      scales:{x:{grid:gridOpts,ticks:{...tickOpts,callback:v=>'₪'+fmt(v/1000)+'K'}},y:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}}}}});
+  const htR=WEEKS.reduce((a,w)=>a+w.ht_rev,0),otR=WEEKS.reduce((a,w)=>a+w.ot_rev,0);
+  makeChart('groupDonutChart',{type:'doughnut',data:{labels:['חומוס/טחינה','מוצרים אחרים'],datasets:[{data:[htR,otR],backgroundColor:['#16a34a','#2563a8'],borderColor:['#fff','#fff'],borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:ctx=>` ${rev(ctx.raw)} (${pct(ctx.raw,htR+otR)})`}}}}});
+  document.getElementById('groupDonutLegend').innerHTML=`<div style="color:#16a34a"><b>■ חומוס/טחינה</b><br>${rev(htR)}<br>${pct(htR,htR+otR)}</div><div style="margin-top:10px;color:#2563a8"><b>■ מוצרים אחרים</b><br>${rev(otR)}<br>${pct(otR,htR+otR)}</div>`;
+  const tbl=document.getElementById('productsTable');
+  const totR=PRODUCTS.reduce((a,p)=>a+p.rev,0);
+  let html='<thead><tr><th>#</th><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th>ק"ג</th><th>הכנסות</th><th>% מכלל ₪</th><th>₪/ק"ג</th></tr></thead><tbody>';
+  PRODUCTS.forEach((p,i)=>{
+    const barW=Math.round(p.rev/maxRev*100);
+    const grpStyle=p.grp==='חומוס/טחינה'?'background:#dcfce7;color:#16a34a':'background:#dbeafe;color:#2563a8';
+    html+=`<tr><td>${i+1}</td><td title="${p.name}">${p.name.length>22?p.name.slice(0,22)+'…':p.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${grpStyle}">${p.grp}</span></td><td>${fmtF(p.pkg)}</td><td>${fmtF(p.kg)}</td><td>${rev(p.rev)}</td><td>${pct(p.rev,totR)}<div class="prod-bar-wrap"><div class="prod-bar" style="width:${barW}%"></div></div></td><td>₪${(p.rev/p.kg).toFixed(2)}</td></tr>`;
+  });
+  html+='</tbody>';tbl.innerHTML=html;
+}
+
+// ═══════════════════════════════ TAB 5: PACKAGING ═══════════════════════════════
+function initPackaging(){
+  const totP=PKG_TOTALS.reduce((a,b)=>a+b,0);
+  const cls=['g','','n','a','t','','g'];const emoji=['4️⃣','2️⃣','2️⃣','3️⃣','1️⃣','½','¼'];
+  document.getElementById('pkgKpiGrid').innerHTML=PKG_TYPES.map((t,i)=>`<div class="kpi ${cls[i]}"><div class="kpi-lbl">${emoji[i]} ${t}</div><div class="kpi-val">${fmtF(PKG_TOTALS[i])}</div><div class="kpi-sub">${pct(PKG_TOTALS[i],totP)}</div></div>`).join('');
+  makeChart('pkgDonutChart',{type:'doughnut',data:{labels:PKG_TYPES,datasets:[{data:PKG_TOTALS,backgroundColor:PKG_COLORS,borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:ctx=>` ${fmtF(ctx.raw)} ארז (${pct(ctx.raw,totP)})`}}}}});
+  makeChart('pkgWeeklyChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),datasets:PKG_TYPES.map((t,i)=>({label:t,data:PKG_WEEKLY.map(r=>r[i]),backgroundColor:PKG_COLORS[i]+'BB',borderColor:PKG_COLORS[i],borderWidth:1,borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:7}},tooltip:ttip},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+  const tbl=document.getElementById('pkgTable');
+  let html='<thead><tr><th>שבוע</th>'+PKG_TYPES.map(t=>`<th>${t}</th>`).join('')+'<th>סה"כ</th></tr></thead><tbody>';
+  PKG_WEEKLY.forEach((row,i)=>{const tot=row.reduce((a,b)=>a+b,0);html+=`<tr><td>שבוע ${WEEKS[i].w}</td>`+row.map(v=>`<td>${fmtF(v)}</td>`).join('')+`<td><strong>${fmtF(tot)}</strong></td></tr>`;});
+  const totRow=PKG_TYPES.map((_,i)=>PKG_WEEKLY.reduce((a,r)=>a+r[i],0));
+  html+=`<tr class="total"><td>סה"כ</td>`+totRow.map(v=>`<td>${fmtF(v)}</td>`).join('')+`<td><strong>${fmtF(totRow.reduce((a,b)=>a+b,0))}</strong></td></tr></tbody>`;
+  tbl.innerHTML=html;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{Chart.defaults.font.family="'Segoe UI',Arial,sans-serif";initSummary();});
+</script>
+</body>
+</html>

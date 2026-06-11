@@ -1,0 +1,2266 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סלטי גן בע"מ — דשבורד פיננסי 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --navy:#1a3a5c;--blue:#2563a8;--lblue:#4a90d9;--sky:#e8f2fb;
+  --green:#16a34a;--lgreen:#dcfce7;--amber:#d97706;--lamber:#fef3c7;
+  --red:#dc2626;--lred:#fee2e2;--gray:#64748b;--lgray:#f1f5f9;
+  --white:#fff;--border:#cbd5e1;--text:#1e293b;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text);direction:rtl}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);color:#fff;padding:20px 30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.header-logo{font-size:25px;font-weight:800}.header-logo span{color:#7dd3fc}
+.header-sub{font-size:11px;opacity:.8;margin-top:3px}
+.header-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hbadge{background:rgba(255,255,255,.15);padding:6px 13px;border-radius:20px;font-size:11px;font-weight:600}
+.hbadge.g{background:rgba(22,163,74,.35)}
+
+/* ── Tabs ── */
+.tabs{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 18px;overflow-x:auto}
+.tab{padding:12px 16px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:var(--gray);white-space:nowrap;transition:color .15s,border-color .15s}
+.tab:hover{color:var(--blue)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ── Layout ── */
+.main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.section-title{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:13px;padding-right:10px;border-right:4px solid var(--blue)}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:11px;padding:18px 22px;box-shadow:var(--shadow);margin-bottom:18px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:13px;padding-bottom:8px;border-bottom:2px solid var(--sky);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.card-badge{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--sky);color:var(--blue)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
+@media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:13px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:10px;padding:15px 17px;box-shadow:var(--shadow);border-top:4px solid var(--blue)}
+.kpi.g{border-top-color:var(--green)}.kpi.a{border-top-color:var(--amber)}.kpi.n{border-top-color:var(--navy)}.kpi.r{border-top-color:var(--red)}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-val{font-size:23px;font-weight:800;color:var(--text);line-height:1.1}
+.kpi-val.sm{font-size:18px}
+.kpi-d{margin-top:6px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px}
+.kpi-d.up{background:var(--lgreen);color:var(--green)}.kpi-d.dn{background:var(--lred);color:var(--red)}.kpi-d.neu{background:var(--lgray);color:var(--gray)}
+.kpi-sub{font-size:10px;color:var(--gray);margin-top:3px}
+
+/* ── Chart wrap ── */
+.cw{position:relative;height:220px}.cw.t{height:280px}.cw.xt{height:340px}
+
+/* ── Insight ── */
+.ins{background:var(--sky);border-right:4px solid var(--blue);padding:8px 12px;border-radius:0 7px 7px 0;font-size:11px;color:var(--navy);margin-top:9px;line-height:1.6}
+.ins.g{background:var(--lgreen);border-right-color:var(--green)}.ins.a{background:var(--lamber);border-right-color:var(--amber)}.ins.r{background:var(--lred);border-right-color:var(--red)}
+
+/* ══════════════════════════════════════════════════
+   FINANCIAL STATEMENT TABLES
+══════════════════════════════════════════════════ */
+.fs-wrap{overflow-x:auto}
+.fs-table{width:100%;border-collapse:collapse;font-size:12.5px;font-family:'Segoe UI',Arial,sans-serif}
+
+/* column headers */
+.fs-table .col-head{background:var(--navy);color:#fff;padding:10px 16px;font-weight:700;font-size:12px;text-align:center;border-left:1px solid rgba(255,255,255,.2)}
+.fs-table .col-head:first-child{text-align:right;border-left:none}
+
+/* section headers */
+.fs-table .sec{background:linear-gradient(90deg,var(--blue) 0%,var(--lblue) 100%);color:#fff;padding:9px 16px;font-weight:700;font-size:12px;letter-spacing:.3px}
+.fs-table .sec-sub{background:#dbeafe;color:var(--navy);padding:7px 16px;font-weight:700;font-size:11.5px}
+
+/* regular rows */
+.fs-table .row td{padding:7px 16px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.fs-table .row:hover td{background:#f8fafc}
+.fs-table .row td:not(:first-child){text-align:left;font-variant-numeric:tabular-nums;min-width:110px}
+.fs-table .row td.lbl{color:var(--text)}
+.fs-table .row.indent td.lbl{padding-right:30px;color:#334155}
+.fs-table .row.indent2 td.lbl{padding-right:46px;color:#475569;font-size:12px}
+
+/* total rows */
+.fs-table .total td{padding:8px 16px;background:#e0f2fe;font-weight:700;color:var(--navy);border-top:2px solid var(--blue);border-bottom:2px solid var(--blue)}
+.fs-table .total td:not(:first-child){text-align:left}
+.fs-table .gtotal td{padding:9px 16px;background:var(--navy);font-weight:800;color:#fff;font-size:13px}
+.fs-table .gtotal td:not(:first-child){text-align:left}
+
+/* delta column */
+.fs-table .pos{color:var(--green);font-weight:600}
+.fs-table .neg{color:var(--red);font-weight:600}
+.fs-table .neu{color:var(--gray)}
+
+/* change badge */
+.chg{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.chg.up{background:var(--lgreen);color:#15803d}
+.chg.dn{background:var(--lred);color:#b91c1c}
+.chg.flat{background:var(--lgray);color:var(--gray)}
+
+/* spacer row */
+.fs-table .sp td{height:8px;background:transparent;border:none}
+
+/* ── DuPont tree ── */
+.dn-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0}
+.dn-row{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
+.dn-box{background:var(--sky);border:2px solid var(--lblue);border-radius:10px;padding:9px 15px;text-align:center;min-width:110px}
+.dn-box.hl{background:var(--navy);border-color:var(--navy);color:#fff}
+.dn-box.g{background:var(--lgreen);border-color:var(--green)}
+.dn-box.a{background:var(--lamber);border-color:var(--amber)}
+.dn-lbl{font-size:10px;color:var(--gray);font-weight:600}
+.dn-box.hl .dn-lbl{color:rgba(255,255,255,.7)}
+.dn-val{font-size:19px;font-weight:800;color:var(--navy)}
+.dn-box.hl .dn-val{color:#fff;font-size:23px}
+.dn-box.g .dn-val{color:var(--green)}.dn-box.a .dn-val{color:var(--amber)}
+.dn-conn{height:20px;width:2px;background:var(--lblue);margin:0 auto}
+.dn-eq{font-size:12px;color:var(--gray);margin:3px 0;text-align:center}
+.dn-sep{font-size:18px;font-weight:700;color:var(--blue);padding:0 3px}
+
+/* ── Waterfall ── */
+.wf-row{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.wf-lbl{width:180px;font-size:11px;text-align:right;color:var(--text);font-weight:500;flex-shrink:0}
+.wf-bar-wrap{flex:1;height:21px;background:var(--lgray);border-radius:4px;overflow:hidden}
+.wf-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:700;color:#fff;min-width:3px}
+.wf-num{width:80px;text-align:left;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0}
+.wf-pct{width:44px;text-align:left;font-size:10px;color:var(--gray);flex-shrink:0}
+
+/* ── Benchmark table ── */
+.bench-table{width:100%;border-collapse:collapse;font-size:12px}
+.bench-table th{background:var(--navy);color:#fff;padding:9px 12px;text-align:right;font-weight:600;font-size:11px}
+.bench-table td{padding:7px 12px;border-bottom:1px solid var(--border)}
+.bench-table tr:hover td{filter:brightness(.97)}
+
+/* ── Equity mini bars ── */
+.eq-grid{display:flex;gap:14px;align-items:flex-end;height:160px;padding:0 6px;margin-top:6px}
+.eq-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.eq-bar-wrap{width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:140px}
+.eq-bar{width:100%;border-radius:5px 5px 0 0}
+.eq-yr{font-size:11px;font-weight:700;color:var(--gray)}
+.eq-lbl{font-size:10px;font-weight:600;color:var(--navy)}
+
+footer{text-align:center;padding:16px;font-size:10px;color:var(--gray);margin-top:12px}
+
+/* ══════════════════════════════════
+   RESPONSIVE — TABLET (≤1024px)
+══════════════════════════════════ */
+@media(max-width:1024px){
+  .main{padding:16px 16px}
+  .kpi-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:11px}
+  .grid2{grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{grid-template-columns:1fr 1fr;gap:14px}
+  .card{padding:14px 16px}
+  .cw{height:200px}.cw.t{height:250px}.cw.xt{height:300px}
+  .bench-table{font-size:11px}
+  .bench-table th,.bench-table td{padding:7px 9px}
+  .dn-box{min-width:95px;padding:7px 12px}
+  .dn-val{font-size:17px}
+  .dn-box.hl .dn-val{font-size:20px}
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE — MOBILE (≤640px)
+══════════════════════════════════ */
+@media(max-width:640px){
+  /* Header */
+  .header{padding:14px 16px;gap:8px}
+  .header-logo{font-size:20px}
+  .header-right{gap:6px}
+  .hbadge{font-size:10px;padding:4px 10px}
+
+  /* Tabs: scroll horizontally */
+  .tabs{padding:0 8px}
+  .tab{padding:10px 12px;font-size:12px}
+
+  /* Layout */
+  .main{padding:12px 12px}
+  .section-title{font-size:14px;margin-bottom:10px}
+
+  /* All grids become single column */
+  .grid2,.grid3,.kpi-grid{grid-template-columns:1fr;gap:10px}
+
+  /* KPI: 2 columns on mobile */
+  .kpi-grid{grid-template-columns:1fr 1fr}
+
+  /* Cards */
+  .card{padding:12px 14px;margin-bottom:12px}
+  .card-title{font-size:12px;margin-bottom:10px}
+
+  /* Charts: shorter on mobile */
+  .cw{height:180px}.cw.t{height:220px}.cw.xt{height:260px}
+
+  /* KPI values smaller */
+  .kpi-val{font-size:20px}.kpi-val.sm{font-size:16px}
+  .kpi-lbl{font-size:9px}
+  .kpi-d{font-size:10px;padding:2px 6px}
+  .kpi-sub{font-size:9px}
+  .kpi{padding:12px 14px}
+
+  /* Tables: horizontal scroll */
+  .fs-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .bench-table{font-size:10px;min-width:580px}
+  .bench-table th,.bench-table td{padding:6px 8px;white-space:nowrap}
+
+  /* Waterfall */
+  .wf-lbl{width:110px;font-size:10px}
+  .wf-num{width:65px;font-size:10px}
+  .wf-pct{width:36px;font-size:9px}
+
+  /* DuPont tree */
+  .dn-wrap{padding:4px 0}
+  .dn-row{gap:8px}
+  .dn-box{min-width:80px;padding:6px 10px}
+  .dn-val{font-size:15px}
+  .dn-box.hl .dn-val{font-size:18px}
+  .dn-lbl{font-size:9px}
+  .dn-sep{font-size:15px}
+  .dn-eq{font-size:11px}
+
+  /* Insights */
+  .ins{font-size:11px;padding:7px 10px}
+
+  /* Equity bars */
+  .eq-grid{height:140px;gap:10px}
+  .eq-bar-wrap{height:120px}
+
+  /* Tooltip: full width on mobile */
+  .m-tooltip{max-width:calc(100vw - 24px);font-size:11px}
+  .m-tooltip-formula{font-size:10px}
+
+  /* Footer */
+  footer{font-size:9px;padding:12px}
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE — SMALL MOBILE (≤380px)
+══════════════════════════════════ */
+@media(max-width:380px){
+  .kpi-grid{grid-template-columns:1fr}
+  .hbadge.g{display:none}
+  .tabs{gap:0}
+  .tab{padding:9px 10px;font-size:11px}
+  .cw{height:160px}.cw.t{height:200px}
+}
+
+/* ── Metric Tooltip ── */
+.m-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #0f1e30;
+  color: #e2e8f0;
+  border: 1px solid #4a90d9;
+  border-radius: 8px;
+  padding: 12px 16px;
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.6;
+  pointer-events: none;
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  display: none;
+}
+.m-tooltip.visible { display: block; }
+.m-tooltip-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7dd3fc;
+  margin-bottom: 7px;
+  border-bottom: 1px solid #2563a8;
+  padding-bottom: 5px;
+}
+.m-tooltip-formula {
+  background: #1e3a5f;
+  border-right: 3px solid #4a90d9;
+  padding: 5px 8px;
+  border-radius: 0 5px 5px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: #bfdbfe;
+  margin-bottom: 8px;
+  direction: ltr;
+  text-align: left;
+}
+.m-tooltip-desc { color: #cbd5e1; font-size: 11.5px; }
+.m-tooltip-tip {
+  margin-top: 7px;
+  font-size: 10.5px;
+  color: #86efac;
+  border-top: 1px solid #2d4a6a;
+  padding-top: 5px;
+}
+/* highlight rows with tooltip on hover */
+.bench-table tr[data-key]:hover td { background: #dbeafe !important; cursor: help; }
+</style>
+</head>
+<body>
+<div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:-18px -18px 14px -18px">
+  <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
+  <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">פיננסי</span>
+</div>
+
+
+<!-- ══ Header ══ -->
+<div class="header">
+  <div>
+    <div class="header-logo">סלטי <span>גן</span> בע"מ</div>
+    <div class="header-sub">דשבורד פיננסי שנתי · ייצור ושיווק סלטים · נוסדה 1990</div>
+  </div>
+  <div class="header-right">
+    <div class="hbadge g">✅ אפס חוב בנקאי</div>
+    <div class="hbadge g">📈 רווח נקי +47.6%</div>
+    <div class="hbadge">📅 31.12.2024 · אושרו 10.9.2025</div>
+  </div>
+</div>
+
+<!-- ══ Tabs ══ -->
+<div class="tabs">
+  <div class="tab active"  onclick="nav('tables',this)">📄 דוחות כספיים</div>
+  <div class="tab"         onclick="nav('overview',this)" id="tab-overview">📊 סקירה כללית</div>
+  <div class="tab"         onclick="nav('profitability',this)">💰 רווחיות</div>
+  <div class="tab"         onclick="nav('workingcap',this)">🔄 הון חוזר</div>
+  <div class="tab"         onclick="nav('leverage',this)">🏦 מינוף ונזילות</div>
+  <div class="tab"         onclick="nav('dupont',this)">🔬 DuPont</div>
+  <div class="tab"         onclick="nav('benchmark',this)">📐 השוואה לתעשייה</div>
+  <div class="tab"         onclick="nav('monthly',this)">📅 ניתוח חודשי</div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════════════════════════════
+     PAGE 0: FINANCIAL STATEMENTS
+══════════════════════════════════════ -->
+<div id="page-tables" class="page active">
+  <div class="section-title">דוחות כספיים — סלטי גן בע"מ · 31 דצמבר 2024</div>
+
+  <!-- ── BALANCE SHEET ── -->
+  <div class="card">
+    <div class="card-title">מאזן <span class="card-badge">ליום 31 בדצמבר</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead>
+        <tr>
+          <td class="col-head" style="width:42%">סעיף</td>
+          <td class="col-head">2024 ש"ח</td>
+          <td class="col-head">2023 ש"ח</td>
+          <td class="col-head">שינוי ש"ח</td>
+          <td class="col-head">שינוי %</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="sec" colspan="5">נכסים</td></tr>
+        <tr><td class="sec-sub" colspan="5">רכוש שוטף</td></tr>
+        <tr class="row indent"><td class="lbl">מזומנים ושווי מזומנים</td><td>1,731,215</td><td>555,579</td><td class="pos">+1,175,636</td><td><span class="chg up">+211.6%</span></td></tr>
+        <tr class="row indent"><td class="lbl">פקדון לזמן קצר</td><td>421,016</td><td>731,207</td><td class="neg">(310,191)</td><td><span class="chg dn">-42.4%</span></td></tr>
+        <tr class="row indent"><td class="lbl">השקעות בניירות ערך לזמן קצר</td><td>1,229,978</td><td>—</td><td class="pos">+1,229,978</td><td><span class="chg up">חדש</span></td></tr>
+        <tr class="row indent"><td class="lbl">לקוחות (נטו)</td><td>4,434,219</td><td>4,855,477</td><td class="neg">(421,258)</td><td><span class="chg dn">-8.7%</span></td></tr>
+        <tr class="row indent"><td class="lbl">חייבים ויתרות חובה</td><td>308,049</td><td>868,873</td><td class="neg">(560,824)</td><td><span class="chg dn">-64.5%</span></td></tr>
+        <tr class="row indent"><td class="lbl">מלאי</td><td>1,078,119</td><td>1,184,746</td><td class="neg">(106,627)</td><td><span class="chg dn">-9.0%</span></td></tr>
+        <tr class="total"><td>סה"כ רכוש שוטף</td><td>9,202,596</td><td>8,195,882</td><td class="pos">+1,006,714</td><td><span class="chg up">+12.3%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr class="row"><td class="lbl" style="font-weight:600">רכוש קבוע (נטו)</td><td>3,840,170</td><td>3,216,124</td><td class="pos">+624,046</td><td><span class="chg up">+19.4%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr class="gtotal"><td>סה"כ נכסים</td><td>13,042,766</td><td>11,412,006</td><td>+1,630,760</td><td>+14.3%</td></tr>
+
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr><td class="sec" colspan="5">התחייבויות והון עצמי</td></tr>
+        <tr><td class="sec-sub" colspan="5">התחייבויות שוטפות</td></tr>
+        <tr class="row indent"><td class="lbl">אשראי לזמן קצר</td><td>—</td><td>773,387</td><td class="pos">+773,387</td><td><span class="chg up">נפרע!</span></td></tr>
+        <tr class="row indent"><td class="lbl">ספקים</td><td>4,819,869</td><td>4,752,454</td><td class="neg">(67,415)</td><td><span class="chg flat">+1.4%</span></td></tr>
+        <tr class="row indent"><td class="lbl">זכאים ויתרות זכות</td><td>740,522</td><td>811,663</td><td class="pos">+71,141</td><td><span class="chg dn">-8.8%</span></td></tr>
+        <tr class="total"><td>סה"כ התחייבויות שוטפות</td><td>5,560,391</td><td>6,337,504</td><td class="pos">+776,113</td><td><span class="chg up">-12.3%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr><td class="sec-sub" colspan="5">התחייבויות לזמן ארוך</td></tr>
+        <tr class="row indent"><td class="lbl">הלוואות לזמן ארוך</td><td>—</td><td>95,729</td><td class="pos">+95,729</td><td><span class="chg up">נפרע!</span></td></tr>
+        <tr class="row indent"><td class="lbl">התחייבויות לסיום יחסי עובד-מעביד</td><td>818,783</td><td>738,683</td><td class="neg">(80,100)</td><td><span class="chg dn">+10.8%</span></td></tr>
+        <tr class="total"><td>סה"כ התחייבויות לזמן ארוך</td><td>818,783</td><td>834,412</td><td class="pos">+15,629</td><td><span class="chg up">-1.9%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr><td class="sec-sub" colspan="5">הון עצמי</td></tr>
+        <tr class="row indent"><td class="lbl">הון מניות</td><td>2,640</td><td>2,640</td><td class="neu">—</td><td><span class="chg flat">0%</span></td></tr>
+        <tr class="row indent"><td class="lbl">יתרת עודפים</td><td>6,660,952</td><td>4,237,450</td><td class="pos">+2,423,502</td><td><span class="chg up">+57.2%</span></td></tr>
+        <tr class="total"><td>סה"כ הון עצמי</td><td>6,663,592</td><td>4,240,090</td><td class="pos">+2,423,502</td><td><span class="chg up">+57.2%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr class="gtotal"><td>סה"כ התחייבויות והון עצמי</td><td>13,042,766</td><td>11,412,006</td><td>+1,630,760</td><td>+14.3%</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ── INCOME STATEMENT ── -->
+  <div class="card">
+    <div class="card-title">דוח רווח והפסד <span class="card-badge">לשנה שנסתיימה 31 בדצמבר</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead>
+        <tr>
+          <td class="col-head" style="width:38%">סעיף</td>
+          <td class="col-head">2024 ש"ח</td>
+          <td class="col-head">% מהכנסות</td>
+          <td class="col-head">2023 ש"ח</td>
+          <td class="col-head">% מהכנסות</td>
+          <td class="col-head">שינוי %</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="row"><td class="lbl" style="font-weight:700">הכנסות ממכירות</td>
+          <td style="font-weight:700">22,621,932</td><td>100.0%</td>
+          <td style="font-weight:700">20,009,171</td><td>100.0%</td>
+          <td><span class="chg up">+13.1%</span></td></tr>
+        <tr class="row indent"><td class="lbl">עלות העיבוד והמכירות</td>
+          <td>18,300,907</td><td style="color:var(--red)">80.9%</td>
+          <td>16,826,561</td><td style="color:var(--red)">84.1%</td>
+          <td><span class="chg dn">+8.8%</span></td></tr>
+        <tr class="total"><td>רווח גולמי</td>
+          <td>4,321,025</td><td style="color:var(--green);font-weight:700">19.1%</td>
+          <td>3,182,610</td><td style="color:var(--green);font-weight:700">15.9%</td>
+          <td><span class="chg up">+35.8%</span></td></tr>
+        <tr class="sp"><td colspan="6"></td></tr>
+        <tr class="row indent"><td class="lbl">הוצאות מכירה, הנהלה וכלליות</td>
+          <td>910,879</td><td>4.0%</td>
+          <td>800,542</td><td>4.0%</td>
+          <td><span class="chg dn">+13.8%</span></td></tr>
+        <tr class="total"><td>רווח תפעולי (EBIT)</td>
+          <td>3,410,146</td><td style="color:var(--blue);font-weight:700">15.1%</td>
+          <td>2,382,068</td><td style="color:var(--blue);font-weight:700">11.9%</td>
+          <td><span class="chg up">+43.2%</span></td></tr>
+        <tr class="sp"><td colspan="6"></td></tr>
+        <tr class="row indent"><td class="lbl">הוצאות מימון, נטו</td>
+          <td>(141,567)</td><td style="color:var(--red)">0.6%</td>
+          <td>(115,511)</td><td style="color:var(--red)">0.6%</td>
+          <td><span class="chg dn">+22.5%</span></td></tr>
+        <tr class="row indent"><td class="lbl">רווח הון (מניירות ערך)</td>
+          <td>87,323</td><td>0.4%</td>
+          <td>—</td><td>—</td>
+          <td><span class="chg up">חדש</span></td></tr>
+        <tr class="total"><td>רווח לפני מס</td>
+          <td>3,355,902</td><td style="font-weight:700">14.8%</td>
+          <td>2,266,557</td><td style="font-weight:700">11.3%</td>
+          <td><span class="chg up">+48.1%</span></td></tr>
+        <tr class="row indent"><td class="lbl">מיסים על הכנסה (23.5%)</td>
+          <td>789,543</td><td>3.5%</td>
+          <td>528,351</td><td>2.6%</td>
+          <td><span class="chg dn">+49.4%</span></td></tr>
+        <tr class="sp"><td colspan="6"></td></tr>
+        <tr class="gtotal"><td>רווח נקי</td>
+          <td>2,566,359</td><td>11.3%</td>
+          <td>1,738,206</td><td>8.7%</td>
+          <td>+47.6%</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ── CASH FLOW ── -->
+  <div class="card">
+    <div class="card-title">דוח על תזרימי המזומנים <span class="card-badge">לשנה שנסתיימה 31 בדצמבר</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead>
+        <tr>
+          <td class="col-head" style="width:42%">סעיף</td>
+          <td class="col-head">2024 ש"ח</td>
+          <td class="col-head">2023 ש"ח</td>
+          <td class="col-head">שינוי ש"ח</td>
+          <td class="col-head">שינוי %</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="sec" colspan="5">תזרימי מזומנים מפעילות שוטפת</td></tr>
+        <tr class="row indent"><td class="lbl">רווח נקי</td><td>2,566,359</td><td>1,738,206</td><td class="pos">+828,153</td><td><span class="chg up">+47.6%</span></td></tr>
+        <tr class="row indent"><td class="lbl">התאמות לתזרים שוטף (נספח א)</td><td>1,699,774</td><td>(343,808)</td><td class="pos">+2,043,582</td><td><span class="chg up">—</span></td></tr>
+        <tr class="total"><td>תזרים נטו מפעילות שוטפת</td><td>4,266,133</td><td>1,394,398</td><td class="pos">+2,871,735</td><td><span class="chg up">+205.9%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr><td class="sec" colspan="5">תזרימי מזומנים מפעילות השקעה</td></tr>
+        <tr class="row indent"><td class="lbl">רכישת רכוש קבוע</td><td>(1,464,435)</td><td>(1,027,295)</td><td class="neg">(437,140)</td><td><span class="chg dn">+42.6%</span></td></tr>
+        <tr class="row indent"><td class="lbl">תמורה ממכירת רכוש קבוע</td><td>280,000</td><td>—</td><td class="pos">+280,000</td><td><span class="chg up">חדש</span></td></tr>
+        <tr class="row indent"><td class="lbl">רכישת ניירות ערך לזמן קצר</td><td>(1,219,255)</td><td>—</td><td class="neg">(1,219,255)</td><td><span class="chg dn">חדש</span></td></tr>
+        <tr class="row indent"><td class="lbl">פקדונות — נטו</td><td>325,015</td><td>(12,000)</td><td class="pos">+337,015</td><td><span class="chg up">—</span></td></tr>
+        <tr class="total"><td>תזרים נטו מפעילות השקעה</td><td>(2,078,675)</td><td>(1,039,295)</td><td class="neg">(1,039,380)</td><td><span class="chg dn">+100.0%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr><td class="sec" colspan="5">תזרימי מזומנים מפעילות מימון</td></tr>
+        <tr class="row indent"><td class="lbl">פירעון הלוואות לזמן ארוך</td><td>(349,651)</td><td>(233,835)</td><td class="neg">(115,816)</td><td><span class="chg dn">+49.5%</span></td></tr>
+        <tr class="row indent"><td class="lbl">גידול (קיטון) נטו באשראי קצר</td><td>(519,314)</td><td>(104,504)</td><td class="neg">(414,810)</td><td><span class="chg dn">+397.0%</span></td></tr>
+        <tr class="row indent"><td class="lbl">חלוקת דיבידנד</td><td>(142,857)</td><td>—</td><td class="neg">(142,857)</td><td><span class="chg dn">חדש</span></td></tr>
+        <tr class="total"><td>תזרים נטו מפעילות מימון</td><td>(1,011,822)</td><td>(338,339)</td><td class="neg">(673,483)</td><td><span class="chg dn">+199.1%</span></td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr class="row" style="background:#f0fdf4"><td class="lbl" style="font-weight:700">עלייה (ירידה) נטו במזומנים</td><td class="pos" style="font-weight:700">1,123,641</td><td class="neu">16,764</td><td class="pos">+1,106,877</td><td><span class="chg up">+6,603%</span></td></tr>
+        <tr class="row indent"><td class="lbl">יתרת פתיחה</td><td>555,579</td><td>538,815</td><td class="pos">+16,764</td><td><span class="chg up">+3.1%</span></td></tr>
+        <tr class="gtotal"><td>יתרת מזומנים — סוף שנה</td><td>1,679,220</td><td>555,579</td><td>+1,123,641</td><td>+202.2%</td></tr>
+        <tr class="sp"><td colspan="5"></td></tr>
+        <tr class="row" style="background:#fef9c3"><td class="lbl" style="font-weight:700;color:var(--navy)">📌 FCF (שוטפת פחות Capex)</td><td style="font-weight:700;color:var(--green)">2,801,698</td><td style="color:var(--amber)">367,103</td><td class="pos">+2,434,595</td><td><span class="chg up">+663%</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ── EQUITY STATEMENT ── -->
+  <div class="card">
+    <div class="card-title">דוח על השינויים בהון עצמי <span class="card-badge">2021–2024</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead>
+        <tr>
+          <td class="col-head" style="width:38%">תנועה</td>
+          <td class="col-head">הון מניות</td>
+          <td class="col-head">יתרת עודפים</td>
+          <td class="col-head">סה"כ</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="total"><td>יתרה 31.12.2021</td><td>2,640</td><td>1,737,895</td><td>1,740,535</td></tr>
+        <tr class="row indent"><td class="lbl">רווח שנת 2022</td><td>—</td><td>961,349</td><td class="pos">961,349</td></tr>
+        <tr class="total"><td>יתרה 31.12.2022</td><td>2,640</td><td>2,699,244</td><td>2,701,884</td></tr>
+        <tr class="row indent"><td class="lbl">דיבידנד 2022</td><td>—</td><td>(200,000)</td><td class="neg">(200,000)</td></tr>
+        <tr class="row indent"><td class="lbl">רווח שנת 2023</td><td>—</td><td>1,738,206</td><td class="pos">1,738,206</td></tr>
+        <tr class="total"><td>יתרה 31.12.2023</td><td>2,640</td><td>4,237,450</td><td>4,240,090</td></tr>
+        <tr class="row indent"><td class="lbl">דיבידנד 2023</td><td>—</td><td>(142,857)</td><td class="neg">(142,857)</td></tr>
+        <tr class="row indent"><td class="lbl">רווח שנת 2024</td><td>—</td><td>2,566,359</td><td class="pos">2,566,359</td></tr>
+        <tr class="gtotal"><td>יתרה 31.12.2024</td><td>2,640</td><td>6,660,952</td><td>6,663,592</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="ins g">הון עצמי גדל ×3.83 תוך 3 שנים — מ-₪1.74M ל-₪6.66M. תשואה ממוצעת על הון: ~47%.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 1: OVERVIEW
+══════════════════════════════════════ -->
+<div id="page-overview" class="page">
+  <div class="section-title">סקירה כללית — 2024 לעומת 2023</div>
+  <div class="kpi-grid">
+    <div class="kpi g"><div class="kpi-lbl">הכנסות</div><div class="kpi-val sm">₪22.6M</div><div class="kpi-d up">▲ 13.1%</div><div class="kpi-sub">2023: ₪20.0M</div></div>
+    <div class="kpi g"><div class="kpi-lbl">רווח גולמי</div><div class="kpi-val sm">₪4.3M</div><div class="kpi-d up">▲ 35.8%</div><div class="kpi-sub">19.1% ← 15.9%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">רווח תפעולי</div><div class="kpi-val sm">₪3.4M</div><div class="kpi-d up">▲ 43.2%</div><div class="kpi-sub">15.1% ← 11.9%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">רווח נקי</div><div class="kpi-val sm">₪2.6M</div><div class="kpi-d up">▲ 47.6%</div><div class="kpi-sub">11.3% ← 8.7%</div></div>
+    <div class="kpi n"><div class="kpi-lbl">RNOA</div><div class="kpi-val">75.3%</div><div class="kpi-d up">תעשייה 18%</div></div>
+    <div class="kpi n"><div class="kpi-lbl">ROCE</div><div class="kpi-val">47.1%</div><div class="kpi-d up">תעשייה 15%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">FCF</div><div class="kpi-val sm">₪2.8M</div><div class="kpi-d up">▲ 663%</div><div class="kpi-sub">2023: ₪367K</div></div>
+    <div class="kpi a"><div class="kpi-lbl">CCC (ימים)</div><div class="kpi-val">2.0</div><div class="kpi-d up">תעשייה: 32</div><div class="kpi-sub">2023: 11.2</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">הכנסות ורווח נקי 2022–2024 <span class="card-badge">₪K</span></div>
+      <div class="cw"><canvas id="c_revProfit"></canvas></div>
+      <div class="ins g">רווח נקי ×2.67 תוך 3 שנים</div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">שולי רווח + ממוצע תעשייה</div>
+      <div class="cw"><canvas id="c_margins"></canvas></div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">מפל P&amp;L 2024</div>
+      <div id="wf_overview" style="padding:4px 0"></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">הון עצמי מצטבר</div>
+      <div class="eq-grid" id="equityBar"></div>
+      <div class="ins g" style="margin-top:8px">₪1.74M → ₪6.66M (×3.8)</div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">ציון כולל מול תעשייה</div>
+      <div class="cw"><canvas id="c_score"></canvas></div>
+      <div style="text-align:center;margin-top:-36px;font-size:20px;font-weight:800;color:var(--navy)">87/100</div>
+      <div style="text-align:center;font-size:11px;color:var(--gray)">ביצוע כולל מול ממוצע תעשייה</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 2: PROFITABILITY
+══════════════════════════════════════ -->
+<div id="page-profitability" class="page">
+  <div class="section-title">ניתוח רווחיות</div>
+  <div class="kpi-grid">
+    <div class="kpi a"><div class="kpi-lbl">שולי גולמי</div><div class="kpi-val">19.1%</div><div class="kpi-d up">▲ מ-15.9%</div><div class="kpi-sub">תעשייה: ~22.9%*</div></div>
+    <div class="kpi g"><div class="kpi-lbl">שולי EBIT</div><div class="kpi-val">15.1%</div><div class="kpi-d up">▲ מ-11.9%</div><div class="kpi-sub">תעשייה: ~8.2%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">שולי נקי</div><div class="kpi-val">11.3%</div><div class="kpi-d up">▲ מ-8.7%</div><div class="kpi-sub">תעשייה: ~6.7%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">צמיחת הכנסות</div><div class="kpi-val">13.1%</div><div class="kpi-d up">תעשייה ~5%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">צמיחת רווח נקי</div><div class="kpi-val">47.6%</div><div class="kpi-d up">תעשייה ~10%</div></div>
+    <div class="kpi n"><div class="kpi-lbl">מינוף תפעולי</div><div class="kpi-val">3.6×</div><div class="kpi-sub">ΔEBIT / ΔRev</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">ניתוח אנכי — % מהכנסות</div>
+      <div class="cw t"><canvas id="c_vertical"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">צמיחה שנה על שנה</div>
+      <div class="cw t"><canvas id="c_growth"></canvas></div>
+      <div class="ins g">מינוף תפעולי 3.6× — כל 1% הכנסות → 3.6% EBIT</div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">שולי גולמי לאורך זמן</div>
+      <div class="cw"><canvas id="c_grossTrend"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">הכנסות לעומת עלות המכר</div>
+      <div class="cw"><canvas id="c_revCOGS"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">פירוט הוצאות 2024</div>
+      <div class="cw"><canvas id="c_expBreak"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">מפל P&amp;L מלא 2024</div>
+    <div id="wf_profit" style="padding:6px 0"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 3: WORKING CAPITAL
+══════════════════════════════════════ -->
+<div id="page-workingcap" class="page">
+  <div class="section-title">ניהול הון חוזר</div>
+  <div class="kpi-grid">
+    <div class="kpi a"><div class="kpi-lbl">ימי לקוחות</div><div class="kpi-val">74.9</div><div class="kpi-d up">▼ מ-88.6</div><div class="kpi-sub">תעשייה: ~52</div></div>
+    <div class="kpi g"><div class="kpi-lbl">ימי מלאי</div><div class="kpi-val">22.6</div><div class="kpi-d up">▼ מ-25.7</div><div class="kpi-sub">תעשייה: ~35</div></div>
+    <div class="kpi g"><div class="kpi-lbl">ימי ספקים</div><div class="kpi-val">95.5</div><div class="kpi-d up">תעשייה: ~55</div></div>
+    <div class="kpi a"><div class="kpi-lbl">מחזור תפעולי</div><div class="kpi-val">97.5</div><div class="kpi-d up">▼ מ-114.3</div><div class="kpi-sub">תעשייה: ~87</div></div>
+    <div class="kpi n"><div class="kpi-lbl">CCC</div><div class="kpi-val">2.0</div><div class="kpi-d up">תעשייה: 32!</div><div class="kpi-sub">2023: 11.2</div></div>
+    <div class="kpi g"><div class="kpi-lbl">יחס שוטף</div><div class="kpi-val">1.65</div><div class="kpi-d up">▲ מ-1.29</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">ימים — 2023 vs 2024 vs תעשייה</div>
+      <div class="cw t"><canvas id="c_wcdays"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">CCC מגמה + ממוצע תעשייה</div>
+      <div class="cw t"><canvas id="c_cccTrend"></canvas></div>
+      <div class="ins g">CCC ירד מ-18.5 → 11.2 → 2.0 ימים. ממוצע תעשייה: 32.</div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">ויזואליזציה — מחזור ימים 2024</div>
+      <div id="cccVisual" style="padding:12px 0"></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">יחסי נזילות — השוואה</div>
+      <div class="cw"><canvas id="c_liquidity"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">לקוחות ומלאי — יתרה לאורך זמן</div>
+      <div class="cw"><canvas id="c_wcBalance"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">הון חוזר נטו לאורך זמן</div>
+      <div class="cw"><canvas id="c_nwc"></canvas></div>
+      <div class="ins">הון חוזר נטו: ₪3.64M (עלייה מ-₪1.86M ב-2023)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 4: LEVERAGE
+══════════════════════════════════════ -->
+<div id="page-leverage" class="page">
+  <div class="section-title">מינוף ונזילות</div>
+  <div class="kpi-grid">
+    <div class="kpi g"><div class="kpi-lbl">חוב בנקאי</div><div class="kpi-val">₪0</div><div class="kpi-d up">נקי!</div><div class="kpi-sub">2023: ₪869K</div></div>
+    <div class="kpi g"><div class="kpi-lbl">NFA נטו</div><div class="kpi-val sm">₪3.38M</div><div class="kpi-d up">▲ מ-₪418K</div></div>
+    <div class="kpi g"><div class="kpi-lbl">חוב / הון</div><div class="kpi-val">0.00×</div><div class="kpi-d up">2023: 0.21×</div><div class="kpi-sub">תעשייה: ~0.5×</div></div>
+    <div class="kpi g"><div class="kpi-lbl">יחס שוטף</div><div class="kpi-val">1.65</div><div class="kpi-d up">▲ מ-1.29</div></div>
+    <div class="kpi g"><div class="kpi-lbl">יחס מהיר</div><div class="kpi-val">1.46</div><div class="kpi-d up">▲ מ-1.11</div><div class="kpi-sub">תעשייה: ~0.9</div></div>
+    <div class="kpi n"><div class="kpi-lbl">הון עצמי</div><div class="kpi-val sm">₪6.66M</div><div class="kpi-d up">▲ 57.2%</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">מבנה מאזן 2024 vs 2023</div>
+      <div class="cw t"><canvas id="c_balance"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">תזרים לפי פעילויות — 2023 vs 2024</div>
+      <div class="cw t"><canvas id="c_cf"></canvas></div>
+      <div class="ins g">תזרים שוטף ×3 — ₪1.4M → ₪4.3M</div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">נכסים פיננסיים נטו לאורך זמן</div>
+      <div class="cw"><canvas id="c_nfa"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">פירוט מזומנים + ני"ע 2024</div>
+      <div class="cw"><canvas id="c_cashBreak"></canvas></div>
+      <div class="ins a">₪3.4M עודף — שקול חלוקה/השקעה</div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">FCF לאורך זמן</div>
+      <div class="cw"><canvas id="c_fcfTrend"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 5: DUPONT
+══════════════════════════════════════ -->
+<div id="page-dupont" class="page">
+  <div class="section-title">פירוק DuPont — 2024</div>
+  <div class="card">
+    <div class="card-title">עץ DuPont — מ-PM ו-ATO ל-ROCE</div>
+    <div class="dn-wrap">
+      <div class="dn-row"><div class="dn-box hl"><div class="dn-lbl">ROCE</div><div class="dn-val">47.1%</div></div></div>
+      <div class="dn-conn"></div>
+      <div class="dn-eq">= RNOA + FLEV × Spread</div>
+      <div class="dn-conn"></div>
+      <div class="dn-row">
+        <div class="dn-box g"><div class="dn-lbl">RNOA</div><div class="dn-val">75.3%</div></div>
+        <div class="dn-sep">+</div>
+        <div class="dn-box a"><div class="dn-lbl">FLEV × Spread</div><div class="dn-val">−24.3%</div></div>
+      </div>
+      <div class="dn-conn"></div>
+      <div class="dn-row">
+        <div class="dn-box g" style="min-width:125px"><div class="dn-lbl">PM (NOPAT%)</div><div class="dn-val">11.8%</div></div>
+        <div class="dn-sep">×</div>
+        <div class="dn-box g" style="min-width:125px"><div class="dn-lbl">ATO (מחזור)</div><div class="dn-val">6.37×</div></div>
+        <div style="width:32px"></div>
+        <div class="dn-box a" style="min-width:105px"><div class="dn-lbl">FLEV</div><div class="dn-val">−0.35×</div></div>
+        <div class="dn-sep">×</div>
+        <div class="dn-box" style="min-width:125px"><div class="dn-lbl">Spread</div><div class="dn-val">69.6%</div></div>
+      </div>
+    </div>
+    <div class="ins g">RNOA 75% — כל ₪1 נכס תפעולי → ₪0.75 רווח. ATO 6.37× (תעשייה: 3.0×).</div>
+    <div class="ins a" style="margin-top:6px">FLEV שלילי: ₪3.4M פיננסי מרוויח 5.7% vs RNOA 75% → גורע 24.3pp מROCE.</div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">DuPont — סלטי גן vs תעשייה</div>
+      <div class="cw t"><canvas id="c_dupont"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">NOA — נכסים תפעוליים נטו 2024</div>
+      <div class="cw t"><canvas id="c_noa"></canvas></div>
+      <div class="ins">NOA ממוצע ₪3.55M → הכנסות ₪22.6M = ATO 6.37×</div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card" style="margin:0">
+      <div class="card-title">PM × ATO — מיקום בריבוע</div>
+      <div class="cw"><canvas id="c_pmAto"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">ROCE = RNOA + FLEV×Spread</div>
+      <div class="cw"><canvas id="c_roceDecomp"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">Spread לאורך זמן</div>
+      <div class="cw"><canvas id="c_spread"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 6: BENCHMARK
+══════════════════════════════════════ -->
+<div id="page-benchmark" class="page">
+  <div class="section-title">השוואה לתעשיית המזון הישראלי</div>
+  <div class="card">
+    <div class="card-title">טבלת מדדים — <span style="color:var(--green)">ירוק בהיר יותר = ביצוע גבוה יותר מהממוצע</span> · <span style="color:var(--red)">אדום = מתחת</span><span class="card-badge">ממוצע תעשיית Food Processing עולמית — CSIMarket Q1 2026</span></div>
+    <div style="overflow-x:auto">
+    <table class="bench-table" id="benchTable">
+      <thead><tr><th>קטגוריה</th><th>מדד</th><th>סלטי גן 2024</th><th>סלטי גן 2023</th><th>ממוצע תעשייה</th><th>% מהממוצע</th><th>פרשנות</th></tr></thead>
+      <tbody id="benchTbody"></tbody>
+    </table>
+    </div>
+    <div class="ins" style="margin-top:8px">* ממוצע תעשיית Food Processing עולמית — מקור: CSIMarket Q1 2026 (TTM). שולי גולמי: 22.9%, EBIT: 8.2%, נקי: 6.7%. <strong>הערה:</strong> פער הגולמי (~3.8pp) מוסבר ע"י הכללת עלויות הפצה ב-COGS אצל סלטי גן — ה-EBIT הוא ההשוואה הנכונה.</div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <div class="card-title">גרף עכביש — סלטי גן vs תעשייה</div>
+      <div class="cw t"><canvas id="c_radar"></canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title">% מהממוצע תעשייה (100% = זהה לממוצע)</div>
+      <div class="cw xt"><canvas id="c_vsAvg"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">סיכום — חוזקות ואזורים לשיפור</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
+      <div>
+        <div style="font-weight:700;color:var(--green);margin-bottom:7px;font-size:13px">✅ חוזקות בולטות</div>
+        <div class="ins g" style="margin-bottom:5px">RNOA 75% — ×4.2 מממוצע התעשייה (18%)</div>
+        <div class="ins g" style="margin-bottom:5px">CCC 2 ימים — ×16 טוב מתעשייה (32 יום)</div>
+        <div class="ins g" style="margin-bottom:5px">אפס חוב + ₪3.4M נכסים פיננסיים נטו</div>
+        <div class="ins g">FCF margin 12.4% — ×3 מממוצע (4%)</div>
+      </div>
+      <div>
+        <div style="font-weight:700;color:var(--amber);margin-bottom:7px;font-size:13px">⚠️ אזורים לשיפור</div>
+        <div class="ins a" style="margin-bottom:5px">רווח גולמי 19.1% מול תעשייה 22.9% — פער ~3.8pp מוסבר בעיקר ע"י הכללת עלויות הפצה ב-COGS</div>
+        <div class="ins a" style="margin-bottom:5px">ימי לקוחות 74.9 &gt; תעשייה 52 — האץ גבייה</div>
+        <div class="ins a">עודף מזומן ₪3.4M בתשואה 5.7% — שקול דיבידנד/השקעה</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: MONTHLY ANALYSIS
+══════════════════════════════════════ -->
+<div id="page-monthly" class="page">
+  <div class="section-title">ניתוח חודשי — פעילות שוטפת</div>
+
+  <!-- Upload zone -->
+  <div class="card" id="uploadCard">
+    <div class="card-title">העלאת נתונים חודשיים <span class="card-badge">Excel / CSV</span></div>
+    <div id="dropZone" style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--lgray)"
+      ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="handleDrop(event)"
+      onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:36px;margin-bottom:8px">📂</div>
+      <div style="font-size:14px;font-weight:700;color:var(--navy)">גרור קובץ Excel או CSV לכאן</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">או לחץ לבחירת קובץ</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button onclick="downloadTemplate()" style="background:var(--navy);color:#fff;border:none;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+        ⬇ הורד תבנית Excel
+      </button>
+      <span style="font-size:11px;color:var(--gray)">הורד את התבנית, מלא את הנתונים החודשיים ו העלה</span>
+    </div>
+
+    <!-- Column guide -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">עמודות נדרשות בקובץ:</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">
+        <div id="colGuide"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div id="uploadError" style="display:none" class="ins r"></div>
+
+  <!-- Results — hidden until data loaded -->
+  <div id="monthlyResults" style="display:none">
+
+    <!-- Current month KPIs -->
+    <div class="section-title" style="margin-top:4px" id="monthlyTitle">ניתוח חודשי</div>
+    <div class="kpi-grid" id="monthlyKpis"></div>
+
+    <!-- Revenue + Margin trend -->
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-title">מכירות חודשיות <span class="card-badge" id="revBadge"></span></div>
+        <div class="cw t"><canvas id="mc_rev"></canvas></div>
+        <div class="ins" id="revIns"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-title">שולי רווח חודשיים</div>
+        <div class="cw t"><canvas id="mc_margins"></canvas></div>
+        <div class="ins" id="marginIns"></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+
+    <!-- Working capital monthly -->
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-title">הון חוזר — ימי לקוחות / מלאי / ספקים</div>
+        <div class="cw t"><canvas id="mc_wc"></canvas></div>
+        <div class="ins" id="wcIns"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-title">מחזור המרת מזומנים (CCC)</div>
+        <div class="cw t"><canvas id="mc_ccc"></canvas></div>
+        <div class="ins" id="cccIns"></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+
+    <!-- Cash flow + EBIT -->
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-title">תזרים מזומנים תפעולי חודשי</div>
+        <div class="cw t"><canvas id="mc_cf"></canvas></div>
+        <div class="ins" id="cfIns"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-title">הכנסות לעומת COGS — חודשי</div>
+        <div class="cw t"><canvas id="mc_revCogs"></canvas></div>
+        <div class="ins" id="revCogsIns"></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+
+    <!-- YTD summary table -->
+    <div class="card">
+      <div class="card-title">סיכום YTD — נצטבר מתחילת השנה <span class="card-badge" id="ytdBadge"></span></div>
+      <div style="overflow-x:auto"><table class="bench-table" id="ytdTable">
+        <thead><tr>
+          <th>חודש</th><th>הכנסות ₪</th><th>גולמי %</th><th>EBIT %</th>
+          <th>ימי לקוחות</th><th>ימי מלאי</th><th>ימי ספקים</th><th>CCC</th>
+          <th>תזרים תפעולי ₪</th>
+        </tr></thead>
+        <tbody id="ytdBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Gross margin breakdown -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">📊 ניתוח רווח גולמי — פירוק לפי רכיבי עלות <span class="card-badge">ינואר–אפריל 2026</span></div>
+
+      <div class="grid2" style="margin-bottom:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">שולי גולמי לפי סוג עלות</div>
+          <div class="cw t"><canvas id="mc_gpm_breakdown"></canvas></div>
+          <div class="ins" style="margin-top:8px">
+            שולי <b>גולמי כולל</b> = הכנסות פחות קניות + שכר + חרושת.<br>
+            שולי <b>מול קניות בלבד</b> = כמה נשאר לפני שמשלמים לעובדים וציוד — "מרווח תרומה" גולמי.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">התפלגות עלות המכר — % מהכנסות</div>
+          <div class="cw t"><canvas id="mc_cogs_stack"></canvas></div>
+          <div class="ins a" style="margin-top:8px">
+            מאי חסר שכר עבודה (~23% מהכנסות) — לכן COGS נמוך מאוד ושולי גולמי 57%.
+          </div>
+        </div>
+      </div>
+
+      <!-- Breakdown table -->
+      <div style="overflow-x:auto">
+      <table class="bench-table" id="gpmBreakTable">
+        <thead><tr>
+          <th>חודש</th>
+          <th>הכנסות ₪</th>
+          <th>קניות ₪ (%)</th>
+          <th>שכר ייצור ₪ (%)</th>
+          <th>הוצ׳ חרושת ₪ (%)</th>
+          <th>סה״כ COGS ₪</th>
+          <th>גולמי כולל %</th>
+          <th>גולמי מול קניות %</th>
+          <th>גולמי מול שכר %</th>
+          <th>גולמי מול חרושת %</th>
+        </tr></thead>
+        <tbody id="gpmBreakBody"></tbody>
+      </table>
+      </div>
+
+      <div class="ins" style="margin-top:10px">
+        <b>כיצד לקרוא את הטבלה:</b>
+        "גולמי מול קניות" = כמה היה נשאר לפני שכר וחרושת. "גולמי מול שכר" = כמה נשאר לפני שכר בלבד.
+        משמש להבין <b>מה מסביר שינוי</b> בשולי הגולמי — קניות יקרות יותר? שכר גדל? עלויות חרושת?
+      </div>
+    </div>
+
+    <!-- Operating Profit Analysis -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">⚙️ ניתוח רווח תפעולי (EBIT) <span class="card-badge">ינואר–אפריל 2026</span></div>
+
+      <!-- EBIT KPIs -->
+      <div class="kpi-grid" style="margin-bottom:16px" id="ebitKpis"></div>
+
+      <div class="grid2" style="margin-bottom:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">רווח תפעולי חודשי (₪)</div>
+          <div class="cw t"><canvas id="mc_ebit_abs"></canvas></div>
+          <div class="ins" id="ebitAbsIns"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">שולי גולמי vs. שולי EBIT vs. שולי נקי (%)</div>
+          <div class="cw t"><canvas id="mc_ebit_margins"></canvas></div>
+          <div class="ins" id="ebitMarginIns"></div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">מגשר P&L — רווח גולמי → EBIT → נקי (₪K)</div>
+          <div class="cw t"><canvas id="mc_ebit_bridge"></canvas></div>
+          <div class="ins">הוצ׳ הנהלה וכלליות גוזרות ~3–4% מהכנסות. מימון נמוך — שיפור בעת ירידת ריבית.</div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">הוצאות הנהלה וכלליות — ₪ ו-% מהכנסות</div>
+          <div class="cw t"><canvas id="mc_gna"></canvas></div>
+          <div class="ins" id="gnaIns"></div>
+        </div>
+      </div>
+
+      <!-- Full P&L table -->
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">טבלת דוח רווח והפסד מלא — חודשי</div>
+      <div style="overflow-x:auto">
+      <table class="bench-table" id="plTable">
+        <thead><tr>
+          <th>שורה</th>
+          <th>ינואר 2026</th><th>% מהכנסות</th>
+          <th>פברואר 2026</th><th>% מהכנסות</th>
+          <th>מרץ 2026</th><th>% מהכנסות</th>
+          <th>אפריל 2026</th><th>% מהכנסות</th>
+          <th>ממוצע %</th>
+        </tr></thead>
+        <tbody id="plBody"></tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Insights & Alerts -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">🔍 תובנות והתראות</div>
+      <div id="alertsBox"></div>
+    </div>
+
+    <!-- Metric explanations -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">📖 מה מחושב כאן ולמה זה חשוב</div>
+      <div id="metricExplainBox"></div>
+    </div>
+
+  </div><!-- /monthlyResults -->
+</div><!-- /page-monthly -->
+
+</div><!-- /main -->
+<div class="m-tooltip" id="metricTooltip">
+  <div class="m-tooltip-title" id="ttTitle"></div>
+  <div class="m-tooltip-formula" id="ttFormula"></div>
+  <div class="m-tooltip-desc" id="ttDesc"></div>
+  <div class="m-tooltip-tip" id="ttTip"></div>
+</div>
+
+<footer>סלטי גן בע"מ · דשבורד פיננסי 2024 · נתונים: דוחות מאושרים 10.9.2025 · ממוצע תעשייה: שטראוס, אוסם, יוחננוף, שופרסל מזון 2022–2024</footer>
+
+<script>
+// ── Navigation ──────────────────────────────────────────────────────────────
+const built = {};
+function nav(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  (el || event.currentTarget).classList.add('active');
+  // defer chart init by one frame so the canvas is visible and has dimensions
+  if (!built[id]) { built[id] = true; requestAnimationFrame(() => setTimeout(() => buildPage(id), 50)); }
+}
+
+// ── Palette + helpers ────────────────────────────────────────────────────────
+const C = { navy:'#1a3a5c',blue:'#2563a8',lblue:'#4a90d9',sky:'#bfdbfe',
+  green:'#16a34a',lgreen:'#86efac',amber:'#d97706',lamber:'#fcd34d',
+  red:'#dc2626',lred:'#fca5a5',gray:'#94a3b8',lgray:'#e2e8f0' };
+const F = { family:"'Segoe UI',Arial,sans-serif", size:11 };
+
+function base(pct) {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{labels:{font:F,color:C.navy}}, tooltip:{titleFont:F,bodyFont:F} },
+    scales:{
+      x:{ticks:{font:F,color:C.navy},grid:{color:'#e2e8f0'}},
+      y:{ticks:{font:F,color:C.navy,callback:pct?v=>v+'%':undefined},grid:{color:'#e2e8f0'}}
+    }
+  };
+}
+function mk(id, type, data, opts) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  new Chart(el, { type, data, options: opts });
+}
+
+// ── Waterfall helper ─────────────────────────────────────────────────────────
+function wf(div, rows) {
+  const el = document.getElementById(div);
+  if (!el) return;
+  const mx = Math.max(...rows.map(r => Math.abs(r.v)));
+  rows.forEach(r => {
+    const w = (Math.abs(r.v)/mx*100).toFixed(1);
+    el.innerHTML += `<div class="wf-row">
+      <div class="wf-lbl">${r.l}</div>
+      <div class="wf-bar-wrap"><div class="wf-bar" style="width:${w}%;background:${r.c}">${w>9?'₪'+Math.abs(r.v).toLocaleString():''}</div></div>
+      <div class="wf-num">${r.v<0?'(':''}₪${Math.abs(r.v).toLocaleString()}${r.v<0?')':''}</div>
+      <div class="wf-pct">${r.p>0?'':r.p<0?'(':''}${Math.abs(r.p).toFixed(1)}%${r.p<0?')':''}</div>
+    </div>`;
+  });
+}
+
+// ── Benchmark coloring ────────────────────────────────────────────────────────
+function bColor(actual, bench, dir) {
+  if (bench == null) return { bg:'#f8fafc', txt:'#475569' };
+  const ratio = actual / bench;
+  const score = dir === 'high' ? ratio : (2 - ratio);
+  const s = Math.max(0, Math.min(2, score));
+  if (s >= 1) {
+    const t = Math.min((s-1)/1, 1);
+    const r = Math.round(t*150), g = Math.round(120+t*120), b = Math.round(60+t*120);
+    return { bg:`rgb(${r},${g},${b})`, txt: s>1.6 ? '#052e16' : '#14532d' };
+  } else {
+    const t = 1-s;
+    return { bg:`rgb(255,${Math.round(180-t*110)},${Math.round(180-t*110)})`, txt:'#7f1d1d' };
+  }
+}
+
+const benchRows = [
+  ['רווחיות','שולי רווח גולמי %',19.1,15.9,22.9,'high','−3.8pp מהממוצע — מוסבר ע"י הפצה ב-COGS','pct'],
+  ['רווחיות','שולי EBIT %',15.1,11.9,8.2,'high','+6.9pp מעל הממוצע','pct'],
+  ['רווחיות','שולי רווח נקי %',11.3,8.7,6.7,'high','+4.6pp מעל הממוצע','pct'],
+  ['צמיחה','צמיחת הכנסות %',13.1,null,5.0,'high','+8.1pp מעל הממוצע','pct'],
+  ['צמיחה','צמיחת רווח נקי %',47.6,null,10.0,'high','+37.6pp מעל הממוצע','pct'],
+  ['הון חוזר','ימי לקוחות',74.9,88.6,52.0,'low','+22.9 ימים מעל הממוצע — שפר גבייה','days'],
+  ['הון חוזר','ימי מלאי',22.6,25.7,35.0,'low','−12.4 ימים מתחת לממוצע (טוב)','days'],
+  ['הון חוזר','ימי ספקים',95.5,103.1,55.0,'high','+40.5 ימים מעל הממוצע — כוח מיקוח גבוה','days'],
+  ['הון חוזר','CCC (ימים)',2.0,11.2,32.0,'low','−30 ימים מתחת לממוצע — יוצא דופן!','days'],
+  ['נזילות','יחס שוטף',1.65,1.29,1.5,'high','+0.15 מעל הממוצע','x'],
+  ['נזילות','יחס מהיר',1.46,1.11,0.9,'high','+0.56 מעל הממוצע','x'],
+  ['מינוף','חוב/הון',0.0,0.205,0.5,'low','−0.50 מתחת לממוצע — אפס חוב בנקאי','x'],
+  ['מינוף','Net Debt/Equity',-0.508,-0.099,0.2,'low','−0.71 מתחת לממוצע — עמדת מזומן נטו','x'],
+  ['DuPont','ROCE %',47.1,null,15.0,'high','+32.1pp מעל הממוצע','pct'],
+  ['DuPont','RNOA %',75.3,null,18.0,'high','+57.3pp מעל הממוצע — יוצא דופן!','pct'],
+  ['DuPont','PM % (NOPAT)',11.8,null,6.0,'high','+5.8pp מעל הממוצע','pct'],
+  ['DuPont','ATO (×)',6.37,null,3.0,'high','+3.37 יחידות מעל הממוצע','x'],
+  ['תזרים','FCF margin %',12.4,1.8,4.0,'high','+8.4pp מעל הממוצע','pct'],
+];
+
+(function buildBenchTable(){
+  const tb = document.getElementById('benchTbody');
+  if (!tb) return;
+  benchRows.forEach(([cat,lbl,v24,v23,bench,dir,note,fmt])=>{
+    const fv = v => v==null ? '—' : fmt==='pct' ? v.toFixed(1)+'%' : fmt==='days' ? v.toFixed(1)+' י׳' : v.toFixed(2)+'×';
+    const col = bColor(v24, bench, dir);
+    const pct = bench!=null ? ((v24/bench-1)*100).toFixed(0) : '—';
+    const sign = bench!=null && v24/bench>=1 ? '+' : '';
+    tb.innerHTML += `<tr data-key="${lbl}">
+      <td>${cat}</td><td><strong>${lbl}</strong></td>
+      <td style="background:${col.bg};color:${col.txt};font-weight:700">${fv(v24)}</td>
+      <td style="color:#64748b">${fv(v23)}</td>
+      <td style="background:#f8fafc">${fv(bench)}</td>
+      <td style="background:${col.bg};color:${col.txt};font-weight:700;text-align:center">${bench!=null?sign+pct+'%':'—'}</td>
+      <td style="color:#475569;font-size:11px">${note}</td>
+    </tr>`;
+  });
+})();
+
+// ── Pre-build overview charts after page load ────────────────────────────────
+window.addEventListener('load', () => setTimeout(() => { if(!built['overview']){ built['overview']=true; buildOverview(); }}, 100));
+
+// ── Static elements (always visible on overview) ─────────────────────────────
+wf('wf_overview',[
+  {l:'הכנסות',v:22622,p:100,c:C.blue},{l:'עלות המכר',v:-18301,p:-80.9,c:C.red},
+  {l:'רווח גולמי',v:4321,p:19.1,c:C.green},{l:"הוצ' מכירה",v:-911,p:-4,c:C.amber},
+  {l:'EBIT',v:3410,p:15.1,c:C.green},{l:'מימון+מס',v:-844,p:-3.7,c:C.red},
+  {l:'רווח נקי',v:2566,p:11.3,c:C.navy}
+]);
+
+(function buildEquity(){
+  const data=[{y:'2021',v:1740,c:C.lblue},{y:'2022',v:2702,c:C.lblue},{y:'2023',v:4240,c:C.blue},{y:'2024',v:6664,c:C.navy}];
+  const max=7200, el=document.getElementById('equityBar');
+  if(!el)return;
+  data.forEach(d=>{
+    const h=(d.v/max*100).toFixed(1);
+    el.innerHTML+=`<div class="eq-col"><div class="eq-bar-wrap"><div class="eq-lbl">₪${(d.v/1000).toFixed(1)}M</div><div class="eq-bar" style="height:${h}%;background:${d.c}"></div></div><div class="eq-yr">${d.y}</div></div>`;
+  });
+})();
+
+(function buildCCC(){
+  const el=document.getElementById('cccVisual');
+  if(!el)return;
+  el.innerHTML=`<div style="display:flex;gap:0;border-radius:8px;overflow:hidden;font-size:11px;font-weight:600">
+    <div style="background:#93c5fd;padding:12px 8px;text-align:center;flex:22.6;min-width:50px"><div style="font-size:15px;font-weight:800;color:#1a3a5c">22.6</div><div style="color:#1e40af">מלאי</div></div>
+    <div style="background:#60a5fa;padding:12px 8px;text-align:center;flex:74.9;min-width:65px"><div style="font-size:15px;font-weight:800;color:#1a3a5c">74.9</div><div style="color:#1e40af">לקוחות</div></div>
+    <div style="background:#dcfce7;padding:12px 8px;text-align:center;flex:2;min-width:42px;border:2px solid #16a34a"><div style="font-size:15px;font-weight:800;color:#15803d">2.0</div><div style="color:#16a34a">CCC</div></div>
+  </div>
+  <div style="display:flex;margin-top:4px;border-radius:8px;overflow:hidden">
+    <div style="background:#fca5a5;padding:8px;text-align:center;flex:95.5;font-size:11px;font-weight:700;color:#7f1d1d">← ימי ספקים: 95.5 →</div>
+  </div>
+  <div style="margin-top:9px;font-size:11px;color:#64748b">
+    CCC = לקוחות (74.9) + מלאי (22.6) − ספקים (95.5) = <strong style="color:#16a34a">2.0 ימים</strong> | ממוצע תעשייה: <strong style="color:#dc2626">32 ימים</strong>
+  </div>`;
+})();
+
+// ── Overview charts (built immediately since it's the 2nd tab) ───────────────
+function buildOverview(){
+  mk('c_revProfit','bar',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'הכנסות',data:[16500,20009,22622],backgroundColor:C.lblue+'cc',borderRadius:5,yAxisID:'y'},
+      {label:'רווח נקי',data:[961,1738,2566],backgroundColor:C.green+'cc',borderRadius:5,yAxisID:'y2'}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},
+    y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()},title:{display:true,text:'הכנסות (₪K)',font:F}},
+    y2:{position:'left',ticks:{font:F,callback:v=>'₪'+v.toLocaleString()},title:{display:true,text:'רווח נקי (₪K)',font:F},grid:{display:false}}}});
+
+  mk('c_margins','line',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'גולמי %',data:[14.5,15.9,19.1],borderColor:C.blue,backgroundColor:C.sky+'88',fill:true,tension:.4,pointRadius:5},
+      {label:'EBIT %',data:[9.2,11.9,15.1],borderColor:C.green,backgroundColor:C.lgreen+'44',fill:true,tension:.4,pointRadius:5},
+      {label:'נקי %',data:[5.8,8.7,11.3],borderColor:C.amber,backgroundColor:C.lamber+'44',fill:true,tension:.4,pointRadius:5},
+      {label:'ממוצע גולמי תעשייה',data:[26,26,26],borderColor:C.gray,borderDash:[5,3],pointRadius:0,borderWidth:1.5}
+    ]
+  },base(true));
+
+  mk('c_score','doughnut',{
+    labels:['ביצוע','יתרה'],
+    datasets:[{data:[87,13],backgroundColor:[C.navy,C.lgray],borderWidth:0,circumference:180,rotation:-90}]
+  },{responsive:true,maintainAspectRatio:false,cutout:'75%',plugins:{legend:{display:false},tooltip:{enabled:false}}});
+}
+
+// ── Page builders ─────────────────────────────────────────────────────────────
+function buildPage(id) {
+  if (id==='overview')      buildOverview();
+  if (id==='profitability') buildProfitability();
+  if (id==='workingcap')    buildWorkingCap();
+  if (id==='leverage')      buildLeverage();
+  if (id==='dupont')        buildDuPont();
+  if (id==='benchmark')     buildBenchmark();
+}
+
+function buildProfitability(){
+  wf('wf_profit',[
+    {l:'הכנסות',v:22622,p:100,c:C.blue},{l:'עלות המכר',v:-18301,p:-80.9,c:C.red},
+    {l:'רווח גולמי',v:4321,p:19.1,c:C.green},{l:"הוצ' הנהלה",v:-911,p:-4,c:C.amber},
+    {l:'EBIT',v:3410,p:15.1,c:C.green},{l:'מימון נטו',v:-142,p:-0.6,c:C.gray},
+    {l:'רווח הון',v:88,p:.4,c:C.lblue},{l:'רווח לפני מס',v:3356,p:14.8,c:C.green},
+    {l:'מיסים',v:-790,p:-3.5,c:C.red},{l:'רווח נקי',v:2566,p:11.3,c:C.navy}
+  ]);
+  mk('c_vertical','bar',{
+    labels:["עלות המכר","הוצ' מכירה","מימון","מס","רווח נקי"],
+    datasets:[
+      {label:'2024',data:[80.9,4.0,0.6,3.5,11.3],backgroundColor:C.navy+'cc',borderRadius:4},
+      {label:'2023',data:[84.1,4.0,0.6,2.6,8.7],backgroundColor:C.gray+'88',borderRadius:4}
+    ]
+  },base(true));
+  mk('c_growth','bar',{
+    labels:['הכנסות','רווח גולמי','EBIT','רווח נקי'],
+    datasets:[{label:'% שינוי 2023→2024',data:[13.1,35.8,43.2,47.6],backgroundColor:[C.lblue,C.blue,C.navy,C.green],borderRadius:7}]
+  },base(true));
+  mk('c_grossTrend','line',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'סלטי גן',data:[14.5,15.9,19.1],borderColor:C.navy,backgroundColor:C.sky+'66',fill:true,tension:.4,pointRadius:5},
+      {label:'ממוצע תעשייה',data:[26,26,26],borderColor:C.gray,borderDash:[5,3],pointRadius:0}
+    ]
+  },base(true));
+  mk('c_revCOGS','bar',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'הכנסות',data:[16500,20009,22622],backgroundColor:C.lblue+'cc',borderRadius:5},
+      {label:'עלות המכר',data:[14102,16827,18301],backgroundColor:C.red+'88',borderRadius:5}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+  mk('c_expBreak','pie',{
+    labels:['עלות המכר','הוצ\' מכירה','מימון','מס','רווח נקי'],
+    datasets:[{data:[18301,911,142,790,2566],backgroundColor:[C.red+'cc',C.amber,C.lblue,C.gray,C.green],borderWidth:2}]
+  },{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},color:C.navy}}}});
+}
+
+function buildWorkingCap(){
+  mk('c_wcdays','bar',{
+    labels:['ימי לקוחות','ימי מלאי','ימי ספקים'],
+    datasets:[
+      {label:'2024',data:[74.9,22.6,95.5],backgroundColor:C.navy+'cc',borderRadius:5},
+      {label:'2023',data:[88.6,25.7,103.1],backgroundColor:C.gray+'88',borderRadius:5},
+      {label:'ממוצע תעשייה',data:[52,35,55],backgroundColor:C.green+'55',borderRadius:5,borderWidth:2,borderColor:C.green}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>v+' י׳'}}}});
+  mk('c_cccTrend','line',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'סלטי גן CCC',data:[18.5,11.2,2.0],borderColor:C.navy,backgroundColor:C.sky+'66',fill:true,tension:.4,pointRadius:6},
+      {label:'ממוצע תעשייה',data:[32,32,32],borderColor:C.red,borderDash:[5,3],pointRadius:0}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>v+' י׳'}}}});
+  mk('c_liquidity','bar',{
+    labels:['יחס שוטף','יחס מהיר'],
+    datasets:[
+      {label:'2024',data:[1.65,1.46],backgroundColor:C.navy+'cc',borderRadius:7},
+      {label:'2023',data:[1.29,1.11],backgroundColor:C.gray+'88',borderRadius:7},
+      {label:'ממוצע תעשייה',data:[1.5,0.9],backgroundColor:C.green+'55',borderRadius:7,borderWidth:2,borderColor:C.green}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F},max:2.2}}});
+  mk('c_wcBalance','line',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'לקוחות',data:[4200,4855,4434],borderColor:C.blue,backgroundColor:C.sky+'44',fill:true,tension:.3,pointRadius:5},
+      {label:'מלאי',data:[1100,1185,1078],borderColor:C.amber,backgroundColor:C.lamber+'44',fill:true,tension:.3,pointRadius:5}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+  mk('c_nwc','bar',{
+    labels:['2022','2023','2024'],
+    datasets:[{label:'הון חוזר נטו (₪K)',data:[1500,1858,3642],backgroundColor:[C.lblue,C.blue,C.navy],borderRadius:7}]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+}
+
+function buildLeverage(){
+  mk('c_balance','bar',{
+    labels:['נכסים שוטפים','רכוש קבוע',"התח' שוטפות","התח' ל\"א",'הון עצמי'],
+    datasets:[
+      {label:'2024',data:[9203,3840,-5560,-819,6664],backgroundColor:[C.lblue+'cc',C.blue+'cc',C.red+'cc',C.amber+'cc',C.green+'cc'],borderRadius:5},
+      {label:'2023',data:[8196,3216,-6338,-834,4240],backgroundColor:[C.lblue+'55',C.blue+'55',C.red+'55',C.amber+'55',C.green+'55'],borderRadius:5}
+    ]
+  },{...base(),scales:{x:{ticks:{font:F,maxRotation:20}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+  mk('c_cf','bar',{
+    labels:['שוטפת 24','שוטפת 23','השקעה 24','השקעה 23','מימון 24','מימון 23'],
+    datasets:[{label:'₪K',data:[4266,1394,-2079,-1039,-1012,-338],
+      backgroundColor:[C.green+'cc',C.green+'66',C.red+'cc',C.red+'66',C.amber+'cc',C.amber+'66'],borderRadius:5}]
+  },{...base(),scales:{x:{ticks:{font:F,maxRotation:0}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+  mk('c_nfa','bar',{
+    labels:['2022','2023','2024'],
+    datasets:[{label:'NFA נטו (₪K)',data:[-200,418,3382],backgroundColor:[C.red+'cc',C.amber+'cc',C.green+'cc'],borderRadius:7}]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+  mk('c_cashBreak','doughnut',{
+    labels:['מזומן','פקדונות','ניירות ערך'],
+    datasets:[{data:[1731,421,1230],backgroundColor:[C.navy,C.blue,C.lblue],borderWidth:2}]
+  },{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:F,color:C.navy}}}});
+  mk('c_fcfTrend','bar',{
+    labels:['2022','2023','2024'],
+    datasets:[{label:'FCF (₪K)',data:[200,367,2802],backgroundColor:[C.lblue,C.blue,C.navy],borderRadius:7}]
+  },{...base(),scales:{x:{ticks:{font:F}},y:{ticks:{font:F,callback:v=>'₪'+v.toLocaleString()}}}});
+}
+
+function buildDuPont(){
+  mk('c_dupont','bar',{
+    labels:['PM %','ATO (×10)','RNOA %','ROCE %'],
+    datasets:[
+      {label:'סלטי גן',data:[11.8,63.7,75.3,47.1],backgroundColor:C.navy+'cc',borderRadius:5},
+      {label:'ממוצע תעשייה',data:[6.0,30.0,18.0,15.0],backgroundColor:C.gray+'88',borderRadius:5}
+    ]
+  },base());
+  mk('c_noa','doughnut',{
+    labels:['לקוחות','רכוש קבוע','מלאי','חייבים','(-)ספקים','(-)זכאים','(-)פרישה'],
+    datasets:[{data:[4434,3840,1078,308,4820,741,819],backgroundColor:[C.lblue,C.navy,C.blue,C.sky,C.red+'cc',C.amber+'cc',C.gray],borderWidth:2}]
+  },{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},color:C.navy}}}});
+  mk('c_pmAto','scatter',{
+    datasets:[
+      {label:'סלטי גן',data:[{x:6.37,y:11.8}],backgroundColor:C.navy,pointRadius:13},
+      {label:'ממוצע תעשייה',data:[{x:3.0,y:6.0}],backgroundColor:C.gray,pointRadius:10}
+    ]
+  },{...base(),scales:{x:{title:{display:true,text:'ATO (×)',font:F},ticks:{font:F},min:0,max:8},y:{title:{display:true,text:'PM %',font:F},ticks:{font:F,callback:v=>v+'%'},min:0,max:16}}});
+  mk('c_roceDecomp','bar',{
+    labels:['RNOA','FLEV effect','ROCE'],
+    datasets:[{label:'2024',data:[75.3,-24.3,47.1],backgroundColor:[C.green+'cc',C.red+'cc',C.navy+'cc'],borderRadius:6}]
+  },base(true));
+  mk('c_spread','line',{
+    labels:['2022','2023','2024'],
+    datasets:[
+      {label:'RNOA %',data:[55,68,75.3],borderColor:C.green,tension:.4,pointRadius:5},
+      {label:'NFR %',data:[3.5,4.5,5.7],borderColor:C.amber,tension:.4,pointRadius:5},
+      {label:'Spread %',data:[51.5,63.5,69.6],borderColor:C.navy,backgroundColor:C.sky+'44',fill:true,tension:.4,pointRadius:5}
+    ]
+  },base(true));
+}
+
+function buildBenchmark(){
+  mk('c_radar','radar',{
+    labels:['שולי גולמי','שולי EBIT','שולי נקי','CCC (היפוך)','נזילות','מינוף (היפוך)','FCF margin','RNOA'],
+    datasets:[
+      {label:'סלטי גן 2024',data:[73,100,100,100,90,100,100,100],borderColor:C.navy,backgroundColor:C.lblue+'44',pointBackgroundColor:C.navy,pointRadius:5},
+      {label:'ממוצע תעשייה',data:[100,70,55,45,65,60,44,30],borderColor:C.gray,backgroundColor:C.gray+'22',pointBackgroundColor:C.gray,pointRadius:5}
+    ]
+  },{responsive:true,maintainAspectRatio:false,
+    scales:{r:{ticks:{display:false},grid:{color:'#e2e8f0'},pointLabels:{font:{size:10}},min:0,max:100}},
+    plugins:{legend:{labels:{font:F,color:C.navy}}}});
+
+  const labels = benchRows.map(r=>r[1]);
+  const vals   = benchRows.map(r=>r[4]?((r[2]/r[4]-1)*100):0);
+  const dirs   = benchRows.map(r=>r[5]);
+  const colors = benchRows.map((r,i)=>{
+    if(!r[4]) return C.gray;
+    const good = dirs[i]==='high' ? vals[i]>0 : vals[i]<0;
+    if(good){ const t=Math.min(Math.abs(vals[i])/200,1); return `rgba(${Math.round(t*100)},${Math.round(140+t*110)},${Math.round(80+t*100)},.85)`; }
+    return `rgba(220,${Math.round(80-Math.abs(vals[i])/4)},${Math.round(80-Math.abs(vals[i])/4)},.85)`;
+  });
+  mk('c_vsAvg','bar',{
+    labels:labels.map(l=>l.length>20?l.slice(0,20)+'…':l),
+    datasets:[{label:'% מהממוצע',data:vals,backgroundColor:colors,borderRadius:4}]
+  },{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(0)+'%'}}},
+    scales:{x:{ticks:{font:{size:9},callback:v=>v+'%'},grid:{color:'#e2e8f0'}},y:{ticks:{font:{size:9}}}}});
+}
+
+// ════════════════════════════════════════════════════════════
+//  MONTHLY TAB — Upload, Parse, Analyse
+// ════════════════════════════════════════════════════════════
+
+// Required columns (Hebrew name → internal key)
+const COLS = [
+  { he:'חודש',             key:'month',    ex:'ינואר 2025',   req:true  },
+  { he:'הכנסות',           key:'rev',      ex:'1850000',      req:true  },
+  { he:'עלות המכר',        key:'cogs',     ex:'1480000',      req:true  },
+  { he:'הוצ׳ תפעוליות',   key:'opex',     ex:'220000',       req:true  },
+  { he:'לקוחות',           key:'ar',       ex:'4200000',      req:true  },
+  { he:'מלאי',             key:'inv',      ex:'1100000',      req:true  },
+  { he:'ספקים',            key:'ap',       ex:'4500000',      req:true  },
+  { he:'מזומן',            key:'cash',     ex:'1600000',      req:true  },
+  { he:'תזרים תפעולי',    key:'ocf',      ex:'380000',       req:false },
+];
+
+// Build column guide
+(function(){
+  const g = document.getElementById('colGuide');
+  if (!g) return;
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;width:100%">';
+  COLS.forEach(c => {
+    html += `<div style="background:${c.req?'var(--sky)':'var(--lgray)'};padding:6px 10px;border-radius:6px;font-size:11px">
+      <span style="font-weight:700;color:var(--navy)">${c.he}</span>
+      <span style="color:var(--gray)"> — לדוגמה: ${c.ex}</span>
+      ${c.req?'<span style="color:var(--red);margin-right:4px">*</span>':''}
+    </div>`;
+  });
+  html += '</div>';
+  g.outerHTML = html;
+})();
+
+// ── Template download ─────────────────────────────────────────────────────────
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const headers = COLS.map(c => c.he);
+  const example1 = ['ינואר 2025',1850000,1480000,220000,4200000,1100000,4500000,1600000,380000];
+  const example2 = ['פברואר 2025',1920000,1530000,225000,4350000,1050000,4600000,1720000,420000];
+  const ws = XLSX.utils.aoa_to_sheet([headers, example1, example2]);
+  ws['!cols'] = headers.map(() => ({ wch: 16 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'נתונים חודשיים');
+  XLSX.writeFile(wb, 'monthly_template.xlsx');
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      let rows;
+      if (ext === 'csv') {
+        rows = parseCSV(ev.target.result);
+      } else {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      }
+      processMonthlyData(rows);
+    } catch(err) {
+      showError('שגיאה בקריאת הקובץ: ' + err.message);
+    }
+  };
+  if (ext === 'csv') reader.readAsText(file, 'UTF-8');
+  else reader.readAsArrayBuffer(file);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim().replace(/"/g,''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    return obj;
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('monthlyResults').style.display = 'none';
+}
+
+// ── Map Hebrew column names → keys ───────────────────────────────────────────
+function mapRow(row) {
+  const out = {};
+  COLS.forEach(c => {
+    const val = row[c.he] ?? row[Object.keys(row).find(k => k.includes(c.he.substring(0,3))) ?? ''] ?? '';
+    out[c.key] = parseFloat(String(val).replace(/,/g,'')) || 0;
+    if (c.key === 'month') out[c.key] = String(row[c.he] || val).trim();
+  });
+  return out;
+}
+
+
+// ── Main analysis engine ──────────────────────────────────────────────────────
+function processMonthlyData(rawRows) {
+  document.getElementById('uploadError').style.display = 'none';
+
+  const data = rawRows.map(mapRow).filter(r => r.rev > 0);
+  if (data.length === 0) { showError('לא נמצאו נתונים תקינים. ודא שהעמודות תואמות לתבנית.'); return; }
+
+  document.getElementById('monthlyResults').style.display = 'block';
+  document.getElementById('dropZone').style.background = 'var(--lgreen)';
+  document.getElementById('dropZone').innerHTML = `<div style="font-size:20px">✅</div><div style="font-weight:700;color:var(--green)">נטענו ${data.length} חודשים בהצלחה</div>`;
+
+  const labels = data.map(r => r.month);
+  const latest = data[data.length - 1];
+  const prev   = data.length > 1 ? data[data.length - 2] : null;
+
+  // ── Computed metrics per row ──────────────────────────────────────────────
+  data.forEach((r, i) => {
+    r.gp        = r.rev - r.cogs;
+    r.gpm       = r.rev ? r.gp / r.rev * 100 : 0;
+    r.ebit      = r.gp - r.opex;
+    r.ebitm     = r.rev ? r.ebit / r.rev * 100 : 0;
+    // For days metrics, use annualised daily rates
+    const daily_rev  = r.rev * 12 / 365;
+    const daily_cogs = r.cogs * 12 / 365;
+    r.dso = daily_rev  > 0 ? r.ar  / daily_rev  : 0;
+    r.dio = daily_cogs > 0 ? r.inv / daily_cogs : 0;
+    r.dpo = daily_cogs > 0 ? r.ap  / daily_cogs : 0;
+    r.ccc = r.dso + r.dio - r.dpo;
+    r.prevRev = i > 0 ? data[i-1].rev : null;
+  });
+
+  // ── KPI cards ─────────────────────────────────────────────────────────────
+  document.getElementById('monthlyTitle').textContent = `ניתוח חודשי — נתון אחרון: ${latest.month}`;
+  document.getElementById('revBadge').textContent = `${data.length} חודשים`;
+  document.getElementById('ytdBadge').textContent = `${data.length} חודשים`;
+
+  const revGrowth = prev && prev.rev ? ((latest.rev - prev.rev) / prev.rev * 100).toFixed(1) : null;
+  const kpis = [
+    { l:'הכנסות', v:`₪${fmtK(latest.rev)}`, d:revGrowth ? `${revGrowth>0?'▲':'▼'} ${Math.abs(revGrowth)}% ממחדש` : '', cls:revGrowth>0?'g':'r' },
+    { l:'שולי גולמי', v:`${latest.gpm.toFixed(1)}%`, d:prev?`${(latest.gpm-prev.gpm)>0?'▲':'▼'} ${Math.abs(latest.gpm-prev.gpm).toFixed(1)}pp`:'', cls:latest.gpm>18?'g':'a' },
+    { l:'שולי EBIT', v:`${latest.ebitm.toFixed(1)}%`, d:'תפעולי', cls:latest.ebitm>10?'g':'a' },
+    { l:'ימי לקוחות', v:`${latest.dso.toFixed(0)}`, d:'DSO', cls:latest.dso<80?'g':'a' },
+    { l:'ימי מלאי', v:`${latest.dio.toFixed(0)}`, d:'DIO', cls:latest.dio<30?'g':'a' },
+    { l:'ימי ספקים', v:`${latest.dpo.toFixed(0)}`, d:'DPO', cls:latest.dpo>60?'g':'a' },
+    { l:'CCC', v:`${latest.ccc.toFixed(0)} ימים`, d:'מחזור המרה', cls:latest.ccc<10?'g':latest.ccc<20?'a':'r' },
+    { l:'תזרים תפעולי', v:`₪${fmtK(latest.ocf||latest.ebit*0.85)}`, d:'חודשי', cls:(latest.ocf||latest.ebit)>0?'g':'r' },
+  ];
+  document.getElementById('monthlyKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi ${k.cls}">
+      <div class="kpi-lbl">${k.l}</div>
+      <div class="kpi-val sm">${k.v}</div>
+      <div class="kpi-d ${k.cls==='g'?'up':k.cls==='r'?'dn':'neu'}">${k.d}</div>
+    </div>`
+  ).join('');
+
+  // ── Charts ────────────────────────────────────────────────────────────────
+  const revData  = data.map(r => r.rev / 1000);
+  const cogsData = data.map(r => r.cogs / 1000);
+  const gpmData  = data.map(r => r.gpm);
+  const ebitData = data.map(r => r.ebitm);
+  const dsoData  = data.map(r => r.dso);
+  const dioData  = data.map(r => r.dio);
+  const dpoData  = data.map(r => r.dpo);
+  const cccData  = data.map(r => r.ccc);
+  const ocfData  = data.map(r => (r.ocf || r.ebit * 0.85) / 1000);
+
+  destroyChart('mc_rev');
+  new Chart(document.getElementById('mc_rev'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'הכנסות (₪K)', data:revData, backgroundColor:C.navy+'cc', borderRadius:5 },
+      ...(data.length>1 ? [{ label:'מגמה', data:revData, type:'line', borderColor:C.amber, borderWidth:2, pointRadius:3, tension:.4 }] : [])
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  destroyChart('mc_margins');
+  new Chart(document.getElementById('mc_margins'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'שולי גולמי %', data:gpmData, borderColor:C.blue, backgroundColor:C.sky+'66', fill:true, tension:.4, pointRadius:4 },
+      { label:'שולי EBIT %',  data:ebitData, borderColor:C.green, backgroundColor:C.lgreen+'44', fill:true, tension:.4, pointRadius:4 },
+      { label:'ממוצע גולמי תעשייה (22.9%)', data:data.map(()=>22.9), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
+    ]},
+    options:{...base(true)}
+  });
+
+  destroyChart('mc_wc');
+  new Chart(document.getElementById('mc_wc'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'ימי לקוחות', data:dsoData, borderColor:C.blue,  tension:.4, pointRadius:4 },
+      { label:'ימי מלאי',   data:dioData, borderColor:C.amber, tension:.4, pointRadius:4 },
+      { label:'ימי ספקים',  data:dpoData, borderColor:C.green, tension:.4, pointRadius:4, borderDash:[4,2] }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>v+' י׳'}}}}
+  });
+
+  destroyChart('mc_ccc');
+  new Chart(document.getElementById('mc_ccc'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'CCC (ימים)', data:cccData,
+        backgroundColor:cccData.map(v => v<5?C.green+'cc':v<15?C.amber+'cc':C.red+'cc'),
+        borderRadius:5 },
+      { label:'ממוצע תעשייה (32)', data:data.map(()=>32), type:'line', borderColor:C.gray, borderDash:[5,3], pointRadius:0, borderWidth:1.5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>v+' י׳'}}}}
+  });
+
+  destroyChart('mc_cf');
+  new Chart(document.getElementById('mc_cf'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'תזרים תפעולי (₪K)', data:ocfData,
+        backgroundColor:ocfData.map(v=>v>=0?C.green+'cc':C.red+'cc'), borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  destroyChart('mc_revCogs');
+  new Chart(document.getElementById('mc_revCogs'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'הכנסות (₪K)', data:revData,  backgroundColor:C.lblue+'cc', borderRadius:5 },
+      { label:'עלות המכר (₪K)', data:cogsData, backgroundColor:C.red+'99', borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  // ── YTD table ─────────────────────────────────────────────────────────────
+  const tbody = document.getElementById('ytdBody');
+  tbody.innerHTML = data.map(r => {
+    const gpColor = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
+    const cccColor = r.ccc<5?'#dcfce7':r.ccc<15?'#fef3c7':'#fee2e2';
+    return `<tr>
+      <td><strong>${r.month}</strong></td>
+      <td>₪${fmtNum(r.rev)}</td>
+      <td style="background:${gpColor};font-weight:600">${r.gpm.toFixed(1)}%</td>
+      <td>${r.ebitm.toFixed(1)}%</td>
+      <td>${r.dso.toFixed(0)}</td>
+      <td>${r.dio.toFixed(0)}</td>
+      <td>${r.dpo.toFixed(0)}</td>
+      <td style="background:${cccColor};font-weight:600">${r.ccc.toFixed(0)}</td>
+      <td>₪${fmtNum(r.ocf || Math.round(r.ebit*0.85))}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Insights & Alerts ─────────────────────────────────────────────────────
+  const alerts = [];
+  const avgGpm = avg(data.map(r=>r.gpm));
+  const avgCcc = avg(data.map(r=>r.ccc));
+
+  if (latest.gpm < 17) alerts.push({ type:'r', msg:`⚠️ שולי גולמי נמוכים (${latest.gpm.toFixed(1)}%) — בדוק תמחור ועלויות חומרי גלם` });
+  if (latest.gpm > avgGpm + 2) alerts.push({ type:'g', msg:`✅ שיפור בשולי גולמי: ${latest.gpm.toFixed(1)}% לעומת ממוצע ${avgGpm.toFixed(1)}%` });
+  if (latest.dso > 90) alerts.push({ type:'r', msg:`⚠️ ימי לקוחות גבוהים (${latest.dso.toFixed(0)}) — בדוק גבייה` });
+  if (latest.ccc < 0) alerts.push({ type:'g', msg:`✅ CCC שלילי (${latest.ccc.toFixed(0)}) — ספקים מממנים את הפעילות` });
+  if (latest.ccc > 20) alerts.push({ type:'a', msg:`📌 CCC גבוה (${latest.ccc.toFixed(0)} ימים) — שקול האצת גבייה או הארכת תנאי ספקים` });
+  if (latest.ebitm < 5) alerts.push({ type:'r', msg:`⚠️ שולי EBIT נמוכים (${latest.ebitm.toFixed(1)}%) — בדוק הוצאות תפעוליות` });
+  if (data.length > 2) {
+    const revTrend = (latest.rev - data[0].rev) / data[0].rev * 100;
+    if (revTrend > 10) alerts.push({ type:'g', msg:`✅ מגמת צמיחה חיובית: +${revTrend.toFixed(1)}% מתחילת הנתונים` });
+    if (revTrend < -10) alerts.push({ type:'r', msg:`⚠️ מגמת ירידה: ${revTrend.toFixed(1)}% מתחילת הנתונים` });
+  }
+  if (prev && latest.rev < prev.rev * 0.9) alerts.push({ type:'r', msg:`⚠️ ירידה חדה בהכנסות: ${((latest.rev/prev.rev-1)*100).toFixed(1)}% לעומת חודש קודם` });
+  if (alerts.length === 0) alerts.push({ type:'g', msg:'✅ לא זוהו חריגות משמעותיות בנתונים' });
+
+  document.getElementById('alertsBox').innerHTML = alerts.map(a =>
+    `<div class="ins ${a.type}" style="margin-bottom:6px">${a.msg}</div>`
+  ).join('');
+
+  // ── Metric explanations ───────────────────────────────────────────────────
+  document.getElementById('metricExplainBox').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${[
+        ['שולי גולמי %', '(הכנסות − עלות המכר) ÷ הכנסות', 'כמה נשאר מכל ₪1 מכירה אחרי עלויות הייצור. ממוצע תעשיית מזון: ~22.9%. שוני = הפצה ב-COGS.'],
+        ['שולי EBIT %', 'רווח תפעולי ÷ הכנסות', 'יעילות תפעולית טהורה. מנטרל מימון ומס — המדד הטוב ביותר להשוואה.'],
+        ['ימי לקוחות (DSO)', '(לקוחות × 365/12) ÷ הכנסות חודשיות', 'כמה ימים ממכירה עד גבייה. גבוה = הון תקוע. תעשייה: ~52 יום.'],
+        ['ימי מלאי (DIO)', '(מלאי × 365/12) ÷ עלות המכר חודשית', 'כמה ימים המלאי יושב. מוצרי מזון טרי: 15-30 יום אידיאלי.'],
+        ['ימי ספקים (DPO)', '(ספקים × 365/12) ÷ עלות המכר חודשית', 'כמה ימים עד תשלום לספקים. יותר = מימון חינמי. תעשייה: ~55 יום.'],
+        ['CCC', 'ימי לקוחות + ימי מלאי − ימי ספקים', 'מחזור המרת מזומנים. ממוצע תעשייה 32 יום. מתחת ל-5 = מצוין. שלילי = אידיאלי.'],
+        ['תזרים תפעולי', 'מזומן שנכנס מהפעילות השוטפת (לפני השקעות)', 'חיובי ועולה = עסק בריא. שלילי = שרפת מזומן — דורש תשומת לב מיידית.'],
+        ['הכנסות חודשיות', 'סך מכירות לחודש', 'עקוב אחר מגמה. עונתיות = נורמלי בענף. ירידה מתמשכת = אות אזהרה.'],
+      ].map(([t,f,d]) => `
+        <div style="background:var(--lgray);border-radius:8px;padding:11px 13px">
+          <div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:3px">${t}</div>
+          <div style="font-size:10px;color:var(--blue);font-family:monospace;background:var(--sky);padding:3px 6px;border-radius:4px;margin-bottom:5px">${f}</div>
+          <div style="font-size:11px;color:var(--gray);line-height:1.5">${d}</div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  // ── Insight text ──────────────────────────────────────────────────────────
+  document.getElementById('revIns').textContent = `ממוצע חודשי: ₪${fmtNum(Math.round(avg(data.map(r=>r.rev))))} | סה"כ: ₪${fmtNum(data.reduce((s,r)=>s+r.rev,0))}`;
+  document.getElementById('marginIns').textContent = `ממוצע גולמי: ${avgGpm.toFixed(1)}% | ממוצע EBIT: ${avg(data.map(r=>r.ebitm)).toFixed(1)}%`;
+  document.getElementById('wcIns').textContent = `ממוצע ימי לקוחות: ${avg(dsoData).toFixed(0)} | ממוצע ימי מלאי: ${avg(dioData).toFixed(0)} | ממוצע ימי ספקים: ${avg(dpoData).toFixed(0)}`;
+  document.getElementById('cccIns').textContent = `ממוצע CCC: ${avgCcc.toFixed(0)} ימים | מינ׳: ${Math.min(...cccData).toFixed(0)} | מקס׳: ${Math.max(...cccData).toFixed(0)}`;
+  document.getElementById('cfIns').textContent = `סה"כ תזרים תפעולי: ₪${fmtNum(data.reduce((s,r)=>s+(r.ocf||r.ebit*0.85),0).toFixed(0))}`;
+  document.getElementById('revCogsIns').textContent = `ממוצע עלות מכר: ${avg(data.map(r=>r.cogs/r.rev*100)).toFixed(1)}% מהכנסות`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function destroyChart(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const existing = Chart.getChart(el);
+  if (existing) existing.destroy();
+}
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function fmtK(n) { return n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? Math.round(n/1000)+'K' : String(n); }
+function fmtNum(n) { return Number(n).toLocaleString(); }
+
+// ════════════════════════════════════════════════════════════
+//  MONTHLY DATA — ינואר–מאי 2026 (parsed from uploaded reports)
+// ════════════════════════════════════════════════════════════
+const MONTHLY_DATA = [
+  { month:'ינואר 2026',  rev:1582808, cogs:1282738, grossProfit:300071, gna:68782,  ebit:231289, finExp:5467,  net:225821, cash:1238931, ar:-67340,   ap:237140,  bankCredit:861549,  arOther:202379 },
+  { month:'פברואר 2026', rev:1551280, cogs:1337315, grossProfit:213965, gna:48413,  ebit:165552, finExp:7908,  net:157644, cash:980618,  ar:97421,    ap:16478,   bankCredit:1002808, arOther:69776  },
+  { month:'מרץ 2026',    rev:1777729, cogs:1308334, grossProfit:469395, gna:35185,  ebit:434210, finExp:1757,  net:432453, cash:1102863, ar:121503,   ap:201675,  bankCredit:801665,  arOther:118230 },
+  { month:'אפריל 2026',  rev:1696922, cogs:1415238, grossProfit:281684, gna:62503,  ebit:219181, finExp:4564,  net:214617, cash:593863,  ar:-42296,   ap:87396,   bankCredit:257026,  arOther:96238  },
+  // מאי 2026 — יוכנס לאחר הזנת שכר ייצור
+  // { month:'מאי 2026', rev:1660835, cogs:707572, grossProfit:953263, gna:24417, ebit:928845, finExp:22112, net:906733, cash:1929731, ar:81105, ap:-457653, bankCredit:1913535, arOther:618769 }
+];
+
+// Enrich with calculated metrics
+MONTHLY_DATA.forEach(r => {
+  r.gpm   = r.rev ? r.grossProfit/r.rev*100 : 0;
+  r.ebitm = r.rev ? r.ebit/r.rev*100 : 0;
+  r.netm  = r.rev ? r.net/r.rev*100 : 0;
+  // Days — annualised (monthly × 12 / 365)
+  const dRev  = r.rev  * 12 / 365;
+  const dCogs = r.cogs * 12 / 365;
+  r.dso = (dRev  > 0 && r.ar > 0) ? r.ar / dRev   : 0;
+  r.dpo = (dCogs > 0 && r.ap > 0) ? r.ap / dCogs  : 0;
+  r.ccc = r.dso - r.dpo;
+  // Net cash (asset cash minus bank credit overdraft)
+  r.netCash = r.cash - r.bankCredit;
+});
+
+(function buildMonthlyDashboard(){
+  const data = MONTHLY_DATA;
+  const labels = data.map(r => r.month);
+  const latest = data[data.length - 1];
+  const prev   = data[data.length - 2];
+
+  // Replace upload area with summary
+  document.getElementById('uploadCard').innerHTML = `
+    <div style="background:var(--lgreen);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:28px">✅</div>
+      <div>
+        <div style="font-weight:700;color:var(--green);font-size:14px">נטענו ${data.length} חודשים — ינואר עד מאי 2026</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px">מקור: דוחות מאזן חודשיים סלטי גן בע"מ · ינואר–אפריל 2026 · מאי יוכנס לאחר הזנת שכר</div>
+      </div>
+    </div>`;
+
+  document.getElementById('monthlyResults').style.display = 'block';
+  document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — ינואר–אפריל 2026';
+
+  // ── KPI cards ─────────────────────────────────────────────────────────────
+  const revGrow = prev ? ((latest.rev-prev.rev)/prev.rev*100).toFixed(1) : null;
+  const gpmAvg4 = data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4; // exclude May anomaly
+  const kpis = [
+    { l:'הכנסות מאי',  v:'₪'+fmtK(latest.rev),   d:revGrow?(revGrow>0?'▲':'▼')+Math.abs(revGrow)+'% ממרץ':'', cls:revGrow>0?'g':'r' },
+    { l:'שולי גולמי*', v:gpmAvg4.toFixed(1)+'%',  d:'ממוצע ינואר–אפריל', cls:gpmAvg4>18?'g':'a', note:'* מאי לא כולל שכר ייצור' },
+    { l:'שולי EBIT',   v:data.slice(0,4).reduce((s,r)=>s+r.ebitm,0)/4 |0+'%', d:'ממוצע ינואר–אפריל', cls:'g' },
+    { l:'הכנסות YTD',  v:'₪'+fmtK(data.reduce((s,r)=>s+r.rev,0)), d:'ינואר–מאי', cls:'n' },
+    { l:'רווח נקי YTD',v:'₪'+fmtK(data.reduce((s,r)=>s+r.net,0)), d:'ינואר–מאי', cls:'g' },
+    { l:'מזומן נטו מאי',v:'₪'+fmtK(latest.netCash), d:latest.netCash>0?'עודף מזומן':'אשראי בנק', cls:latest.netCash>0?'g':'a' },
+    { l:'יחס שוטף מאי',v:'1.52', d:'↑ מ-1.09 בינואר', cls:'g' },
+    { l:'אנומליה מאי', v:'שכר חסר', d:'~₪370K לא הוזן', cls:'a' },
+  ];
+  document.getElementById('monthlyKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi ${k.cls}">
+      <div class="kpi-lbl">${k.l}</div>
+      <div class="kpi-val sm">${k.v}</div>
+      <div class="kpi-d ${k.cls==='g'?'up':k.cls==='r'?'dn':'neu'}">${k.d}</div>
+    </div>`).join('');
+
+  // ── Charts ────────────────────────────────────────────────────────────────
+  const revData  = data.map(r => Math.round(r.rev/1000));
+  const cogsData = data.map(r => Math.round(r.cogs/1000));
+  const gpmData  = data.map(r => +r.gpm.toFixed(1));
+  const ebitData = data.map(r => +r.ebitm.toFixed(1));
+  const netData  = data.map(r => Math.round(r.net/1000));
+  const cashData = data.map(r => Math.round(r.cash/1000));
+  const ncashData= data.map(r => Math.round(r.netCash/1000));
+
+  destroyChart('mc_rev');
+  new Chart(document.getElementById('mc_rev'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'הכנסות (₪K)', data:revData, backgroundColor:C.navy+'cc', borderRadius:5 },
+      { label:'רווח נקי (₪K)', data:netData, backgroundColor:C.green+'cc', borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}},
+      plugins:{...base().plugins, tooltip:{callbacks:{
+        afterBody: ctx => ctx[0].dataIndex===4 ? ['⚠️ מאי: שכר ייצור חסר'] : []
+      }}}}
+  });
+
+  destroyChart('mc_margins');
+  new Chart(document.getElementById('mc_margins'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'שולי גולמי %', data:gpmData, borderColor:C.blue, backgroundColor:C.sky+'55', fill:true, tension:.4, pointRadius:5,
+        pointBackgroundColor: gpmData.map((_,i)=>i===4?C.amber:C.blue) },
+      { label:'שולי EBIT %',  data:ebitData, borderColor:C.green, backgroundColor:C.lgreen+'33', fill:true, tension:.4, pointRadius:5 },
+      { label:'ממוצע גולמי תעשייה (22.9%)', data:data.map(()=>22.9), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
+    ]},
+    options:{...base(true), plugins:{...base().plugins, annotation:{
+      annotations:{ maylabel:{ type:'label', xValue:4, yValue:57, content:'⚠️ חסר שכר', color:C.amber }}
+    }}}
+  });
+
+  destroyChart('mc_cf');
+  new Chart(document.getElementById('mc_cf'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'מזומן (₪K)', data:cashData, backgroundColor:C.lblue+'cc', borderRadius:5 },
+      { label:'מזומן נטו (₪K)', data:ncashData, backgroundColor:ncashData.map(v=>v>0?C.green+'cc':C.red+'cc'), borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  destroyChart('mc_revCogs');
+  new Chart(document.getElementById('mc_revCogs'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'הכנסות (₪K)', data:revData, backgroundColor:C.lblue+'cc', borderRadius:5 },
+      { label:'COGS (₪K)', data:cogsData, backgroundColor:C.red+'88', borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  // Working capital — DSO/DPO
+  destroyChart('mc_wc');
+  new Chart(document.getElementById('mc_wc'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'ספקים (₪K)', data:data.map(r=>Math.round(r.ap/1000)), backgroundColor:C.amber+'cc', borderRadius:5 },
+      { label:'לקוחות (₪K)', data:data.map(r=>Math.round(r.ar/1000)), backgroundColor:C.blue+'cc', borderRadius:5 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  // Current ratio trend
+  destroyChart('mc_ccc');
+  new Chart(document.getElementById('mc_ccc'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'יחס שוטף', data:[1.09,1.15,1.31,1.46,1.52], borderColor:C.navy, backgroundColor:C.sky+'44', fill:true, tension:.4, pointRadius:6 },
+      { label:'מינימום בריא (1.2)', data:data.map(()=>1.2), borderColor:C.amber, borderDash:[4,3], pointRadius:0 }
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F}, min:0.8, max:2.0}}}
+  });
+
+  // ── YTD Table ─────────────────────────────────────────────────────────────
+  let ytdRev=0, ytdNet=0;
+  document.getElementById('ytdBadge').textContent = 'ינואר–אפריל 2026';
+  document.getElementById('ytdBody').innerHTML = data.map(r => {
+    ytdRev += r.rev; ytdNet += r.net;
+    const gCol = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
+    const flag = r.month.includes('מאי') ? ' ⚠️' : '';
+    return `<tr>
+      <td><strong>${r.month}</strong>${flag}</td>
+      <td>₪${fmtNum(r.rev)}</td>
+      <td style="background:${gCol};font-weight:600">${r.gpm.toFixed(1)}%</td>
+      <td>${r.ebitm.toFixed(1)}%</td>
+      <td>${r.ar>0?'₪'+fmtNum(r.ar):'<span style="color:var(--green)">זיכוי ₪'+fmtNum(Math.abs(r.ar))+'</span>'}</td>
+      <td>${r.ap>0?'₪'+fmtNum(r.ap):'<span style="color:var(--green)">זיכוי ₪'+fmtNum(Math.abs(r.ap))+'</span>'}</td>
+      <td>₪${fmtNum(r.cash)}</td>
+      <td style="font-weight:700;color:${r.netCash>0?'var(--green)':'var(--red)'}">${r.netCash>0?'+':''}₪${fmtNum(r.netCash)}</td>
+    </tr>`;
+  }).join('') +
+  `<tr style="background:var(--navy);color:#fff">
+    <td><strong>סה"כ YTD</strong></td>
+    <td><strong>₪${fmtNum(ytdRev)}</strong></td>
+    <td><strong>${(data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4).toFixed(1)}%*</strong></td>
+    <td><strong>${(data.slice(0,4).reduce((s,r)=>s+r.ebitm,0)/4).toFixed(1)}%*</strong></td>
+    <td colspan="3"></td>
+    <td><strong>₪${fmtNum(ytdNet)}</strong></td>
+  </tr>`;
+
+  // Fix table headers for this data
+  document.querySelector('#ytdTable thead tr').innerHTML = `
+    <th>חודש</th><th>הכנסות ₪</th><th>גולמי %</th><th>EBIT %</th>
+    <th>לקוחות ₪</th><th>ספקים ₪</th><th>מזומן ₪</th><th>מזומן נטו ₪</th>`;
+
+  // ── Alerts ────────────────────────────────────────────────────────────────
+  const alerts = [
+    { t:'r', m:'⚠️ מאי 2026: שכר ייצור (~₪370K) לא הוזן בדוח — שולי הגולמי 57.4% אינם מייצגים. יש להזין/לאשר ולעדכן.' },
+    { t:'a', m:'📊 תנודתיות גבוהה בשולי גולמי: ינואר 19% → פברואר 13.8% → מרץ 26.4% → אפריל 16.6%. הפרש של 12.6pp בין חודשים — בדוק עקביות הזנת עלות המכר.' },
+    { t:'g', m:'✅ יחס שוטף משתפר בעקביות: 1.09 → 1.15 → 1.31 → 1.46 → 1.52. מגמה חיובית חזקה.' },
+    { t:'g', m:'✅ הכנסות YTD: ₪'+(data.reduce((s,r)=>s+r.rev,0)/1000000).toFixed(2)+'M לינואר–מאי. קצב שנתי משוער ~₪'+(data.reduce((s,r)=>s+r.rev,0)/5*12/1000000).toFixed(1)+'M.' },
+    { t:'a', m:'📌 חו"ז (חייבים אחרים) מאי: ₪618K — פי 5 מהממוצע הרגיל. בדוק מהות הסעיף.' },
+    { t:'g', m:'✅ ינואר ואפריל: לקוחות בעודף זיכוי — לקוחות שילמו מראש. מדיניות תשלום טובה.' },
+    { t:'r', m:'⚠️ מאי: ספקים בזיכוי שלילי (₪-458K) — שולמה יתרה לספקים. בדוק אם מדובר בתשלום כפול או מקדמה.' },
+    { t:'a', m:'📌 פברואר: שולי גולמי 13.8% — הנמוכים בסדרה. קניות גבוהות (₪670K→₪589K) ביחס להכנסות. בדוק אם היה אירוע חד-פעמי.' },
+  ];
+  document.getElementById('alertsBox').innerHTML = alerts.map(a=>
+    `<div class="ins ${a.t}" style="margin-bottom:6px">${a.m}</div>`).join('');
+
+  // ── Metric explanations ───────────────────────────────────────────────────
+  document.getElementById('metricExplainBox').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${[
+        ['שולי גולמי חודשי','(הכנסות − עלות מכר) ÷ הכנסות','מה נשאר לאחר עלויות ייצור ישירות. תנודתיות גבוהה בין חודשים מרמזת על אי-עקביות בהזנת עלויות. יש לבדוק מדי חודש.'],
+        ['שולי EBIT חודשי','(רווח גולמי − הנהלה וכלליות) ÷ הכנסות','רווחיות תפעולית נקייה לפני מימון ומס. עדיף להשוות לחודש מקביל אשתקד.'],
+        ['מזומן נטו','מזומן בנכסים − אשראי בנק','מצב הנזילות האמיתי. חיובי = עודף מזומן. שלילי = בחוב לבנק. אצל סלטי גן — נוצלה מסגרת אשראי בפברואר–מרץ.'],
+        ['יחס שוטף','נכסים שוטפים ÷ התחייבויות שוטפות','יכולת פירעון חובות קצרי מועד. מעל 1.2 = בריא. אצל סלטי גן: מגמת שיפור יפה לאורך השנה.'],
+        ['לקוחות שלילי','יתרת חובה שלילית — לקוחות בזיכוי','לקוחות שילמו יותר ממה שחייבים (מקדמות או תשלום כפול). לרוב חיובי — מדיניות גבייה טובה.'],
+        ['ספקים שלילי','יתרת חובה שלילית — ספקים בזיכוי','שולמה לספקים יתרה מעל החוב. דורש בדיקה — ייתכן תשלום כפול או מקדמה.'],
+        ['חו"ז חייבים','חייבים שונים — לא לקוחות מכירות','כולל הלוואות לעובדים, חשבונות לקבל, מס מקדמות. יתרה גבוהה דורשת בדיקת פירוט.'],
+        ['COGS תנודתי','עלות המכר — קניות + שכר + עלויות חרושת','שינוי חד בין חודשים עשוי לנבוע מחוסר עקביות בהזנת שכר. חשוב לוודא שכל הרכיבים מוזנים בכל חודש.'],
+      ].map(([t,f,d])=>`
+        <div style="background:var(--lgray);border-radius:8px;padding:10px 13px">
+          <div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:3px">${t}</div>
+          <div style="font-size:10px;color:var(--blue);font-family:monospace;background:var(--sky);padding:3px 6px;border-radius:4px;margin-bottom:5px">${f}</div>
+          <div style="font-size:11px;color:var(--gray);line-height:1.5">${d}</div>
+        </div>`).join('')}
+    </div>
+    <div class="ins a" style="margin-top:12px">* ממוצעי שולי גולמי ו-EBIT מחושבים ללא מאי עקב אנומליית שכר ייצור חסר.</div>`;
+
+  // ── Gross Margin Breakdown ────────────────────────────────────────────────
+  const GPM = [
+    { m:'ינואר 2026', rev:1582808, purchases:670313, labor:373898, factory:238526, totalCogs:1282737 },
+    { m:'פברואר 2026',rev:1551280, purchases:718765, labor:361023, factory:257526, totalCogs:1337315 },
+    { m:'מרץ 2026',   rev:1777728, purchases:712060, labor:383251, factory:213021, totalCogs:1308333 },
+    { m:'אפריל 2026', rev:1696921, purchases:730937, labor:389384, factory:294915, totalCogs:1415237 },
+    // מאי 2026 — יוכנס לאחר הזנת שכר ייצור
+  ];
+  GPM.forEach(r => {
+    r.gpm_full      = r.rev ? (r.rev-r.totalCogs)/r.rev*100 : 0;
+    r.gpm_purchases = r.rev ? (r.rev-r.purchases)/r.rev*100 : 0;
+    r.gpm_labor     = r.rev ? (r.rev-r.labor)/r.rev*100     : 0;
+    r.gpm_factory   = r.rev ? (r.rev-r.factory)/r.rev*100   : 0;
+    r.pct_purchases = r.rev ? r.purchases/r.rev*100 : 0;
+    r.pct_labor     = r.rev ? r.labor/r.rev*100     : 0;
+    r.pct_factory   = r.rev ? r.factory/r.rev*100   : 0;
+  });
+  const gLabels = GPM.map(r => r.m);
+
+  destroyChart('mc_gpm_breakdown');
+  new Chart(document.getElementById('mc_gpm_breakdown'), {
+    type:'line',
+    data:{ labels: gLabels, datasets:[
+      { label:'גולמי כולל %',        data:GPM.map(r=>+r.gpm_full.toFixed(1)),      borderColor:C.navy,  backgroundColor:C.sky+'44',    fill:false, tension:.4, pointRadius:5, borderWidth:2.5 },
+      { label:'מול קניות בלבד %',    data:GPM.map(r=>+r.gpm_purchases.toFixed(1)), borderColor:C.blue,  backgroundColor:'transparent', fill:false, tension:.4, pointRadius:5, borderDash:[4,2] },
+      { label:'מול שכר ייצור %',     data:GPM.map(r=>r.gpm_labor>0?+r.gpm_labor.toFixed(1):null), borderColor:C.green, fill:false, tension:.4, pointRadius:5, borderDash:[2,3] },
+      { label:'מול הוצ׳ חרושת %',    data:GPM.map(r=>+r.gpm_factory.toFixed(1)),   borderColor:C.amber, fill:false, tension:.4, pointRadius:5, borderDash:[6,3] },
+    ]},
+    options:{...base(true), scales:{
+      x:{ticks:{font:F}},
+      y:{ticks:{font:F, callback:v=>v+'%'}, min:0, max:110}
+    }}
+  });
+
+  destroyChart('mc_cogs_stack');
+  new Chart(document.getElementById('mc_cogs_stack'), {
+    type:'bar',
+    data:{ labels: gLabels, datasets:[
+      { label:'קניות %',         data:GPM.map(r=>+r.pct_purchases.toFixed(1)), backgroundColor:C.red+'cc',   borderRadius:0 },
+      { label:'שכר ייצור %',     data:GPM.map(r=>+r.pct_labor.toFixed(1)),     backgroundColor:C.amber+'cc', borderRadius:0 },
+      { label:'הוצ׳ חרושת %',    data:GPM.map(r=>+r.pct_factory.toFixed(1)),   backgroundColor:C.lblue+'cc', borderRadius:0 },
+      { label:'רווח גולמי %',    data:GPM.map(r=>+r.gpm_full.toFixed(1)),      backgroundColor:C.green+'cc', borderRadius:0 },
+    ]},
+    options:{...base(true),
+      scales:{ x:{ticks:{font:F}, stacked:true}, y:{ticks:{font:F, callback:v=>v+'%'}, stacked:true, max:110} },
+      plugins:{...base().plugins, tooltip:{mode:'index'}}
+    }
+  });
+
+  // GPM breakdown table
+  const colors = { full:'', purch:'#dbeafe', labor:'#dcfce7', factory:'#fef3c7' };
+  const gBody = document.getElementById('gpmBreakBody');
+  if (gBody) gBody.innerHTML = GPM.map(r => {
+    const mayFlag = r.m.includes('מאי') ? ' ⚠️' : '';
+    const laborCell = r.labor > 0
+      ? `₪${fmtNum(r.labor|0)} (${r.pct_labor.toFixed(1)}%)`
+      : `<span style="color:var(--red);font-weight:700">לא הוזן ⚠️</span>`;
+    const gpmColor = r.gpm_full>22?'#dcfce7':r.gpm_full>16?'#fef3c7':'#fee2e2';
+    return `<tr>
+      <td><strong>${r.m}${mayFlag}</strong></td>
+      <td>₪${fmtNum(r.rev|0)}</td>
+      <td style="background:#dbeafe">₪${fmtNum(r.purchases|0)} (${r.pct_purchases.toFixed(1)}%)</td>
+      <td style="background:#dcfce7">${laborCell}</td>
+      <td style="background:#fef3c7">₪${fmtNum(r.factory|0)} (${r.pct_factory.toFixed(1)}%)</td>
+      <td>₪${fmtNum(r.totalCogs|0)}</td>
+      <td style="background:${gpmColor};font-weight:700">${r.gpm_full.toFixed(1)}%</td>
+      <td style="background:#dbeafe;font-weight:600">${r.gpm_purchases.toFixed(1)}%</td>
+      <td style="background:#dcfce7;font-weight:600">${r.labor>0?r.gpm_labor.toFixed(1)+'%':'—'}</td>
+      <td style="background:#fef3c7;font-weight:600">${r.gpm_factory.toFixed(1)}%</td>
+    </tr>`;
+  }).join('') + `<tr style="background:var(--lgray);font-weight:700">
+    <td>ממוצע (ינ-אפר)</td>
+    <td></td>
+    <td style="background:#dbeafe">${(GPM.slice(0,4).reduce((s,r)=>s+r.pct_purchases,0)/4).toFixed(1)}%</td>
+    <td style="background:#dcfce7">${(GPM.slice(0,4).reduce((s,r)=>s+r.pct_labor,0)/4).toFixed(1)}%</td>
+    <td style="background:#fef3c7">${(GPM.slice(0,4).reduce((s,r)=>s+r.pct_factory,0)/4).toFixed(1)}%</td>
+    <td></td>
+    <td>${(GPM.slice(0,4).reduce((s,r)=>s+r.gpm_full,0)/4).toFixed(1)}%</td>
+    <td style="background:#dbeafe">${(GPM.slice(0,4).reduce((s,r)=>s+r.gpm_purchases,0)/4).toFixed(1)}%</td>
+    <td style="background:#dcfce7">${(GPM.slice(0,4).reduce((s,r)=>s+r.gpm_labor,0)/4).toFixed(1)}%</td>
+    <td style="background:#fef3c7">${(GPM.slice(0,4).reduce((s,r)=>s+r.gpm_factory,0)/4).toFixed(1)}%</td>
+  </tr>`;
+
+  // ── Operating Profit (EBIT) Analysis ──────────────────────────────────────
+  const PL = [
+    { m:'ינואר 2026',  rev:1582808, cogs:1282738, gp:300071,  gna:68782,  ebit:231289, fin:5467,  net:225821 },
+    { m:'פברואר 2026', rev:1551280, cogs:1337315, gp:213965,  gna:48413,  ebit:165552, fin:7908,  net:157644 },
+    { m:'מרץ 2026',    rev:1777729, cogs:1308334, gp:469395,  gna:35185,  ebit:434210, fin:1757,  net:432453 },
+    { m:'אפריל 2026',  rev:1696922, cogs:1415238, gp:281684,  gna:62503,  ebit:219181, fin:4564,  net:214617 },
+  ];
+  PL.forEach(r => {
+    r.gpm   = r.rev ? r.gp/r.rev*100   : 0;
+    r.ebitm = r.rev ? r.ebit/r.rev*100 : 0;
+    r.netm  = r.rev ? r.net/r.rev*100  : 0;
+    r.gnam  = r.rev ? r.gna/r.rev*100  : 0;
+    r.finm  = r.rev ? r.fin/r.rev*100  : 0;
+  });
+  const plLabels = PL.map(r => r.m);
+  const avgEbitm = PL.reduce((s,r)=>s+r.ebitm,0)/PL.length;
+  const avgGna   = PL.reduce((s,r)=>s+r.gnam,0)/PL.length;
+
+  // EBIT KPI cards
+  const bestMonth  = PL.reduce((a,b)=>b.ebit>a.ebit?b:a);
+  const worstMonth = PL.reduce((a,b)=>b.ebit<a.ebit?b:a);
+  document.getElementById('ebitKpis').innerHTML = [
+    { l:'EBIT ממוצע', v:'₪'+fmtK(Math.round(PL.reduce((s,r)=>s+r.ebit,0)/PL.length)), d:avgEbitm.toFixed(1)+'% מהכנסות', cls:'n' },
+    { l:'EBIT גבוה — מרץ', v:'₪'+fmtK(bestMonth.ebit|0), d:bestMonth.ebitm.toFixed(1)+'%', cls:'g' },
+    { l:'EBIT נמוך — פבר׳', v:'₪'+fmtK(worstMonth.ebit|0), d:worstMonth.ebitm.toFixed(1)+'%', cls:'a' },
+    { l:'טווח EBIT', v:(bestMonth.ebitm-worstMonth.ebitm).toFixed(1)+'pp', d:'בין חודשים', cls:'a' },
+    { l:'EBIT YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.ebit,0)), d:'ינואר–אפריל', cls:'g' },
+    { l:'הנהלה ממוצע', v:avgGna.toFixed(1)+'%', d:'מהכנסות', cls:'n' },
+    { l:'מימון ממוצע', v:(PL.reduce((s,r)=>s+r.finm,0)/PL.length).toFixed(2)+'%', d:'נמוך מאוד', cls:'g' },
+    { l:'רווח נקי YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.net,0)), d:'ינ–אפר', cls:'g' },
+  ].map(k=>`<div class="kpi ${k.cls}">
+    <div class="kpi-lbl">${k.l}</div>
+    <div class="kpi-val sm">${k.v}</div>
+    <div class="kpi-d ${k.cls==='g'?'up':k.cls==='r'?'dn':'neu'}">${k.d}</div>
+  </div>`).join('');
+
+  // EBIT absolute bar
+  destroyChart('mc_ebit_abs');
+  new Chart(document.getElementById('mc_ebit_abs'), {
+    type:'bar',
+    data:{ labels:plLabels, datasets:[
+      { label:'רווח גולמי (₪K)', data:PL.map(r=>Math.round(r.gp/1000)),   backgroundColor:C.lblue+'cc', borderRadius:5 },
+      { label:'הנהלה וכלליות (₪K)', data:PL.map(r=>-Math.round(r.gna/1000)), backgroundColor:C.amber+'99', borderRadius:5 },
+      { label:'EBIT (₪K)',      data:PL.map(r=>Math.round(r.ebit/1000)), backgroundColor:C.navy+'cc', borderRadius:5 },
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  // Margins comparison line
+  destroyChart('mc_ebit_margins');
+  new Chart(document.getElementById('mc_ebit_margins'), {
+    type:'line',
+    data:{ labels:plLabels, datasets:[
+      { label:'שולי גולמי %', data:PL.map(r=>+r.gpm.toFixed(1)),   borderColor:C.blue,  backgroundColor:C.sky+'44', fill:true, tension:.4, pointRadius:5 },
+      { label:'שולי EBIT %',  data:PL.map(r=>+r.ebitm.toFixed(1)), borderColor:C.navy,  backgroundColor:C.navy+'22',fill:true, tension:.4, pointRadius:5 },
+      { label:'שולי נקי %',   data:PL.map(r=>+r.netm.toFixed(1)),  borderColor:C.green, backgroundColor:'transparent', tension:.4, pointRadius:5 },
+    ]},
+    options:{...base(true)}
+  });
+
+  // Bridge chart (waterfall-style grouped bar)
+  destroyChart('mc_ebit_bridge');
+  new Chart(document.getElementById('mc_ebit_bridge'), {
+    type:'bar',
+    data:{ labels:plLabels, datasets:[
+      { label:'רווח גולמי',     data:PL.map(r=>Math.round(r.gp/1000)),   backgroundColor:C.blue+'cc',  borderRadius:5 },
+      { label:'(-) הנהלה',      data:PL.map(r=>-Math.round(r.gna/1000)), backgroundColor:C.amber+'cc', borderRadius:5 },
+      { label:'EBIT',           data:PL.map(r=>Math.round(r.ebit/1000)), backgroundColor:C.navy+'cc',  borderRadius:5 },
+      { label:'(-) מימון',      data:PL.map(r=>-Math.round(r.fin/1000)), backgroundColor:C.red+'88',   borderRadius:5 },
+      { label:'רווח נקי',       data:PL.map(r=>Math.round(r.net/1000)),  backgroundColor:C.green+'cc', borderRadius:5 },
+    ]},
+    options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}}}
+  });
+
+  // G&A trend — dual axis
+  destroyChart('mc_gna');
+  new Chart(document.getElementById('mc_gna'), {
+    type:'bar',
+    data:{ labels:plLabels, datasets:[
+      { label:'הנהלה וכלליות (₪K)', data:PL.map(r=>Math.round(r.gna/1000)), backgroundColor:C.amber+'cc', borderRadius:5, yAxisID:'y' },
+      { label:'% מהכנסות',          data:PL.map(r=>+r.gnam.toFixed(1)),      type:'line', borderColor:C.navy, pointRadius:5, tension:.4, yAxisID:'y2' },
+    ]},
+    options:{...base(), scales:{
+      x:{ticks:{font:F}},
+      y:{ticks:{font:F, callback:v=>'₪'+v+'K'}, title:{display:true,text:'₪K',font:F}},
+      y2:{position:'left', ticks:{font:F, callback:v=>v+'%'}, title:{display:true,text:'%',font:F}, grid:{display:false}}
+    }}
+  });
+
+  // Full P&L table
+  const plRows = [
+    { lbl:'הכנסות ממכירות', key:'rev',  style:'background:var(--lgray);font-weight:700', bold:true },
+    { lbl:'עלות המכר (COGS)', key:'cogs', style:'color:var(--red)', neg:true },
+    { lbl:'רווח גולמי',       key:'gp',  style:'background:#dbeafe;font-weight:700', bold:true },
+    { lbl:'הנהלה וכלליות',   key:'gna', style:'color:var(--amber)', neg:true },
+    { lbl:'רווח תפעולי (EBIT)',key:'ebit',style:'background:#dcfce7;font-weight:700', bold:true },
+    { lbl:'הוצ׳ מימון',       key:'fin', style:'color:var(--red)', neg:true },
+    { lbl:'רווח נקי',         key:'net', style:'background:var(--navy);color:#fff;font-weight:700', bold:true },
+  ];
+  document.getElementById('plBody').innerHTML = plRows.map(row => {
+    const cells = PL.map(m => {
+      const v = m[row.key];
+      const pct = m.rev ? (v/m.rev*100).toFixed(1) : '0.0';
+      const disp = row.neg ? `(₪${fmtNum(v|0)})` : `₪${fmtNum(v|0)}`;
+      return `<td style="${row.style}">${disp}</td><td style="color:var(--gray);font-size:11px">${row.neg?'('+pct+'%)':pct+'%'}</td>`;
+    }).join('');
+    const avgPct = (PL.reduce((s,m)=>s+(m[row.key]/m.rev*100),0)/PL.length).toFixed(1);
+    return `<tr><td style="font-weight:${row.bold?'700':'400'}">${row.lbl}</td>${cells}<td style="${row.style}">${row.neg?'('+avgPct+'%)':avgPct+'%'}</td></tr>`;
+  }).join('');
+
+  // insight texts
+  document.getElementById('ebitAbsIns').textContent =
+    `ממוצע EBIT: ₪${fmtNum(Math.round(PL.reduce((s,r)=>s+r.ebit,0)/PL.length))} | מרץ =${fmtK(PL[2].ebit|0)} vs. פברואר =${fmtK(PL[1].ebit|0)} — הפרש פי ${(PL[2].ebit/PL[1].ebit).toFixed(1)}`;
+  document.getElementById('ebitMarginIns').textContent =
+    `מרץ גבוה (${PL[2].ebitm.toFixed(1)}%) ← שולי גולמי 26.4% + הנהלה נמוכה (2%). פברואר נמוך (${PL[1].ebitm.toFixed(1)}%) ← שולי גולמי 13.8%.`;
+  document.getElementById('gnaIns').textContent =
+    `ממוצע הנהלה: ₪${fmtNum(Math.round(PL.reduce((s,r)=>s+r.gna,0)/PL.length))} (${avgGna.toFixed(1)}%). טווח: ${Math.min(...PL.map(r=>r.gna))|0}–${Math.max(...PL.map(r=>r.gna))|0} ₪`;
+
+  // insight texts
+  document.getElementById('revBadge').textContent = 'ינואר–מאי 2026';
+  document.getElementById('revIns').textContent = `ממוצע חודשי: ₪${fmtNum(Math.round(data.reduce((s,r)=>s+r.rev,0)/5))} | טווח: ₪${fmtNum(Math.min(...data.map(r=>r.rev)))} – ₪${fmtNum(Math.max(...data.map(r=>r.rev)))}`;
+  document.getElementById('marginIns').textContent = `ממוצע גולמי (ינ-אפר): ${(data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4).toFixed(1)}% | תנודתיות גבוהה — בדוק עקביות COGS`;
+  document.getElementById('wcIns').textContent = 'לקוחות ומלאי נמוכים — חברה עובדת עם מקדמות ותשלום מהיר';
+  document.getElementById('cccIns').textContent = 'יחס שוטף משתפר בעקביות: 1.09 → 1.52 — מגמה חיובית';
+  document.getElementById('cfIns').textContent = `מזומן נטו: ינואר +₪${fmtNum(MONTHLY_DATA[0].netCash|0)} | מרץ +₪${fmtNum(MONTHLY_DATA[2].netCash|0)} | מאי +₪${fmtNum(MONTHLY_DATA[4].netCash|0)}`;
+  document.getElementById('revCogsIns').textContent = 'מאי: COGS נמוך (57% מהכנסות) — שכר ייצור חסר. ינואר-אפריל: COGS ~80-83%';
+})();
+
+// ── Metric Tooltips ──────────────────────────────────────────────────────────
+const TOOLTIPS = {
+  'שולי רווח גולמי %': {
+    formula: '(הכנסות − עלות המכר) ÷ הכנסות',
+    desc: 'כמה נשאר מכל ₪1 הכנסה אחרי עלויות הייצור וההפצה הישירות.',
+    tip: 'אצל סלטי גן ה-COGS כולל גם הפצה — לכן ה-EBIT הוא ההשוואה הנכונה.'
+  },
+  'שולי EBIT %': {
+    formula: 'רווח תפעולי ÷ הכנסות',
+    desc: 'כמה נשאר מכל ₪1 לפני ריבית ומס. מנטרל הבדלי מבנה הון — המדד הטהור ביותר לרווחיות תפעולית.',
+    tip: 'ה-EBIT הוא המדד המועדף להשוואה בין חברות מזון עם קלסיפיקציות COGS שונות.'
+  },
+  'שולי רווח נקי %': {
+    formula: 'רווח נקי ÷ הכנסות',
+    desc: 'כמה נשאר לבעלי המניות מכל ₪1 הכנסה לאחר כל הוצאה — ייצור, הפצה, ניהול, מימון ומס.',
+    tip: 'מושפע ממבנה המינוף. חברה עם אפס חוב תציג שולי נקי גבוהים יותר.'
+  },
+  'צמיחת הכנסות %': {
+    formula: '(הכנסות השנה − הכנסות אשתקד) ÷ הכנסות אשתקד',
+    desc: 'קצב גידול המכירות. משקף הרחבת פעילות, לקוחות חדשים או העלאות מחיר.',
+    tip: 'אצל סלטי גן: (22.6M − 20.0M) ÷ 20.0M = +13.1%'
+  },
+  'צמיחת רווח נקי %': {
+    formula: '(רווח נקי השנה − רווח נקי אשתקד) ÷ רווח נקי אשתקד',
+    desc: 'קצב גידול הרווחיות. אמור לעלות על צמיחת ההכנסות בגלל מינוף תפעולי — עלויות קבועות מתפרסות על יותר הכנסות.',
+    tip: 'מינוף תפעולי = % EBIT ÷ % הכנסות = 43.2% ÷ 13.1% = 3.3×'
+  },
+  'ימי לקוחות': {
+    formula: '(לקוחות ממוצע × 365) ÷ הכנסות',
+    desc: 'כמה ימים בממוצע עוברים ממכירה עד גביית תשלום. ימים רבים = הון תקוע אצל הלקוח.',
+    tip: 'הפחתה מ-88.6 ל-74.9 ימים שחררה ~₪420K מזומנים ב-2024.'
+  },
+  'ימי מלאי': {
+    formula: '(מלאי ממוצע × 365) ÷ עלות המכר',
+    desc: 'כמה ימים המלאי יושב במחסן עד שנמכר. למוצרי מזון טרי — ימים מועטים חיוניים לאיכות.',
+    tip: '22.6 ימים = מחזור מהיר מאוד, מתאים לסלטים עם תוקף קצר.'
+  },
+  'ימי ספקים': {
+    formula: '(ספקים ממוצע × 365) ÷ עלות המכר',
+    desc: 'כמה ימים עוברים מקבלת הסחורה עד התשלום לספק. ימים רבים = מימון חינמי מהספקים.',
+    tip: '95.5 ימים מול ממוצע תעשייה 55 — כוח מיקוח גבוה מאוד.'
+  },
+  'CCC (ימים)': {
+    formula: 'ימי לקוחות + ימי מלאי − ימי ספקים',
+    desc: 'מחזור המרת מזומנים — כמה ימים הכסף "תקוע" בפעילות לפני שחוזר כמזומן. שלילי = ספקים מממנים את הפעילות.',
+    tip: '74.9 + 22.6 − 95.5 = 2.0 ימים. ממוצע התעשייה 32 יום — הפרש של 30 יום!'
+  },
+  'יחס שוטף': {
+    formula: 'נכסים שוטפים ÷ התחייבויות שוטפות',
+    desc: 'יכולת פירעון חובות קצרי מועד מנכסים שוטפים. מעל 1.0 = הנכסים השוטפים מכסים את ההתחייבויות.',
+    tip: 'אצל סלטי גן: 9,202K ÷ 5,560K = 1.65'
+  },
+  'יחס מהיר': {
+    formula: '(נכסים שוטפים − מלאי) ÷ התחייבויות שוטפות',
+    desc: 'גרסה שמרנית של יחס השוטף — ללא מלאי שלא ניתן לממשו מיד. בודקת נזילות "מיידית".',
+    tip: '(9,202K − 1,078K) ÷ 5,560K = 1.46'
+  },
+  'חוב/הון': {
+    formula: 'חוב פיננסי כולל ÷ הון עצמי',
+    desc: 'מדד מינוף — כמה מהפעילות ממומנת בחוב. גבוה = יותר סיכון פיננסי, אך פוטנציאל תשואה גבוהה יותר.',
+    tip: 'סלטי גן 2024: 0 ÷ 6,663K = 0.00 — אפס חוב בנקאי.'
+  },
+  'Net Debt/Equity': {
+    formula: '(חוב פיננסי − מזומן ונ"ע) ÷ הון עצמי',
+    desc: 'מינוף נטו לאחר ניכוי נכסים פיננסיים נזילים. שלילי = יש יותר מזומן מחוב.',
+    tip: '(0 − 3,382K) ÷ 6,663K = −0.508'
+  },
+  'ROCE %': {
+    formula: 'רווח נקי ÷ הון עצמי ממוצע',
+    desc: 'תשואה על ההון — כמה רווח הפיקה החברה לכל ₪1 שהושקע ע"י בעלי המניות.',
+    tip: 'ROCE = RNOA + FLEV × Spread. FLEV שלילי מוריד ROCE מתחת ל-RNOA.'
+  },
+  'RNOA %': {
+    formula: 'NOPAT ÷ NOA ממוצע',
+    desc: 'תשואה על נכסים תפעוליים נטו. מבודד את רווחיות הפעילות מהחלטות מימון. NOPAT = רווח תפעולי × (1 − שיעור מס).',
+    tip: '75.3% = כל ₪1 נכס תפעולי מניב ₪0.75 רווח. ממוצע תעשייה: 18%.'
+  },
+  'PM % (NOPAT)': {
+    formula: 'NOPAT ÷ הכנסות',
+    desc: 'שולי רווח תפעולי נטו אחרי מס — הרכיב הראשון בפירוק DuPont. מייצג יעילות תמחור ועלויות.',
+    tip: 'RNOA = PM × ATO. לשפר RNOA: שפר PM (מחיר/עלות) או ATO (יעילות נכסים).'
+  },
+  'ATO (×)': {
+    formula: 'הכנסות ÷ NOA ממוצע',
+    desc: 'מחזור נכסים תפעוליים — כמה הכנסה מניב כל ₪1 נכס תפעולי. גבוה = נכסים קטנים יחסית לפעילות.',
+    tip: '22,622K ÷ 3,552K = 6.37×. ממוצע תעשייה: 3.0×.'
+  },
+  'FCF margin %': {
+    formula: '(תזרים שוטף − Capex) ÷ הכנסות',
+    desc: 'אחוז ההכנסות שהופך למזומן חופשי לאחר השקעות הכרחיות. המדד הטוב ביותר לבריאות תזרימית.',
+    tip: '(4,266K − 1,464K) ÷ 22,622K = 12.4%. FCF גבוה מ-EBIT מרמז על ניהול הון חוזר מעולה.'
+  },
+};
+
+(function initTooltip(){
+  const tip     = document.getElementById('metricTooltip');
+  const ttTitle = document.getElementById('ttTitle');
+  const ttFm    = document.getElementById('ttFormula');
+  const ttDesc  = document.getElementById('ttDesc');
+  const ttTip   = document.getElementById('ttTip');
+
+  function show(e, key) {
+    const d = TOOLTIPS[key];
+    if (!d) return;
+    ttTitle.textContent = key;
+    ttFm.textContent    = d.formula;
+    ttDesc.textContent  = d.desc;
+    ttTip.textContent   = d.tip || '';
+    ttTip.style.display = d.tip ? 'block' : 'none';
+    tip.classList.add('visible');
+    move(e);
+  }
+  function move(e) {
+    const tw = tip.offsetWidth || 320, th = tip.offsetHeight || 130, m = 16;
+    let x = e.clientX + m, y = e.clientY + m;
+    if (x + tw > window.innerWidth  - 8) x = e.clientX - tw - m;
+    if (y + th > window.innerHeight - 8) y = e.clientY - th - m;
+    tip.style.left = x + 'px';
+    tip.style.top  = y + 'px';
+  }
+  function hide() { tip.classList.remove('visible'); }
+
+  // Mouse events
+  document.addEventListener('mouseover', e => {
+    const row = e.target.closest('tr[data-key]');
+    if (row) show(e, row.dataset.key); else hide();
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.classList.contains('visible')) move(e);
+  });
+  // Touch events for mobile/tablet
+  document.addEventListener('touchstart', e => {
+    const row = e.target.closest('tr[data-key]');
+    if (row) {
+      const t = e.touches[0];
+      show({ clientX: t.clientX, clientY: t.clientY }, row.dataset.key);
+      e.preventDefault();
+    } else {
+      hide();
+    }
+  }, { passive: false });
+})();
+</script>
+</body>
+</html>
