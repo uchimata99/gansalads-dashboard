@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#173f30">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D7%A0%D7%99%D7%AA%D7%95%D7%97%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%20%D7%A9%D7%91%D7%95%D7%A2%D7%99%20%E2%80%94%20%D7%A1%D7%9C%D7%98%D7%99%20%D7%92%D7%9F%22%2C%22short_name%22%3A%22%D7%99%D7%99%D7%A6%D7%95%D7%A8%20%D7%A9%D7%91%D7%95%D7%A2%D7%99%22%2C%22display%22%3A%22standalone%22%2C%22theme_color%22%3A%22%23173f30%22%2C%22background_color%22%3A%22%23f0f4f8%22%7D">
 <title>סלטי גן — ניתוח ייצור שבועי 2026</title>
+<script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
@@ -88,6 +89,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 .prod-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px}
 .metric-highlight{font-size:28px;font-weight:900;color:var(--green);line-height:1}
 .metric-highlight.p{color:var(--purple)}
+/* מצב הסתרת כספים */
+html.nofin .fin{display:none!important}
+html.nofin .fin-pair{grid-template-columns:1fr}
+#finToggle{margin-inline-start:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:18px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+#finToggle:hover{background:rgba(255,255,255,.22)}
 @media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}.tab{padding:10px 12px;font-size:12px}}
 </style>
 </head>
@@ -96,7 +102,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
   <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">ייצור שבועי</span>
-  <a href="finance.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <a href="finance.html" class="fin" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <button id="finToggle" onclick="toggleFin()">🙈 הסתר כספים</button>
 </div>
 
 
@@ -111,8 +118,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
   <div class="header-kpis">
     <div class="hkpi"><div class="hkpi-lbl">סה"כ אריזות</div><div class="hkpi-val">98,561</div></div>
     <div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג</div><div class="hkpi-val">233,396</div></div>
-    <div class="hkpi"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">₪3.75M</div></div>
-    <div class="hkpi"><div class="hkpi-lbl">ממוצע שבועי</div><div class="hkpi-val">₪416K</div></div>
+    <div class="hkpi fin"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">₪3.75M</div></div>
+    <div class="hkpi fin"><div class="hkpi-lbl">ממוצע שבועי</div><div class="hkpi-val">₪416K</div></div>
   </div>
 </header>
 
@@ -131,10 +138,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
   <div class="kpi-grid">
     <div class="kpi g"><div class="kpi-lbl">אריזות — ממוצע שבועי</div><div class="kpi-val">10,951</div><div class="kpi-sub">סה"כ 98,561</div></div>
     <div class="kpi t"><div class="kpi-lbl">ק"ג — ממוצע שבועי</div><div class="kpi-val">25,933</div><div class="kpi-sub">סה"כ 233,396</div></div>
-    <div class="kpi a"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">₪416,511</div><div class="kpi-sub">סה"כ ₪3.75M</div></div>
-    <div class="kpi n"><div class="kpi-lbl">₪ לק"ג ממוצע</div><div class="kpi-val">₪16.06</div><div class="kpi-sub">כולל כל המוצרים</div></div>
-    <div class="kpi"><div class="kpi-lbl">חומוס/טחינה — ממוצע שבועי</div><div class="kpi-val">2,960</div><div class="kpi-sub g">סה"כ 26,643 | 27% מהאריזות | ₪1.24M</div></div>
-    <div class="kpi"><div class="kpi-lbl">אחרים — ממוצע שבועי</div><div class="kpi-val">7,991</div><div class="kpi-sub">סה"כ 71,919 | 73% מהאריזות | ₪2.51M</div></div>
+    <div class="kpi a fin"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">₪416,511</div><div class="kpi-sub">סה"כ ₪3.75M</div></div>
+    <div class="kpi n fin"><div class="kpi-lbl">₪ לק"ג ממוצע</div><div class="kpi-val">₪16.06</div><div class="kpi-sub">כולל כל המוצרים</div></div>
+    <div class="kpi"><div class="kpi-lbl">חומוס/טחינה — ממוצע שבועי</div><div class="kpi-val">2,960</div><div class="kpi-sub g">סה"כ 26,643 | 27% מהאריזות<span class="fin"> | ₪1.24M</span></div></div>
+    <div class="kpi"><div class="kpi-lbl">אחרים — ממוצע שבועי</div><div class="kpi-val">7,991</div><div class="kpi-sub">סה"כ 71,919 | 73% מהאריזות<span class="fin"> | ₪2.51M</span></div></div>
   </div>
   <div class="card">
     <div class="card-title">
@@ -142,18 +149,18 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
       <div style="display:flex;gap:6px">
         <button class="ctrl-btn active" id="btn-pkg" onclick="toggleMetric('pkg')">אריזות</button>
         <button class="ctrl-btn" id="btn-kg" onclick="toggleMetric('kg')">ק"ג</button>
-        <button class="ctrl-btn" id="btn-rev" onclick="toggleMetric('rev')">הכנסות</button>
+        <button class="ctrl-btn fin" id="btn-rev" onclick="toggleMetric('rev')">הכנסות</button>
       </div>
     </div>
     <div class="cw t"><canvas id="weeklyTrendChart"></canvas></div>
     <div class="ins">📈 שבוע 16 — שיא ייצור עם 13,272 אריזות. שבוע 15 — נמוך ביותר עם 8,862. פערים של עד 50% בין שבועות.</div>
   </div>
-  <div class="grid2">
+  <div class="grid2 fin-pair">
     <div class="card">
       <div class="card-title">פילוח קבוצות — אריזות שבועי <span class="card-badge">ריבוד</span></div>
       <div class="cw"><canvas id="groupStackChart"></canvas></div>
     </div>
-    <div class="card">
+    <div class="card fin">
       <div class="card-title">הכנסות שבועיות (₪) <span class="card-badge g">9 שבועות</span></div>
       <div class="cw"><canvas id="revenueChart"></canvas></div>
     </div>
@@ -335,7 +342,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
         <select class="ctrl-select" id="prod-select" onchange="updateProdDetail()" style="max-width:260px"></select>
         <button class="ctrl-btn active" id="prod-btn-pkg" onclick="setProdMetric('pkg',this)">אריזות</button>
         <button class="ctrl-btn" id="prod-btn-kg" onclick="setProdMetric('kg',this)">ק"ג</button>
-        <button class="ctrl-btn" id="prod-btn-rev" onclick="setProdMetric('rev',this)">הכנסות</button>
+        <button class="ctrl-btn fin" id="prod-btn-rev" onclick="setProdMetric('rev',this)">הכנסות</button>
       </div>
     </div>
     <div class="kpi-grid" id="prod-kpis"></div>
@@ -355,7 +362,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
       </div>
     </div>
   </div>
-  <div class="grid2">
+  <div class="grid2 fin">
     <div class="card">
       <div class="card-title">טופ 15 מוצרים — הכנסות <span class="card-badge g">₪</span></div>
       <div class="cw xt"><canvas id="productsChart"></canvas></div>
@@ -524,14 +531,14 @@ function buildRevenueChart(){
 }
 function buildWeeklyTable(){
   const tbl=document.getElementById('weeklyTable');
-  let html='<thead><tr><th>שבוע</th><th>ימים</th><th>אריזות</th><th>ממוצע/יום</th><th>ק"ג</th><th>ק"ג/ארז</th><th>הכנסות</th><th>₪/ק"ג</th><th>הערות</th></tr></thead><tbody>';
+  let html='<thead><tr><th>שבוע</th><th>ימים</th><th>אריזות</th><th>ממוצע/יום</th><th>ק"ג</th><th>ק"ג/ארז</th><th class="fin">הכנסות</th><th class="fin">₪/ק"ג</th><th>הערות</th></tr></thead><tbody>';
   let prev=null;
   WEEKS.forEach(w=>{
     let chg='';if(prev!==null){const d=((w.pkg-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.pkg;
-    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td><td>${rev(w.rev)}</td><td>₪${(w.rev/w.kg).toFixed(2)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
+    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td><td class="fin">${rev(w.rev)}</td><td class="fin">₪${(w.rev/w.kg).toFixed(2)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
   });
   const tP=WEEKS.reduce((a,w)=>a+w.pkg,0),tK=WEEKS.reduce((a,w)=>a+w.kg,0),tR=WEEKS.reduce((a,w)=>a+w.rev,0),tD=WEEKS.reduce((a,w)=>a+w.days,0);
-  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(tK)}</td><td>${(tK/tP).toFixed(2)}</td><td>${rev(tR)}</td><td>₪${(tR/tK).toFixed(2)}</td><td></td></tr></tbody>`;
+  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(tK)}</td><td>${(tK/tP).toFixed(2)}</td><td class="fin">${rev(tR)}</td><td class="fin">₪${(tR/tK).toFixed(2)}</td><td></td></tr></tbody>`;
   tbl.innerHTML=html;
 }
 
@@ -677,11 +684,11 @@ function initProducts(){
   document.getElementById('groupDonutLegend').innerHTML=`<div style="color:#16a34a"><b>■ חומוס/טחינה</b><br>${rev(htR)}<br>${pct(htR,htR+otR)}</div><div style="margin-top:10px;color:#2563a8"><b>■ מוצרים אחרים</b><br>${rev(otR)}<br>${pct(otR,htR+otR)}</div>`;
   const tbl=document.getElementById('productsTable');
   const totR=PRODUCTS.reduce((a,p)=>a+p.rev,0);
-  let html='<thead><tr><th>#</th><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th>ק"ג</th><th>הכנסות</th><th>% מכלל ₪</th><th>₪/ק"ג</th></tr></thead><tbody>';
+  let html='<thead><tr><th>#</th><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th>ק"ג</th><th class="fin">הכנסות</th><th class="fin">% מכלל ₪</th><th class="fin">₪/ק"ג</th></tr></thead><tbody>';
   PRODUCTS.forEach((p,i)=>{
     const barW=Math.round(p.rev/maxRev*100);
     const grpStyle=p.grp==='חומוס/טחינה'?'background:#dcfce7;color:#16a34a':'background:#dbeafe;color:#2563a8';
-    html+=`<tr><td>${i+1}</td><td title="${p.name}">${p.name.length>22?p.name.slice(0,22)+'…':p.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${grpStyle}">${p.grp}</span></td><td>${fmtF(p.pkg)}</td><td>${fmtF(p.kg)}</td><td>${rev(p.rev)}</td><td>${pct(p.rev,totR)}<div class="prod-bar-wrap"><div class="prod-bar" style="width:${barW}%"></div></div></td><td>₪${(p.rev/p.kg).toFixed(2)}</td></tr>`;
+    html+=`<tr><td>${i+1}</td><td title="${p.name}">${p.name.length>22?p.name.slice(0,22)+'…':p.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${grpStyle}">${p.grp}</span></td><td>${fmtF(p.pkg)}</td><td>${fmtF(p.kg)}</td><td class="fin">${rev(p.rev)}</td><td class="fin">${pct(p.rev,totR)}<div class="prod-bar-wrap"><div class="prod-bar" style="width:${barW}%"></div></div></td><td class="fin">₪${(p.rev/p.kg).toFixed(2)}</td></tr>`;
   });
   html+='</tbody>';tbl.innerHTML=html;
   initProdDetail();
@@ -709,8 +716,8 @@ function updateProdDetail(){
   document.getElementById('prod-kpis').innerHTML=
     `<div class="kpi g"><div class="kpi-lbl">אריזות — ממוצע שבועי</div><div class="kpi-val">${fmtF(tp/nw)}</div><div class="kpi-sub">סה"כ ${fmtF(tp)}</div></div>`+
     `<div class="kpi t"><div class="kpi-lbl">ק"ג — ממוצע שבועי</div><div class="kpi-val">${fmtF(tk/nw)}</div><div class="kpi-sub">סה"כ ${fmtF(tk)}</div></div>`+
-    `<div class="kpi a"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">${rev(tr/nw)}</div><div class="kpi-sub">סה"כ ${rev(tr)}</div></div>`+
-    `<div class="kpi n"><div class="kpi-lbl">₪ לק"ג</div><div class="kpi-val">${tk?'₪'+(tr/tk).toFixed(2):'—'}</div><div class="kpi-sub">${nw} שבועות פעילים</div></div>`;
+    `<div class="kpi a fin"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">${rev(tr/nw)}</div><div class="kpi-sub">סה"כ ${rev(tr)}</div></div>`+
+    `<div class="kpi n fin"><div class="kpi-lbl">₪ לק"ג</div><div class="kpi-val">${tk?'₪'+(tr/tk).toFixed(2):'—'}</div><div class="kpi-sub">${nw} שבועות פעילים</div></div>`;
   const mi=PROD_MI[prodMetric];
   const data=WEEKS.map(w=>{const wd=d[w.w];if(!wd)return 0;let s=0;for(const i in wd)s+=wd[i][mi];return s;});
   makeChart('prodWeeklyChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),datasets:[{label:PROD_LBL[prodMetric],data,backgroundColor:'#16a34aCC',borderColor:'#16a34a',borderWidth:2,borderRadius:6}]},
@@ -751,7 +758,21 @@ function initPackaging(){
   tbl.innerHTML=html;
 }
 
-document.addEventListener('DOMContentLoaded',()=>{Chart.defaults.font.family="'Segoe UI',Arial,sans-serif";initSummary();});
+// ─── הסתרת נתונים כספיים ───
+function toggleFin(){
+  const h=document.documentElement.classList.toggle('nofin');
+  try{localStorage.setItem('gsHideFin',h?'1':'0');}catch(e){}
+  updateFinBtn();
+  if(h){
+    if(currentMetric==='rev')toggleMetric('pkg');
+    if(prodMetric==='rev'&&charts['prodWeeklyChart'])setProdMetric('pkg',document.getElementById('prod-btn-pkg'));
+  }
+}
+function updateFinBtn(){
+  const b=document.getElementById('finToggle');
+  if(b)b.textContent=document.documentElement.classList.contains('nofin')?'👁 הצג כספים':'🙈 הסתר כספים';
+}
+document.addEventListener('DOMContentLoaded',()=>{Chart.defaults.font.family="'Segoe UI',Arial,sans-serif";updateFinBtn();initSummary();});
 </script>
 </body>
 </html>
