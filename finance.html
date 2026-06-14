@@ -963,7 +963,7 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 
     <!-- Gross margin breakdown -->
     <div class="card" style="margin-top:16px">
-      <div class="card-title">📊 ניתוח רווח גולמי — פירוק לפי רכיבי עלות <span class="card-badge">ינואר–אפריל 2026</span></div>
+      <div class="card-title">📊 ניתוח רווח גולמי — פירוק לפי רכיבי עלות <span class="card-badge">ינואר–מאי 2026</span></div>
 
       <div class="grid2" style="margin-bottom:16px">
         <div>
@@ -978,7 +978,7 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">התפלגות עלות המכר — % מהכנסות</div>
           <div class="cw t"><canvas id="mc_cogs_stack"></canvas></div>
           <div class="ins a" style="margin-top:8px">
-            מאי חסר שכר עבודה (~23% מהכנסות) — לכן COGS נמוך מאוד ושולי גולמי 57%.
+            מאי: שכר הייצור בדוח (~6% מהכנסות) היה רישום חלקי — נורמל לממוצע ינואר–אפריל (~23% מהכנסות). COGS לאחר נרמול: 74.6%, שולי גולמי: 25.4%.
           </div>
         </div>
       </div>
@@ -1011,7 +1011,7 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 
     <!-- Operating Profit Analysis -->
     <div class="card" style="margin-top:16px">
-      <div class="card-title">⚙️ ניתוח רווח תפעולי (EBIT) <span class="card-badge">ינואר–אפריל 2026</span></div>
+      <div class="card-title">⚙️ ניתוח רווח תפעולי (EBIT) <span class="card-badge">ינואר–מאי 2026</span></div>
 
       <!-- EBIT KPIs -->
       <div class="kpi-grid" style="margin-bottom:16px" id="ebitKpis"></div>
@@ -1754,8 +1754,8 @@ const MONTHLY_DATA = [
   { month:'פברואר 2026', rev:1551280, cogs:1337315, grossProfit:213965, gna:48413,  ebit:165552, finExp:7908,  net:157644, cash:980618,  ar:97421,    ap:16478,   bankCredit:1002808, arOther:69776  },
   { month:'מרץ 2026',    rev:1777729, cogs:1308334, grossProfit:469395, gna:35185,  ebit:434210, finExp:1757,  net:432453, cash:1102863, ar:121503,   ap:201675,  bankCredit:801665,  arOther:118230 },
   { month:'אפריל 2026',  rev:1696922, cogs:1415238, grossProfit:281684, gna:62503,  ebit:219181, finExp:4564,  net:214617, cash:593863,  ar:-42296,   ap:87396,   bankCredit:257026,  arOther:96238  },
-  // מאי 2026 — יוכנס לאחר הזנת שכר ייצור
-  // { month:'מאי 2026', rev:1660835, cogs:707572, grossProfit:953263, gna:24417, ebit:928845, finExp:22112, net:906733, cash:1929731, ar:81105, ap:-457653, bankCredit:1913535, arOther:618769 }
+  // מאי 2026 — שכר הייצור בדוח (104,912) היה רשום חלקית; נורמל לממוצע ינואר–אפריל (376,890) ע"י הוספת ההפרש (~271,978) לעלות המכר. עלות מכר בדוח: 967,143.
+  { month:'מאי 2026',    rev:1661395, cogs:1239121, grossProfit:422274, gna:26603,  ebit:395671, finExp:22112, net:373558, cash:1929731, ar:81176,    ap:-157090, bankCredit:1917519, arOther:662149 }
 ];
 
 // Enrich with calculated metrics
@@ -1785,25 +1785,25 @@ MONTHLY_DATA.forEach(r => {
       <div style="font-size:28px">✅</div>
       <div>
         <div style="font-weight:700;color:var(--green);font-size:14px">נטענו ${data.length} חודשים — ינואר עד מאי 2026</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px">מקור: דוחות מאזן חודשיים סלטי גן בע"מ · ינואר–אפריל 2026 · מאי יוכנס לאחר הזנת שכר</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px">מקור: דוחות מאזן חודשיים סלטי גן בע"מ · ינואר–מאי 2026</div>
       </div>
     </div>`;
 
   document.getElementById('monthlyResults').style.display = 'block';
-  document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — ינואר–אפריל 2026';
+  document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — ינואר–מאי 2026';
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
   const revGrow = prev ? ((latest.rev-prev.rev)/prev.rev*100).toFixed(1) : null;
-  const gpmAvg4 = data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4; // exclude May anomaly
+  const gpmAvg = data.reduce((s,r)=>s+r.gpm,0)/data.length;
   const kpis = [
-    { l:'הכנסות מאי',  v:'₪'+fmtK(latest.rev),   d:revGrow?(revGrow>0?'▲':'▼')+Math.abs(revGrow)+'% ממרץ':'', cls:revGrow>0?'g':'r' },
-    { l:'שולי גולמי*', v:gpmAvg4.toFixed(1)+'%',  d:'ממוצע ינואר–אפריל', cls:gpmAvg4>18?'g':'a', note:'* מאי לא כולל שכר ייצור' },
-    { l:'שולי EBIT',   v:data.slice(0,4).reduce((s,r)=>s+r.ebitm,0)/4 |0+'%', d:'ממוצע ינואר–אפריל', cls:'g' },
+    { l:'הכנסות מאי',  v:'₪'+fmtK(latest.rev),   d:revGrow?(revGrow>0?'▲':'▼')+Math.abs(revGrow)+'% מאפריל':'', cls:revGrow>0?'g':'r' },
+    { l:'שולי גולמי*', v:gpmAvg.toFixed(1)+'%',   d:'ממוצע ינואר–מאי', cls:gpmAvg>18?'g':'a', note:'* שכר ייצור מאי נורמל לממוצע' },
+    { l:'שולי EBIT',   v:(data.reduce((s,r)=>s+r.ebitm,0)/data.length).toFixed(1)+'%', d:'ממוצע ינואר–מאי', cls:'g' },
     { l:'הכנסות YTD',  v:'₪'+fmtK(data.reduce((s,r)=>s+r.rev,0)), d:'ינואר–מאי', cls:'n' },
     { l:'רווח נקי YTD',v:'₪'+fmtK(data.reduce((s,r)=>s+r.net,0)), d:'ינואר–מאי', cls:'g' },
     { l:'מזומן נטו מאי',v:'₪'+fmtK(latest.netCash), d:latest.netCash>0?'עודף מזומן':'אשראי בנק', cls:latest.netCash>0?'g':'a' },
-    { l:'יחס שוטף מאי',v:'1.52', d:'↑ מ-1.09 בינואר', cls:'g' },
-    { l:'אנומליה מאי', v:'שכר חסר', d:'~₪370K לא הוזן', cls:'a' },
+    { l:'יחס שוטף מאי',v:'1.31', d:'↑ מ-1.09 בינואר', cls:'g' },
+    { l:'שכר ייצור מאי', v:'נורמל', d:'לממוצע ₪377K', cls:'a' },
   ];
   document.getElementById('monthlyKpis').innerHTML = kpis.map(k =>
     `<div class="kpi ${k.cls}">
@@ -1830,7 +1830,7 @@ MONTHLY_DATA.forEach(r => {
     ]},
     options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}},
       plugins:{...base().plugins, tooltip:{callbacks:{
-        afterBody: ctx => ctx[0].dataIndex===4 ? ['⚠️ מאי: שכר ייצור חסר'] : []
+        afterBody: ctx => ctx[0].dataIndex===4 ? ['ℹ️ מאי: שכר ייצור נורמל לממוצע'] : []
       }}}}
   });
 
@@ -1844,7 +1844,7 @@ MONTHLY_DATA.forEach(r => {
       { label:'ממוצע גולמי תעשייה (22.9%)', data:data.map(()=>22.9), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
     ]},
     options:{...base(true), plugins:{...base().plugins, annotation:{
-      annotations:{ maylabel:{ type:'label', xValue:4, yValue:57, content:'⚠️ חסר שכר', color:C.amber }}
+      annotations:{ maylabel:{ type:'label', xValue:4, yValue:30, content:'מאי: נורמל', color:C.amber }}
     }}}
   });
 
@@ -1884,7 +1884,7 @@ MONTHLY_DATA.forEach(r => {
   new Chart(document.getElementById('mc_ccc'), {
     type:'line',
     data:{ labels, datasets:[
-      { label:'יחס שוטף', data:[1.09,1.15,1.31,1.46,1.52], borderColor:C.navy, backgroundColor:C.sky+'44', fill:true, tension:.4, pointRadius:6 },
+      { label:'יחס שוטף', data:[1.09,1.15,1.31,1.46,1.31], borderColor:C.navy, backgroundColor:C.sky+'44', fill:true, tension:.4, pointRadius:6 },
       { label:'מינימום בריא (1.2)', data:data.map(()=>1.2), borderColor:C.amber, borderDash:[4,3], pointRadius:0 }
     ]},
     options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F}, min:0.8, max:2.0}}}
@@ -1892,7 +1892,7 @@ MONTHLY_DATA.forEach(r => {
 
   // ── YTD Table ─────────────────────────────────────────────────────────────
   let ytdRev=0, ytdNet=0;
-  document.getElementById('ytdBadge').textContent = 'ינואר–אפריל 2026';
+  document.getElementById('ytdBadge').textContent = 'ינואר–מאי 2026';
   document.getElementById('ytdBody').innerHTML = data.map(r => {
     ytdRev += r.rev; ytdNet += r.net;
     const gCol = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
@@ -1911,8 +1911,8 @@ MONTHLY_DATA.forEach(r => {
   `<tr style="background:var(--navy);color:#fff">
     <td><strong>סה"כ YTD</strong></td>
     <td><strong>₪${fmtNum(ytdRev)}</strong></td>
-    <td><strong>${(data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4).toFixed(1)}%*</strong></td>
-    <td><strong>${(data.slice(0,4).reduce((s,r)=>s+r.ebitm,0)/4).toFixed(1)}%*</strong></td>
+    <td><strong>${(data.reduce((s,r)=>s+r.gpm,0)/data.length).toFixed(1)}%*</strong></td>
+    <td><strong>${(data.reduce((s,r)=>s+r.ebitm,0)/data.length).toFixed(1)}%*</strong></td>
     <td colspan="3"></td>
     <td><strong>₪${fmtNum(ytdNet)}</strong></td>
   </tr>`;
@@ -1924,13 +1924,13 @@ MONTHLY_DATA.forEach(r => {
 
   // ── Alerts ────────────────────────────────────────────────────────────────
   const alerts = [
-    { t:'r', m:'⚠️ מאי 2026: שכר ייצור (~₪370K) לא הוזן בדוח — שולי הגולמי 57.4% אינם מייצגים. יש להזין/לאשר ולעדכן.' },
-    { t:'a', m:'📊 תנודתיות גבוהה בשולי גולמי: ינואר 19% → פברואר 13.8% → מרץ 26.4% → אפריל 16.6%. הפרש של 12.6pp בין חודשים — בדוק עקביות הזנת עלות המכר.' },
-    { t:'g', m:'✅ יחס שוטף משתפר בעקביות: 1.09 → 1.15 → 1.31 → 1.46 → 1.52. מגמה חיובית חזקה.' },
+    { t:'a', m:'📌 מאי 2026: שכר הייצור בדוח (₪104,912) היה רישום חלקי — נורמל לממוצע ינואר–אפריל (₪376,890) בהוספת ההפרש לעלות המכר. שולי הגולמי לאחר נרמול: 25.4%.' },
+    { t:'a', m:'📊 תנודתיות גבוהה בשולי גולמי: ינואר 19% → פברואר 13.8% → מרץ 26.4% → אפריל 16.6% → מאי 25.4%. הפרש של 12.6pp בין חודשים — בדוק עקביות הזנת עלות המכר.' },
+    { t:'g', m:'✅ יחס שוטף עלה בעקביות עד אפריל: 1.09 → 1.15 → 1.31 → 1.46. במאי 1.31 — עדיין מעל 1.2 (בריא).' },
     { t:'g', m:'✅ הכנסות YTD: ₪'+(data.reduce((s,r)=>s+r.rev,0)/1000000).toFixed(2)+'M לינואר–מאי. קצב שנתי משוער ~₪'+(data.reduce((s,r)=>s+r.rev,0)/5*12/1000000).toFixed(1)+'M.' },
-    { t:'a', m:'📌 חו"ז (חייבים אחרים) מאי: ₪618K — פי 5 מהממוצע הרגיל. בדוק מהות הסעיף.' },
+    { t:'a', m:'📌 חו"ז (חייבים אחרים) מאי: ₪662K — פי 5 מהממוצע הרגיל. בדוק מהות הסעיף.' },
     { t:'g', m:'✅ ינואר ואפריל: לקוחות בעודף זיכוי — לקוחות שילמו מראש. מדיניות תשלום טובה.' },
-    { t:'r', m:'⚠️ מאי: ספקים בזיכוי שלילי (₪-458K) — שולמה יתרה לספקים. בדוק אם מדובר בתשלום כפול או מקדמה.' },
+    { t:'r', m:'⚠️ מאי: ספקים בזיכוי שלילי (₪-157K) — שולמה יתרה לספקים. בדוק אם מדובר בתשלום כפול או מקדמה.' },
     { t:'a', m:'📌 פברואר: שולי גולמי 13.8% — הנמוכים בסדרה. קניות גבוהות (₪670K→₪589K) ביחס להכנסות. בדוק אם היה אירוע חד-פעמי.' },
   ];
   document.getElementById('alertsBox').innerHTML = alerts.map(a=>
@@ -1955,7 +1955,7 @@ MONTHLY_DATA.forEach(r => {
           <div style="font-size:11px;color:var(--gray);line-height:1.5">${d}</div>
         </div>`).join('')}
     </div>
-    <div class="ins a" style="margin-top:12px">* ממוצעי שולי גולמי ו-EBIT מחושבים ללא מאי עקב אנומליית שכר ייצור חסר.</div>`;
+    <div class="ins a" style="margin-top:12px">* שכר הייצור של מאי נורמל לממוצע ינואר–אפריל (₪376,890) — בדוח הופיע רישום חלקי (₪104,912). הממוצעים כוללים את מאי המנורמל.</div>`;
 
   // ── Gross Margin Breakdown ────────────────────────────────────────────────
   const GPM = [
@@ -1963,7 +1963,8 @@ MONTHLY_DATA.forEach(r => {
     { m:'פברואר 2026',rev:1551280, purchases:718765, labor:361023, factory:257526, totalCogs:1337315 },
     { m:'מרץ 2026',   rev:1777728, purchases:712060, labor:383251, factory:213021, totalCogs:1308333 },
     { m:'אפריל 2026', rev:1696921, purchases:730937, labor:389384, factory:294915, totalCogs:1415237 },
-    // מאי 2026 — יוכנס לאחר הזנת שכר ייצור
+    // מאי 2026 — שכר הייצור (labor) נורמל לממוצע ינואר–אפריל (376,890); בדוח הופיע רישום חלקי (104,912)
+    { m:'מאי 2026',   rev:1661395, purchases:665737, labor:376890, factory:196494, totalCogs:1239121 },
   ];
   GPM.forEach(r => {
     r.gpm_full      = r.rev ? (r.rev-r.totalCogs)/r.rev*100 : 0;
@@ -2046,6 +2047,7 @@ MONTHLY_DATA.forEach(r => {
     { m:'פברואר 2026', rev:1551280, cogs:1337315, gp:213965,  gna:48413,  ebit:165552, fin:7908,  net:157644 },
     { m:'מרץ 2026',    rev:1777729, cogs:1308334, gp:469395,  gna:35185,  ebit:434210, fin:1757,  net:432453 },
     { m:'אפריל 2026',  rev:1696922, cogs:1415238, gp:281684,  gna:62503,  ebit:219181, fin:4564,  net:214617 },
+    { m:'מאי 2026',    rev:1661395, cogs:1239121, gp:422274,  gna:26603,  ebit:395671, fin:22112, net:373558 },
   ];
   PL.forEach(r => {
     r.gpm   = r.rev ? r.gp/r.rev*100   : 0;
@@ -2066,10 +2068,10 @@ MONTHLY_DATA.forEach(r => {
     { l:'EBIT גבוה — מרץ', v:'₪'+fmtK(bestMonth.ebit|0), d:bestMonth.ebitm.toFixed(1)+'%', cls:'g' },
     { l:'EBIT נמוך — פבר׳', v:'₪'+fmtK(worstMonth.ebit|0), d:worstMonth.ebitm.toFixed(1)+'%', cls:'a' },
     { l:'טווח EBIT', v:(bestMonth.ebitm-worstMonth.ebitm).toFixed(1)+'pp', d:'בין חודשים', cls:'a' },
-    { l:'EBIT YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.ebit,0)), d:'ינואר–אפריל', cls:'g' },
+    { l:'EBIT YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.ebit,0)), d:'ינואר–מאי', cls:'g' },
     { l:'הנהלה ממוצע', v:avgGna.toFixed(1)+'%', d:'מהכנסות', cls:'n' },
     { l:'מימון ממוצע', v:(PL.reduce((s,r)=>s+r.finm,0)/PL.length).toFixed(2)+'%', d:'נמוך מאוד', cls:'g' },
-    { l:'רווח נקי YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.net,0)), d:'ינ–אפר', cls:'g' },
+    { l:'רווח נקי YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.net,0)), d:'ינ–מאי', cls:'g' },
   ].map(k=>`<div class="kpi ${k.cls}">
     <div class="kpi-lbl">${k.l}</div>
     <div class="kpi-val sm">${k.v}</div>
@@ -2161,11 +2163,11 @@ MONTHLY_DATA.forEach(r => {
   // insight texts
   document.getElementById('revBadge').textContent = 'ינואר–מאי 2026';
   document.getElementById('revIns').textContent = `ממוצע חודשי: ₪${fmtNum(Math.round(data.reduce((s,r)=>s+r.rev,0)/5))} | טווח: ₪${fmtNum(Math.min(...data.map(r=>r.rev)))} – ₪${fmtNum(Math.max(...data.map(r=>r.rev)))}`;
-  document.getElementById('marginIns').textContent = `ממוצע גולמי (ינ-אפר): ${(data.slice(0,4).reduce((s,r)=>s+r.gpm,0)/4).toFixed(1)}% | תנודתיות גבוהה — בדוק עקביות COGS`;
+  document.getElementById('marginIns').textContent = `ממוצע גולמי (ינ-מאי): ${(data.reduce((s,r)=>s+r.gpm,0)/data.length).toFixed(1)}% | תנודתיות גבוהה — בדוק עקביות COGS`;
   document.getElementById('wcIns').textContent = 'לקוחות ומלאי נמוכים — חברה עובדת עם מקדמות ותשלום מהיר';
-  document.getElementById('cccIns').textContent = 'יחס שוטף משתפר בעקביות: 1.09 → 1.52 — מגמה חיובית';
+  document.getElementById('cccIns').textContent = 'יחס שוטף: 1.09 → 1.46 (אפריל), מאי 1.31 — מעל 1.2 (בריא)';
   document.getElementById('cfIns').textContent = `מזומן נטו: ינואר +₪${fmtNum(MONTHLY_DATA[0].netCash|0)} | מרץ +₪${fmtNum(MONTHLY_DATA[2].netCash|0)} | מאי +₪${fmtNum(MONTHLY_DATA[4].netCash|0)}`;
-  document.getElementById('revCogsIns').textContent = 'מאי: COGS נמוך (57% מהכנסות) — שכר ייצור חסר. ינואר-אפריל: COGS ~80-83%';
+  document.getElementById('revCogsIns').textContent = 'מאי: COGS 74.6% מהכנסות (שכר ייצור נורמל לממוצע). ינואר-אפריל: COGS ~80-83%';
 })();
 
 // ── Metric Tooltips ──────────────────────────────────────────────────────────
