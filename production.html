@@ -26,6 +26,23 @@ html.locked #gsLock{display:flex!important}
 #gsLock button{background:#52b788;color:#fff;border:none;border-radius:10px;padding:11px 34px;font-size:15px;font-weight:700;cursor:pointer}
 #gsLock button:hover{background:#46a47a}
 #gsLock .lock-err{color:#ffb4a8;font-size:13px;min-height:18px}
+
+/* ── בורר שבועות גלובלי ── */
+#weekFilter{position:sticky;top:0;z-index:500;background:#eef5f1;border:1px solid #cfe3d8;border-radius:12px;padding:9px 12px;margin:0 0 14px 0;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+#weekFilter .wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#weekFilter .wf-ttl{font-weight:800;color:#173f30;font-size:13px;margin-left:4px}
+#weekFilter .wf-btn{background:#fff;border:1px solid #cfe3d8;color:#2d6a4f;border-radius:8px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#weekFilter .wf-btn:hover{background:#e2efe8}
+#weekFilter .wf-seg{display:inline-flex;border:1px solid #cfe3d8;border-radius:8px;overflow:hidden}
+#weekFilter .wf-seg button{background:#fff;border:none;color:#2d6a4f;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#weekFilter .wf-seg button.active{background:#52b788;color:#fff}
+#weekFilter #weekCount{font-size:12px;color:#5b7a6b;font-weight:700;margin-right:auto}
+#weekChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;max-height:96px;overflow-y:auto}
+.wchip{background:#52b788;color:#fff;border:1px solid #46a47a;border-radius:7px;padding:4px 9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;position:relative;line-height:1.2}
+.wchip:hover{filter:brightness(1.06)}
+.wchip.off{background:#fff;color:#9aa9a1;border-color:#d7e3dc;text-decoration:line-through}
+.wchip.hol{box-shadow:inset 0 -3px 0 #d97706}
+@media(max-width:600px){#weekChips{max-height:120px}.wchip{padding:5px 10px}}
 </style>
 <script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -191,17 +208,21 @@ async function loadProdData(){
   const cells=(j.values||[]).map(row=>(row&&row.length?row[0]:'')).filter(x=>x!==''&&x!=null);
   if(!cells.length) throw new Error('empty');
   const obj=JSON.parse(cells.join(''));
-  WEEKS=obj.WEEKS||[]; DAILY=obj.DAILY||{}; DAYS_TOTAL=obj.DAYS_TOTAL||{};
-  PKG_WEEKLY=obj.PKG_WEEKLY||[]; PKG_TOTALS=obj.PKG_TOTALS||[];
-  PRODUCTS=obj.PRODUCTS||[]; PROD_DETAIL=obj.PROD_DETAIL||{}; PROD_UNI=obj.PROD_UNI||{};
+  ALLWEEKS=obj.WEEKS||[]; DAILY=obj.DAILY||{};
+  ALLPKG=obj.PKG_WEEKLY||[];
+  PROD_DETAIL=obj.PROD_DETAIL||{}; PROD_UNI=obj.PROD_UNI||{};
+  selWeeks=new Set(ALLWEEKS.map(w=>w.w));
 }
 
 // אתחול הדשבורד (זהה להיום) — רץ רק אחרי שהנתונים נטענו וה-DOM מוכן
 function startDashboard(){
   const go=()=>{
     try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
-    prepareDerived();
+    recompute();
+    buildFilterBar();
+    renderAllKPIs();
     initSummary();
+    buildDistChart();
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go, {once:true});
   else go();
@@ -228,10 +249,10 @@ window.addEventListener('load', ()=>{
     <div class="brand-icon">🥗</div>
     <div>
       <div class="brand-name">סלטי גן — ניתוח ייצור שבועי</div>
-      <div class="brand-sub">שבועות 15–23 | אפריל–יוני 2026 | 9 שבועות פעילות</div>
+      <div class="brand-sub" id="hdrSub"></div>
     </div>
   </div>
-  <div class="header-kpis">
+  <div class="header-kpis" id="hdrKpis">
     <div class="hkpi"><div class="hkpi-lbl">סה"כ אריזות</div><div class="hkpi-val">98,561</div></div>
     <div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג</div><div class="hkpi-val">233,396</div></div>
     <div class="hkpi fin"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">₪3.75M</div></div>
@@ -247,11 +268,23 @@ window.addEventListener('load', ()=>{
   <button class="tab"         onclick="showPage('packaging',this)">🗂️ סוגי אריזה</button>
 </nav>
 
+<div id="weekFilter" dir="rtl">
+  <div class="wf-row">
+    <span class="wf-ttl">בורר שבועות</span>
+    <button class="wf-btn" onclick="selectAllWeeks()">הכל</button>
+    <button class="wf-btn" onclick="clearWeeks()">נקה</button>
+    <button class="wf-btn" onclick="onlyFullWeeks()">רק שבועות מלאים</button>
+    <span class="wf-seg"><button id="avg-week" class="active" onclick="setAvgMode('week')">ממוצע שבועי</button><button id="avg-day" onclick="setAvgMode('day')">לפי יום-עבודה</button></span>
+    <span id="weekCount"></span>
+  </div>
+  <div id="weekChips"></div>
+</div>
+
 <div class="main">
 
 <!-- ═══════ TAB 1: SUMMARY ═══════ -->
 <div id="page-summary" class="page active">
-  <div class="kpi-grid">
+  <div class="kpi-grid" id="sumKpis">
     <div class="kpi g"><div class="kpi-lbl">אריזות — ממוצע שבועי</div><div class="kpi-val">10,951</div><div class="kpi-sub">סה"כ 98,561</div></div>
     <div class="kpi t"><div class="kpi-lbl">ק"ג — ממוצע שבועי</div><div class="kpi-val">25,933</div><div class="kpi-sub">סה"כ 233,396</div></div>
     <div class="kpi a fin"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">₪416,511</div><div class="kpi-sub">סה"כ ₪3.75M</div></div>
@@ -269,7 +302,7 @@ window.addEventListener('load', ()=>{
       </div>
     </div>
     <div class="cw t"><canvas id="weeklyTrendChart"></canvas></div>
-    <div class="ins">📈 שבוע 16 — שיא ייצור עם 13,272 אריזות. שבוע 15 — נמוך ביותר עם 8,862. פערים של עד 50% בין שבועות.</div>
+    <div class="ins" id="sumIns"></div>
   </div>
   <div class="grid2 fin-pair">
     <div class="card">
@@ -277,9 +310,13 @@ window.addEventListener('load', ()=>{
       <div class="cw"><canvas id="groupStackChart"></canvas></div>
     </div>
     <div class="card fin">
-      <div class="card-title">הכנסות שבועיות (₪) <span class="card-badge g">9 שבועות</span></div>
+      <div class="card-title">הכנסות שבועיות (₪) <span class="card-badge g">לפי בחירה</span></div>
       <div class="cw"><canvas id="revenueChart"></canvas></div>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-title">התפלגות שבועית — אריזות <span class="card-badge">ממוצע + חציון</span></div>
+    <div class="cw t"><canvas id="distChart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-title">טבלת סיכום שבועי מלא</div>
@@ -298,7 +335,7 @@ window.addEventListener('load', ()=>{
   <!-- pkg / weekly -->
   <div id="sub-pkg-weekly" class="subpage active">
     <div class="kpi-grid" id="pkgW-kpis">
-      <div class="kpi g"><div class="kpi-lbl">סה"כ אריזות</div><div class="kpi-val">98,561</div><div class="kpi-sub">9 שבועות</div></div>
+      <div class="kpi g"><div class="kpi-lbl">סה"כ אריזות</div><div class="kpi-val">98,561</div><div class="kpi-sub">לפי בחירה</div></div>
       <div class="kpi g"><div class="kpi-lbl">ממוצע שבועי</div><div class="kpi-val">10,951</div><div class="kpi-sub">אריזות לשבוע</div></div>
       <div class="kpi a"><div class="kpi-lbl">שיא — שבוע 16</div><div class="kpi-val">13,272</div><div class="kpi-sub">עם יום עצמאות</div></div>
       <div class="kpi r"><div class="kpi-lbl">שפל — שבוע 15</div><div class="kpi-val">8,862</div><div class="kpi-sub">שבוע השואה</div></div>
@@ -308,7 +345,7 @@ window.addEventListener('load', ()=>{
     <div class="card">
       <div class="card-title">אריזות לפי שבוע <span class="card-badge g">כולל פילוח קבוצות</span></div>
       <div class="cw t"><canvas id="pkgW-trendChart"></canvas></div>
-      <div class="ins g">📦 שיא ב-שבוע 16 (13,272 ארז). ממוצע שבועי: 10,951. שבועות 15 ו-18 נמוכים בשל חגים.</div>
+      <div class="ins g" id="pkgwIns"></div>
     </div>
     <div class="grid2">
       <div class="card">
@@ -328,7 +365,7 @@ window.addEventListener('load', ()=>{
 
   <!-- pkg / daily -->
   <div id="sub-pkg-daily" class="subpage">
-    <div class="kpi-grid">
+    <div class="kpi-grid" id="pkgdKpis">
       <div class="kpi r"><div class="kpi-lbl">ראשון</div><div class="kpi-val">17,578</div><div class="kpi-sub">17.8% מהסך</div></div>
       <div class="kpi p"><div class="kpi-lbl">שני</div><div class="kpi-val">24,397</div><div class="kpi-sub p">24.8% — יום שיא</div></div>
       <div class="kpi n"><div class="kpi-lbl">שלישי</div><div class="kpi-val">22,307</div><div class="kpi-sub">22.6%</div></div>
@@ -338,9 +375,9 @@ window.addEventListener('load', ()=>{
     </div>
     <div class="grid2">
       <div class="card">
-        <div class="card-title">סך אריזות לפי יום בשבוע <span class="card-badge g">9 שבועות</span></div>
+        <div class="card-title">סך אריזות לפי יום בשבוע <span class="card-badge g">לפי בחירה</span></div>
         <div class="cw t"><canvas id="pkgD-dayTotalChart"></canvas></div>
-        <div class="ins g">🔵 יום שני — 24,397 ארז (24.8%). יום שישי — 2,515 ארז (2.6%) בלבד.</div>
+        <div class="ins g" id="pkgdIns"></div>
       </div>
       <div class="card">
         <div class="card-title">אריזות יומי — ריבוד שבועי</div>
@@ -378,8 +415,8 @@ window.addEventListener('load', ()=>{
 
   <!-- kg / weekly -->
   <div id="sub-kg-weekly" class="subpage active">
-    <div class="kpi-grid">
-      <div class="kpi t"><div class="kpi-lbl">סה"כ ק"ג</div><div class="kpi-val">233,396</div><div class="kpi-sub">9 שבועות</div></div>
+    <div class="kpi-grid" id="kgwKpis">
+      <div class="kpi t"><div class="kpi-lbl">סה"כ ק"ג</div><div class="kpi-val">233,396</div><div class="kpi-sub">לפי בחירה</div></div>
       <div class="kpi t"><div class="kpi-lbl">ממוצע שבועי</div><div class="kpi-val">25,933</div><div class="kpi-sub">ק"ג לשבוע</div></div>
       <div class="kpi a"><div class="kpi-lbl">שיא — שבוע 16</div><div class="kpi-val">31,995</div><div class="kpi-sub">ק"ג</div></div>
       <div class="kpi r"><div class="kpi-lbl">שפל — שבוע 15</div><div class="kpi-val">21,660</div><div class="kpi-sub">ק"ג</div></div>
@@ -389,7 +426,7 @@ window.addEventListener('load', ()=>{
     <div class="card">
       <div class="card-title">ק"ג לפי שבוע <span class="card-badge p">כולל פילוח קבוצות</span></div>
       <div class="cw t"><canvas id="kgW-trendChart"></canvas></div>
-      <div class="ins p">⚖️ שיא ב-שבוע 16 (31,995 ק"ג). חומוס/טחינה מהווים 42% מהק"ג למרות 27% מהאריזות — אריזות גדולות יותר.</div>
+      <div class="ins p" id="kgwIns"></div>
     </div>
     <div class="grid2">
       <div class="card">
@@ -409,7 +446,7 @@ window.addEventListener('load', ()=>{
 
   <!-- kg / daily -->
   <div id="sub-kg-daily" class="subpage">
-    <div class="kpi-grid">
+    <div class="kpi-grid" id="kgdKpis">
       <div class="kpi r"><div class="kpi-lbl">ראשון</div><div class="kpi-val">41,780</div><div class="kpi-sub">ק"ג | 17.9%</div></div>
       <div class="kpi p"><div class="kpi-lbl">שני</div><div class="kpi-val">59,640</div><div class="kpi-sub p">ק"ג | 25.5% — שיא</div></div>
       <div class="kpi n"><div class="kpi-lbl">שלישי</div><div class="kpi-val">54,919</div><div class="kpi-sub">ק"ג | 23.5%</div></div>
@@ -419,9 +456,9 @@ window.addEventListener('load', ()=>{
     </div>
     <div class="grid2">
       <div class="card">
-        <div class="card-title">סך ק"ג לפי יום בשבוע <span class="card-badge p">9 שבועות</span></div>
+        <div class="card-title">סך ק"ג לפי יום בשבוע <span class="card-badge p">לפי בחירה</span></div>
         <div class="cw t"><canvas id="kgD-dayTotalChart"></canvas></div>
-        <div class="ins p">⚖️ יום שני — 59,640 ק"ג (25.5%). יום שישי — 6,900 ק"ג (3%). שלישי מעט גבוה מחמישי בק"ג.</div>
+        <div class="ins p" id="kgdIns"></div>
       </div>
       <div class="card">
         <div class="card-title">ק"ג יומי — ריבוד שבועי</div>
@@ -527,15 +564,16 @@ window.addEventListener('load', ()=>{
 
 <script>
 // ═══════════════════════════════ DATA ═══════════════════════════════
-let WEEKS=[];
+let WEEKS=[], ALLWEEKS=[];
 let DAILY={};
+let selWeeks=new Set(), avgMode='week', curPage='summary';
 const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const DAYS_COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706','#ca8a04'];
 let DAYS_TOTAL={};
 const WK_COLORS=['#16a34a','#2563a8','#7c3aed','#d97706','#e11d48','#0d9488','#ca8a04','#0891b2','#9333ea'];
 const PKG_TYPES=['4 ק"ג','2 ק"ג שטוח','2 ק"ג גבוה','3 ק"ג','1 ק"ג','500 גרם','250 גרם'];
 const PKG_COLORS=['#16a34a','#2563a8','#7c3aed','#d97706','#e11d48','#0d9488','#9333ea'];
-let PKG_WEEKLY=[];
+let PKG_WEEKLY=[], ALLPKG=[];
 let PKG_TOTALS=[];
 let PRODUCTS=[];
 // נתוני מוצר ברמת פריט — {שם:{שבוע:{אינדקס יום:[אריזות,ק"ג,₪]}}} (מקור: ניתוח ייצור שבועי.xlsx)
@@ -562,6 +600,7 @@ const ttip={backgroundColor:'rgba(15,23,42,.92)',titleColor:'#fff',bodyColor:'#c
 
 // ═══════════════════════════════ NAVIGATION ═══════════════════════════════
 function showPage(name,btn){
+  curPage=name;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav .tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -599,7 +638,7 @@ function buildWeeklyTrendChart(){
   else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
   else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
   makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:WEEKS.map((_,i)=>i===1?color:color+'CC'),borderColor:color,borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:ttip},
+    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:ttip},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
 }
 function buildGroupStackChart(){
@@ -792,11 +831,6 @@ const prodFmtV=v=>prodMetric==='rev'?rev(v):fmtF(v);
 // מספר השבועות שבהם כל יום היה יום עבודה בפועל (לחישוב ממוצע יומי)
 let DAY_WEEKS=[];
 let UNIFIED_MEMBERS={};
-function prepareDerived(){
-  DAY_WEEKS=DAYS.map(d=>Object.values(DAILY).filter(w=>w[d]&&w[d].p>0).length);
-  UNIFIED_MEMBERS={};
-  for(const n in PROD_UNI){(UNIFIED_MEMBERS[PROD_UNI[n]]=UNIFIED_MEMBERS[PROD_UNI[n]]||[]).push(n);}
-}
 function getProdData(name){
   if(prodMode==='item')return PROD_DETAIL[name];
   const members=UNIFIED_MEMBERS[name];if(!members)return null;
@@ -849,13 +883,14 @@ function setProdMode(m,btn){prodMode=m;document.querySelectorAll('[id^="prod-mod
 function setProdMetric(m,btn){prodMetric=m;document.querySelectorAll('[id^="prod-btn-"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateProdDetail();}
 function updateProdDetail(){
   const d=getProdData(document.getElementById('prod-select').value);if(!d)return;
-  let tp=0,tk=0,tr=0,nw=0;
-  for(const w in d){nw++;for(const i in d[w]){tp+=d[w][i][0];tk+=d[w][i][1];tr+=d[w][i][2];}}
+  let tp=0,tk=0,tr=0,nw=0,nd=0;const dayOf={};ALLWEEKS.forEach(w=>dayOf[w.w]=w.days);
+  for(const w in d){if(!selWeeks.has(+w))continue;nw++;nd+=dayOf[w]||0;for(const i in d[w]){tp+=d[w][i][0];tk+=d[w][i][1];tr+=d[w][i][2];}}
+  const den=avgMode==='day'?(nd||1):(nw||1),aLbl=avgMode==='day'?'ממוצע/יום':'ממוצע שבועי';
   document.getElementById('prod-kpis').innerHTML=
-    `<div class="kpi g"><div class="kpi-lbl">אריזות — ממוצע שבועי</div><div class="kpi-val">${fmtF(tp/nw)}</div><div class="kpi-sub">סה"כ ${fmtF(tp)}</div></div>`+
-    `<div class="kpi t"><div class="kpi-lbl">ק"ג — ממוצע שבועי</div><div class="kpi-val">${fmtF(tk/nw)}</div><div class="kpi-sub">סה"כ ${fmtF(tk)}</div></div>`+
-    `<div class="kpi a fin"><div class="kpi-lbl">הכנסות — ממוצע שבועי</div><div class="kpi-val">${rev(tr/nw)}</div><div class="kpi-sub">סה"כ ${rev(tr)}</div></div>`+
-    `<div class="kpi n fin"><div class="kpi-lbl">₪ לק"ג</div><div class="kpi-val">${tk?'₪'+(tr/tk).toFixed(2):'—'}</div><div class="kpi-sub">${nw} שבועות פעילים</div></div>`;
+    `<div class="kpi g"><div class="kpi-lbl">אריזות — ${aLbl}</div><div class="kpi-val">${fmtF(tp/den)}</div><div class="kpi-sub">סה"כ ${fmtF(tp)}</div></div>`+
+    `<div class="kpi t"><div class="kpi-lbl">ק"ג — ${aLbl}</div><div class="kpi-val">${fmtF(tk/den)}</div><div class="kpi-sub">סה"כ ${fmtF(tk)}</div></div>`+
+    `<div class="kpi a fin"><div class="kpi-lbl">הכנסות — ${aLbl}</div><div class="kpi-val">${rev(tr/den)}</div><div class="kpi-sub">סה"כ ${rev(tr)}</div></div>`+
+    `<div class="kpi n fin"><div class="kpi-lbl">₪ לק"ג</div><div class="kpi-val">${tk?'₪'+(tr/tk).toFixed(2):'—'}</div><div class="kpi-sub">${nw} שבועות נבחרו</div></div>`;
   const mi=PROD_MI[prodMetric];
   const data=WEEKS.map(w=>{const wd=d[w.w];if(!wd)return 0;let s=0;for(const i in wd)s+=wd[i][mi];return s;});
   makeChart('prodWeeklyChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),datasets:[{label:PROD_LBL[prodMetric],data,backgroundColor:'#16a34aCC',borderColor:'#16a34a',borderWidth:2,borderRadius:6}]},
@@ -869,7 +904,7 @@ function drawProdDaily(){
   const mi=PROD_MI[prodMetric];
   const vals=DAYS.map((_,di)=>{
     let s=0;
-    if(wsel==='all'){for(const w in d){const v=d[w][di];if(v)s+=v[mi];}return DAY_WEEKS[di]?s/DAY_WEEKS[di]:0;}
+    if(wsel==='all'){for(const w in d){if(!selWeeks.has(+w))continue;const v=d[w][di];if(v)s+=v[mi];}return DAY_WEEKS[di]?s/DAY_WEEKS[di]:0;}
     const v=d[wsel]&&d[wsel][di];if(v)s=v[mi];
     return s;
   });
@@ -912,6 +947,133 @@ function updateFinBtn(){
   if(b)b.textContent=document.documentElement.classList.contains('nofin')?'😊':'🙂';
 }
 document.addEventListener('DOMContentLoaded',()=>{updateFinBtn();});
+</script>
+<script>
+// ═══════════════════════════════ בורר שבועות גלובלי + חישובים חיים ═══════════════════════════════
+function grpOf(n){return ((n.indexOf('חומוס')>=0||n.indexOf('טחינה')>=0)&&n.indexOf('גרגרי')<0&&n.indexOf('חציל')<0)?'חומוס/טחינה':'אחר';}
+
+function recomputeProducts(){
+  const cum={};
+  for(const name in PROD_DETAIL){const wks=PROD_DETAIL[name];let p=0,k=0,r=0;
+    for(const w in wks){if(!selWeeks.has(+w))continue;const dd=wks[w];for(const di in dd){p+=dd[di][0];k+=dd[di][1];r+=dd[di][2];}}
+    if(r||p)cum[name]={name:name,pkg:p,kg:k,rev:r,grp:grpOf(name)};}
+  return Object.values(cum).sort((a,b)=>b.rev-a.rev).slice(0,15);
+}
+
+// בונה את התצוגות המסוננות מתוך הנתונים המלאים, לפי השבועות שנבחרו
+function recompute(){
+  WEEKS=ALLWEEKS.filter(w=>selWeeks.has(w.w));
+  PKG_WEEKLY=ALLPKG.filter((_,i)=>selWeeks.has(ALLWEEKS[i].w));
+  PKG_TOTALS=PKG_TYPES.map((_,j)=>PKG_WEEKLY.reduce((a,r)=>a+(+r[j]||0),0));
+  DAYS_TOTAL={};
+  DAYS.forEach(d=>{let p=0,k=0;WEEKS.forEach(w=>{const c=DAILY[w.w]&&DAILY[w.w][d];if(c){p+=c.p;k+=c.k;}});DAYS_TOTAL[d]={p:Math.round(p*10)/10,k:Math.round(k*10)/10};});
+  DAY_WEEKS=DAYS.map(d=>WEEKS.filter(w=>DAILY[w.w]&&DAILY[w.w][d]&&DAILY[w.w][d].p>0).length);
+  PRODUCTS=recomputeProducts();
+  UNIFIED_MEMBERS={};for(const n in PROD_UNI){(UNIFIED_MEMBERS[PROD_UNI[n]]=UNIFIED_MEMBERS[PROD_UNI[n]]||[]).push(n);}
+}
+
+function agg(){const s={pkg:0,kg:0,rev:0,htp:0,otp:0,htk:0,otk:0,htr:0,otr:0,days:0};
+  WEEKS.forEach(w=>{s.pkg+=w.pkg;s.kg+=w.kg;s.rev+=w.rev;s.htp+=w.ht_pkg;s.otp+=w.ot_pkg;s.htk+=w.ht_kg;s.otk+=w.ot_kg;s.htr+=w.ht_rev;s.otr+=w.ot_rev;s.days+=w.days;});
+  s.n=WEEKS.length;s.den=avgMode==='day'?(s.days||1):(s.n||1);s.avgLbl=avgMode==='day'?'ממוצע/יום':'ממוצע שבועי';return s;}
+function maxBy(f){return WEEKS.reduce((b,w)=>!b||w[f]>b[f]?w:b,null);}
+function minBy(f){return WEEKS.reduce((b,w)=>!b||w[f]<b[f]?w:b,null);}
+function kc(cls,lbl,val,sub){return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+(sub||'')+'</div></div>';}
+
+function renderAllKPIs(){
+  const s=agg();
+  const setH=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
+  const setT=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t;};
+  setH('hdrKpis',
+    '<div class="hkpi"><div class="hkpi-lbl">סה"כ אריזות</div><div class="hkpi-val">'+fmt(s.pkg)+'</div></div>'+
+    '<div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג</div><div class="hkpi-val">'+fmt(s.kg)+'</div></div>'+
+    '<div class="hkpi fin"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">'+rev(s.rev)+'</div></div>'+
+    '<div class="hkpi fin"><div class="hkpi-lbl">'+s.avgLbl+' (₪)</div><div class="hkpi-val">'+rev(s.rev/s.den)+'</div></div>');
+  setT('hdrSub',weekRangeText());
+  setH('sumKpis',
+    kc('g','אריזות — '+s.avgLbl,fmtF(s.pkg/s.den),'סה"כ '+fmtF(s.pkg))+
+    kc('t','ק"ג — '+s.avgLbl,fmtF(s.kg/s.den),'סה"כ '+fmtF(s.kg))+
+    kc('a fin','הכנסות — '+s.avgLbl,rev(s.rev/s.den),'סה"כ '+rev(s.rev))+
+    kc('n fin','₪ לק"ג ממוצע',s.kg?'₪'+(s.rev/s.kg).toFixed(2):'—','כולל כל המוצרים')+
+    kc('','חומוס/טחינה — '+s.avgLbl,fmtF(s.htp/s.den),'סה"כ '+fmtF(s.htp)+' | '+pct(s.htp,s.pkg))+
+    kc('','אחרים — '+s.avgLbl,fmtF(s.otp/s.den),'סה"כ '+fmtF(s.otp)+' | '+pct(s.otp,s.pkg)));
+  const pkPeak=maxBy('pkg'),pkLow=minBy('pkg');
+  setH('pkgW-kpis',
+    kc('g','סה"כ אריזות',fmtF(s.pkg),s.n+' שבועות')+
+    kc('g',s.avgLbl,fmtF(s.pkg/s.den),'אריזות')+
+    kc('a','שיא — שבוע '+(pkPeak?pkPeak.w:'-'),pkPeak?fmtF(pkPeak.pkg):'-',pkPeak&&pkPeak.hol!=='—'?pkPeak.hol:'')+
+    kc('r','שפל — שבוע '+(pkLow?pkLow.w:'-'),pkLow?fmtF(pkLow.pkg):'-',pkLow&&pkLow.hol!=='—'?pkLow.hol:'')+
+    kc('','חומוס/טחינה',fmtF(s.htp),pct(s.htp,s.pkg)+' מהאריזות')+
+    kc('','מוצרים אחרים',fmtF(s.otp),pct(s.otp,s.pkg)+' מהאריזות'));
+  const kgPeak=maxBy('kg'),kgLow=minBy('kg');
+  setH('kgwKpis',
+    kc('t','סה"כ ק"ג',fmtF(s.kg),s.n+' שבועות')+
+    kc('t',s.avgLbl,fmtF(s.kg/s.den),'ק"ג')+
+    kc('a','שיא — שבוע '+(kgPeak?kgPeak.w:'-'),kgPeak?fmtF(kgPeak.kg):'-','ק"ג')+
+    kc('r','שפל — שבוע '+(kgLow?kgLow.w:'-'),kgLow?fmtF(kgLow.kg):'-','ק"ג')+
+    kc('','ממוצע ק"ג/ארז',s.pkg?(s.kg/s.pkg).toFixed(2):'—','כלל המוצרים')+
+    kc('n','חומוס/טחינה ק"ג',fmtF(s.htk),pct(s.htk,s.kg)+' מסך הק"ג'));
+  renderDayKpis('pkgdKpis','p');
+  renderDayKpis('kgdKpis','k');
+  setIns();
+  fillWeekSelect('pkgD-weekSelect');fillWeekSelect('kgD-weekSelect');
+}
+function renderDayKpis(id,field){const el=document.getElementById(id);if(!el)return;
+  const tot=DAYS.reduce((a,d)=>a+DAYS_TOTAL[d][field],0);const cls=['r','p','n','g','a',''];
+  const pre=field==='k'?'ק"ג | ':'';
+  el.innerHTML=DAYS.map((d,i)=>kc(cls[i],d,fmt(DAYS_TOTAL[d][field]),pre+pct(DAYS_TOTAL[d][field],tot))).join('');
+}
+function weekRangeText(){if(!WEEKS.length)return'לא נבחרו שבועות';const ws=WEEKS.map(w=>w.w);
+  return 'שבועות '+Math.min.apply(null,ws)+'–'+Math.max.apply(null,ws)+' | נבחרו '+WEEKS.length+' שבועות';}
+function setIns(){const peak=maxBy('pkg'),low=minBy('pkg');
+  const t=peak&&low?'📈 שיא: שבוע '+peak.w+' ('+fmtF(peak.pkg)+' ארז). שפל: שבוע '+low.w+' ('+fmtF(low.pkg)+' ארז).':'';
+  ['sumIns','pkgwIns'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=t;});
+  const pk=maxBy('kg');const tk=pk?'⚖️ שיא ק"ג: שבוע '+pk.w+' ('+fmtF(pk.kg)+'). חומוס/טחינה '+pct(WEEKS.reduce((a,w)=>a+w.ht_kg,0),WEEKS.reduce((a,w)=>a+w.kg,0))+' מהק"ג.':'';
+  const ke=document.getElementById('kgwIns');if(ke)ke.textContent=tk;
+  const bestDay=f=>{let b=DAYS[0];DAYS.forEach(d=>{if(DAYS_TOTAL[d][f]>DAYS_TOTAL[b][f])b=d;});return b;};
+  const dp=document.getElementById('pkgdIns');if(dp){const b=bestDay('p');dp.textContent='🔵 יום שיא: '+b+' ('+fmt(DAYS_TOTAL[b].p)+' ארז).';}
+  const dk=document.getElementById('kgdIns');if(dk){const b=bestDay('k');dk.textContent='⚖️ יום שיא ק"ג: '+b+' ('+fmt(DAYS_TOTAL[b].k)+').';}
+}
+function fillWeekSelect(id){const sel=document.getElementById(id);if(!sel)return;const cur=sel.value;
+  sel.innerHTML=ALLWEEKS.map(w=>'<option value="'+w.w+'">שבוע '+w.w+(w.hol&&w.hol!=='—'?' • '+w.hol:'')+'</option>').join('');
+  if(ALLWEEKS.some(w=>String(w.w)===cur))sel.value=cur;else if(WEEKS.length)sel.value=WEEKS[Math.floor(WEEKS.length/2)].w;}
+
+// ── פס הבורר ──
+function buildFilterBar(){renderChips();
+  ['week','day'].forEach(m=>{const b=document.getElementById('avg-'+m);if(b)b.classList.toggle('active',m===avgMode);});}
+function renderChips(){const c=document.getElementById('weekChips');if(!c)return;
+  c.innerHTML=ALLWEEKS.map(w=>{const on=selWeeks.has(w.w);const hol=w.hol&&w.hol!=='—';
+    return '<button class="wchip'+(on?'':' off')+(hol?' hol':'')+'" title="'+(hol?w.hol:('שבוע '+w.w))+'" onclick="toggleWeek('+w.w+')">ש'+w.w+(on?'':' ✕')+'</button>';}).join('');
+  const cnt=document.getElementById('weekCount');if(cnt)cnt.textContent='נבחרו '+selWeeks.size+' / '+ALLWEEKS.length;}
+function toggleWeek(w){if(selWeeks.has(w)){if(selWeeks.size<=1)return;selWeeks.delete(w);}else selWeeks.add(w);refreshAll();}
+function selectAllWeeks(){selWeeks=new Set(ALLWEEKS.map(w=>w.w));refreshAll();}
+function clearWeeks(){selWeeks=new Set(ALLWEEKS.length?[ALLWEEKS[ALLWEEKS.length-1].w]:[]);refreshAll();}
+function onlyFullWeeks(){let s=new Set(ALLWEEKS.filter(w=>w.days>=6&&(!w.hol||w.hol==='—')).map(w=>w.w));if(!s.size)s=new Set(ALLWEEKS.map(w=>w.w));selWeeks=s;refreshAll();}
+function setAvgMode(m){avgMode=m;['week','day'].forEach(x=>{const b=document.getElementById('avg-'+x);if(b)b.classList.toggle('active',x===m);});refreshAll();}
+
+function refreshAll(){recompute();renderChips();renderAllKPIs();reinitCurrent();}
+function reinitCurrent(){Object.keys(charts).slice().forEach(destroyChart);
+  if(curPage==='summary'){initSummary();buildDistChart();}
+  else if(curPage==='pkg_analysis'){initPkgAnalysis();if(subActive('pkg')==='daily')initPkgDaily();}
+  else if(curPage==='kg_analysis'){initKgAnalysis();if(subActive('kg')==='daily')initKgDaily();}
+  else if(curPage==='products'){initProducts();}
+  else if(curPage==='packaging'){initPackaging();}}
+function subActive(tab){const id=tab==='pkg'?'page-pkg_analysis':'page-kg_analysis';const a=document.querySelector('#'+id+' .subpage.active');return a&&a.id.indexOf('daily')>=0?'daily':'weekly';}
+
+// התפלגות השבועות (אריזות, ממוין, עם ממוצע וחציון)
+function buildDistChart(){const el=document.getElementById('distChart');if(!el)return;
+  const arr=WEEKS.map(w=>({w:w.w,v:w.pkg})).sort((a,b)=>a.v-b.v);
+  const mean=arr.reduce((a,x)=>a+x.v,0)/(arr.length||1);
+  const med=arr.length?(arr.length%2?arr[(arr.length-1)/2].v:(arr[arr.length/2-1].v+arr[arr.length/2].v)/2):0;
+  makeChart('distChart',{type:'bar',data:{labels:arr.map(x=>'ש'+x.w),datasets:[
+    {label:'אריזות לשבוע',data:arr.map(x=>x.v),backgroundColor:'#16a34aCC',borderColor:'#16a34a',borderWidth:1,borderRadius:4,order:3},
+    {label:'ממוצע',data:arr.map(()=>mean),type:'line',borderColor:'#d97706',borderDash:[6,3],pointRadius:0,borderWidth:2,order:1},
+    {label:'חציון',data:arr.map(()=>med),type:'line',borderColor:'#2563a8',borderDash:[3,3],pointRadius:0,borderWidth:2,order:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}},tooltip:ttip},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}}});}
+
+// לחיצה על באר שבוע בגרף → החרגה/הוספה
+function weekBarClick(evt,els){if(els&&els.length){const w=WEEKS[els[0].index];if(w)toggleWeek(w.w);}}
+
 </script>
 </body>
 </html>
