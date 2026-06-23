@@ -188,7 +188,10 @@ async function fetchTabObject(tab, required){
 }
 
 async function loadForecastData(){
-  FORECAST=await fetchTabObject('FORECAST', true);
+  // FORECAST ו-ACCURACY אינן חובה: אם לשונית חסרה/ריקה — מוצגת הודעת המתנה.
+  // רק שגיאת הרשאה (401/403) מחזירה למסך הכניסה.
+  try{ FORECAST=await fetchTabObject('FORECAST', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; FORECAST=null; }
   try{ ACCURACY=await fetchTabObject('ACCURACY', false); }
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; ACCURACY=null; }
 }
@@ -196,12 +199,18 @@ async function loadForecastData(){
 function startDashboard(){
   const go=()=>{
     try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
-    prepareForecast();
-    renderHeader();
-    renderForecastKpis();
-    buildDailyChart();
-    buildTopProductsChart();
-    buildProductsTable();
+    if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
+      document.getElementById('fcBody').style.display='';
+      document.getElementById('fcEmpty').innerHTML='';
+      prepareForecast();
+      renderHeader();
+      renderForecastKpis();
+      buildDailyChart();
+      buildTopProductsChart();
+      buildProductsTable();
+    } else {
+      renderForecastEmpty();
+    }
     renderAccuracy();
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go, {once:true});
@@ -240,25 +249,28 @@ window.addEventListener('load', ()=>{
 
   <!-- ═══════ תחזית השבוע הקרוב ═══════ -->
   <div class="kpi-grid" id="fcKpis"></div>
+  <div id="fcEmpty"></div>
 
-  <div class="grid2">
-    <div class="card">
-      <div class="card-title">פילוח התחזית לימי השבוע <span class="card-badge g">ק"ג</span></div>
-      <div class="cw t"><canvas id="dailyChart"></canvas></div>
-      <div class="ins g" id="dailyIns"></div>
+  <div id="fcBody">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">פילוח התחזית לימי השבוע <span class="card-badge g">ק"ג</span></div>
+        <div class="cw t"><canvas id="dailyChart"></canvas></div>
+        <div class="ins g" id="dailyIns"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">18 המוצרים המובילים בתחזית <span class="card-badge">ק"ג לשבוע</span></div>
+        <div class="cw xt"><canvas id="topChart"></canvas></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-title">18 המוצרים המובילים בתחזית <span class="card-badge">ק"ג לשבוע</span></div>
-      <div class="cw xt"><canvas id="topChart"></canvas></div>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="card-title">
-      כל המוצרים הפעילים בתחזית
-      <input class="search-input" id="prodSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="filterProducts()">
+    <div class="card">
+      <div class="card-title">
+        כל המוצרים הפעילים בתחזית
+        <input class="search-input" id="prodSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="filterProducts()">
+      </div>
+      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
     </div>
-    <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
   </div>
 
   <!-- ═══════ בדיקת החיזוי (מתוך ACCURACY) ═══════ -->
@@ -388,6 +400,17 @@ function filterProducts(){
     const n=tr.getAttribute('data-name')||'';
     tr.style.display=(!q||n.indexOf(q)>=0)?'':'none';
   });
+}
+
+// מצב ריק — אין עדיין תחזית בלשונית FORECAST
+function renderForecastEmpty(){
+  document.getElementById('hdrSub').textContent='התחזית תתעדכן ביום חמישי';
+  document.getElementById('hdrKpis').innerHTML='';
+  document.getElementById('fcKpis').innerHTML='';
+  document.getElementById('fcBody').style.display='none';
+  document.getElementById('fcEmpty').innerHTML=
+    '<div class="card"><div class="card-title">תחזית השבוע הקרוב <span class="card-badge a">ממתין</span></div>'+
+    '<div class="empty-note">התחזית לשבוע הקרוב תופיע כאן ביום חמישי, אחרי הפקת החיזוי.</div></div>';
 }
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
