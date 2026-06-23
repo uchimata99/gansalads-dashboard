@@ -238,6 +238,14 @@ html.nofin .fin{display:none!important}
   .wk-diff-up{color:var(--green);font-weight:700;}
   .wk-diff-down{color:var(--red);font-weight:700;}
 
+  /* PACKAGING SEARCH (חיפוש מוצר) */
+  .pkg-search-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;}
+  .pkg-search-ico{font-size:15px;flex-shrink:0;opacity:.7;}
+  .pkg-search-wrap input{flex:1;border:none;outline:none;background:transparent;font-family:'Heebo',sans-serif;font-size:14px;color:var(--text);min-width:0;}
+  .pkg-search-wrap input::placeholder{color:var(--text-muted);}
+  .pkg-search-clear{font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;flex-shrink:0;}
+  .pkg-search-clear:hover{background:var(--green-light);color:var(--green);border-color:var(--green);}
+
   @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
   /* פריטי רשת חייבים היתר מפורש להתכווץ מתחת לרוחב התוכן — אחרת תוכן רחב (כמו גרף המשקלים) דוחף את כל העמוד */
   .main > *, .grid-2 > *, .split-view > *, .kpi-row > * { min-width:0; }
@@ -462,6 +470,13 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
         <span id="pkg-kpi-reports-diff" style="font-weight:700;margin-right:4px;"></span>
       </div>
     </div>
+  </div>
+
+  <!-- חיפוש מוצר בטבלאות -->
+  <div class="pkg-search-wrap">
+    <span class="pkg-search-ico">🔍</span>
+    <input id="pkg-search" type="search" placeholder="חיפוש מוצר בטבלאות…" oninput="pkgSearch()" autocomplete="off">
+    <button type="button" class="pkg-search-clear" onclick="document.getElementById('pkg-search').value='';pkgSearch();">נקה</button>
   </div>
 
   <!-- שתי טבלאות זה לצד זה – דיווחים משמאל, אצוות מימין -->
@@ -1213,6 +1228,32 @@ function toggleRepBatch(idx) {
   if (arr) arr.textContent = open ? '▼' : '▶';
 }
 
+// פתיחת פירוט יומי למוצר בטבלת הצבירה השבועית (כמה נארז ובאיזה יום)
+function togglePkgProduct(idx) {
+  const rows = document.querySelectorAll(`tr[id="wprod-det-${idx}"]`);
+  const arr = document.getElementById(`wprod-arr-${idx}`);
+  if (!rows.length) return;
+  const open = rows[0].style.display === 'none';
+  rows.forEach(r => r.style.display = open ? 'table-row' : 'none');
+  if (arr) arr.textContent = open ? '▼' : '▶';
+}
+
+// חיפוש מוצר בטבלאות מחלקת האריזה
+function pkgSearch() {
+  const inp = document.getElementById('pkg-search');
+  const q = (inp ? inp.value : '').trim().toLowerCase();
+  // שורות ראשיות: מציגים לפי התאמה
+  document.querySelectorAll('#page-packaging tr.pkg-row').forEach(tr => {
+    const name = (tr.getAttribute('data-prod') || '').toLowerCase();
+    tr.style.display = (!q || name.includes(q)) ? 'table-row' : 'none';
+  });
+  // שורות פירוט: בחיפוש פעיל נסגרות תמיד (נפתחות מחדש בלחיצה)
+  document.querySelectorAll('#page-packaging tr.pkg-sub').forEach(tr => { tr.style.display = 'none'; });
+  document.querySelectorAll('#page-packaging tr.pkg-row span[id^="wprod-arr-"], #page-packaging tr.pkg-row span[id^="rep-arr-"]').forEach(s => { s.textContent = '▶'; });
+  // שורות סיכום מוסתרות בזמן חיפוש כדי לא להטעות
+  document.querySelectorAll('#page-packaging tr.pkg-total').forEach(tr => { tr.style.display = q ? 'none' : 'table-row'; });
+}
+
 function toggleIng(id) {
   const rows = document.querySelectorAll(`tr[id="ing_${id}"]`);
   const arr = document.getElementById('arr_' + id);
@@ -1740,7 +1781,7 @@ async function loadPackagingData() {
 
         // שורת סיכום
         const summaryRow = `
-          <tr ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
+          <tr class="pkg-row" data-prod="${b.product}" ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
             <td style="padding:9px 8px;font-weight:700;font-size:13px;">${b.product} ${arrow}</td>
             <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? b.rows.length + ' אריזות' : (b.rows[0][4] || '—')}</td>
             <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? '' : (packMap[b.rows[0][6]] || b.rows[0][6] || '—')}</td>
@@ -1754,7 +1795,7 @@ async function loadPackagingData() {
           const packName = packMap[r[6]] || r[6] || '—';
           const kg = parseFloat(r[8]) || 0;
           return `
-            <tr id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
+            <tr class="pkg-sub" data-prod="${b.product}" id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
               <td style="padding:7px 8px 7px 20px;font-size:12px;color:var(--text-muted);">↳ ${r[4] || '—'}</td>
               <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);"></td>
               <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
@@ -1944,6 +1985,8 @@ async function loadPackagingData() {
     // שמירת נתוני אורזות לpopup
     const weeklyProducts = {};
     const weeklyBatchesByProduct = {};
+    const weeklyProductDaily = {};   // פירוט יומי לכל מוצר בשבוע הנבחר
+    const pkgDayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 
     batchRows.forEach(r => {
       if (!r[0]) return;
@@ -1962,9 +2005,19 @@ async function loadPackagingData() {
       const productCode = b.productCode || r[5];
       if (hummusTahiniProducts.includes(productCode)) return; // מסנן חומוס וטחינה
       const productName = b.product || prodMap[r[5]] || r[5] || '—';
+      const qty = parseInt(r[7]) || 0;
+      const kg = parseFloat(r[8]) || 0;
       if (!weeklyProducts[productName]) weeklyProducts[productName] = {qty: 0, kg: 0};
-      weeklyProducts[productName].qty += parseInt(r[7]) || 0;
-      weeklyProducts[productName].kg += parseFloat(r[8]) || 0;
+      weeklyProducts[productName].qty += qty;
+      weeklyProducts[productName].kg += kg;
+      // צבירה יומית למוצר
+      const dayKey = d.getTime();
+      if (!weeklyProductDaily[productName]) weeklyProductDaily[productName] = {};
+      if (!weeklyProductDaily[productName][dayKey]) {
+        weeklyProductDaily[productName][dayKey] = { ts: dayKey, dn: pkgDayNames[d.getDay()], label: `${d.getDate()}/${d.getMonth()+1}`, qty: 0, kg: 0 };
+      }
+      weeklyProductDaily[productName][dayKey].qty += qty;
+      weeklyProductDaily[productName][dayKey].kg += kg;
     });
 
     function renderWeeklyTable(bodyId, products) {
@@ -1974,20 +2027,33 @@ async function loadPackagingData() {
         body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
         return;
       }
-      let totalQty = 0, totalKg = 0, totalBatches = 0;
+      let totalQty = 0, totalKg = 0, totalBatches = 0, pidx = 0;
       const rowsHtml = Object.entries(products)
         .sort((a,b) => b[1].kg - a[1].kg)
         .map(([name, d]) => {
           const batches = weeklyBatchesByProduct[name] ? weeklyBatchesByProduct[name].size : 0;
           totalQty += d.qty; totalKg += d.kg; totalBatches += batches;
-          return `<tr style="border-bottom:1px solid var(--surface2);">
-            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${name}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);">${batches}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
+          const idx = pidx++;
+          const days = Object.values(weeklyProductDaily[name] || {}).sort((a,b) => a.ts - b.ts);
+          const hasDays = days.length > 0;
+          const arrow = hasDays ? `<span id="wprod-arr-${idx}" style="font-size:9px;color:var(--text-muted);margin-left:4px;">▶</span>` : '';
+          const onclick = hasDays ? `onclick="togglePkgProduct('${idx}')" style="cursor:pointer;"` : '';
+          const mainRow = `<tr class="pkg-row" data-prod="${name}" ${onclick}>
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;border-bottom:1px solid var(--surface2);">${name} ${arrow}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);border-bottom:1px solid var(--surface2);">${batches}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--surface2);">${d.qty}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);border-bottom:1px solid var(--surface2);">${d.kg.toFixed(1)}</td>
           </tr>`;
+          const detRows = days.map(day => `
+            <tr class="pkg-sub" data-prod="${name}" id="wprod-det-${idx}" style="display:none;background:var(--surface2);">
+              <td style="padding:7px 8px 7px 22px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border);">↳ ${day.dn} ${day.label}</td>
+              <td style="border-bottom:1px solid var(--border);"></td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--border);">${day.qty}</td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green);border-bottom:1px solid var(--border);">${day.kg.toFixed(1)}</td>
+            </tr>`).join('');
+          return mainRow + detRows;
         }).join('');
-      body.innerHTML = rowsHtml + `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+      body.innerHTML = rowsHtml + `<tr class="pkg-total" style="border-top:2px solid var(--border);background:var(--surface2);">
         <td style="padding:9px 8px;font-weight:800;">סה"כ</td>
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--purple);">${totalBatches}</td>
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--blue);">${totalQty}</td>
@@ -2115,6 +2181,7 @@ async function loadPackagingData() {
     _wkCache.pkg = { reportRows, batchMap, htProducts: hummusTahiniProducts };
     updateWeekNav('pkg');
     renderCompare('pkg');
+    pkgSearch();   // שמירה על סינון החיפוש הפעיל אחרי בנייה מחדש
 
   } catch(e) {
     console.error('Packaging data error:', e);
