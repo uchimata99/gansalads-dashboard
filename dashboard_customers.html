@@ -391,7 +391,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(
    אין נתונים במקור הדף — הכול נטען בזמן ריצה אחרי כניסה עם חשבון גוגל מורשה.
    מפתח הסשן משותף עם finance/production כך שלא נדרשת כניסה כפולה. */
 const CUST_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
-const CUST_SHEET_ID='1BeFP0B_PzQyHD8uTDB2DzuU-lu_u9hqRp51QaHWFT6k';
+const CUST_SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
 const CUST_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const CUST_TOKEN_KEY='gsGoogleToken';
 let custTokenClient=null, custAccessToken=null;
@@ -429,7 +429,7 @@ function gsAfterToken(){
 }
 // משיכת עמודה A מהגיליון, שרשור התאים, פענוח base64 -> JSON אל D
 async function loadCustData(){
-  const range=encodeURIComponent('A:A');
+  const range=encodeURIComponent('CUSTOMERS!A:A');
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+CUST_SHEET_ID+'/values/'+range,
     {headers:{Authorization:'Bearer '+custAccessToken}});
   if(!r.ok) throw new Error('values '+r.status);
