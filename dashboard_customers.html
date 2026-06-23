@@ -54,7 +54,19 @@ select:focus,input:focus{border-color:var(--green)}
 .note b{color:var(--blue)}
 .bar{height:7px;border-radius:4px;background:var(--green);display:inline-block;vertical-align:middle}
 .scroll{max-height:560px;overflow:auto}
-.scroll thead th{position:sticky;top:0;background:var(--surface);z-index:2}</style></head><body>
+.scroll thead th{position:sticky;top:0;background:var(--surface);z-index:2}
+#finToggle{margin-inline-start:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:3px 9px;font-size:16px;line-height:1.3;cursor:pointer;font-family:inherit}
+#finToggle:hover{background:rgba(255,255,255,.22)}
+html.nofin .fin{display:none!important}</style>
+<script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script></head><body>
+<div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0">
+  <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
+  <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">לקוחות</span>
+  <a href="finance.html" class="fin" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <button id="finToggle" onclick="toggleFin()">🙂</button>
+</div>
 <div class="topbar"><div class="brand"><span class="brand-i">🥗</span><div><div class="brand-n">סלטי גן</div><div class="brand-s">דשבורד לקוחות</div></div></div><div class="range">שבועות 1–25</div></div>
 <div class="tabs">
  <div class="tab active" data-p="rk">דירוג לקוחות</div>
@@ -350,4 +362,17 @@ function renderWeekDet(){
 
 ranking();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
-</script></body></html>
+</script>
+<script>
+function toggleFin(){
+  const h=document.documentElement.classList.toggle('nofin');
+  try{localStorage.setItem('gsHideFin',h?'1':'0');}catch(e){}
+  updateFinBtn();
+}
+function updateFinBtn(){
+  const b=document.getElementById('finToggle');
+  if(b)b.textContent=document.documentElement.classList.contains('nofin')?'😊':'🙂';
+}
+document.addEventListener('DOMContentLoaded',updateFinBtn);
+</script>
+</body></html>
