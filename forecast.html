@@ -76,6 +76,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 .tbl tr.total td{background:#e0f7ef;font-weight:800;color:var(--dgreen);border-top:2px solid var(--green)}
 .prod-bar-wrap{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;min-width:80px;margin-top:3px}
 .prod-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px}
+.mbtn{border:2px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text);background:#fff;cursor:pointer;transition:all .15s}
+.mbtn:hover{border-color:var(--green)}
+.mbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
 .search-input{border:2px solid var(--border);border-radius:8px;padding:7px 13px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;outline:none;width:230px;max-width:60vw}
 .search-input:focus{border-color:var(--green)}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -263,14 +266,19 @@ window.addEventListener('load', ()=>{
   <div id="fcEmpty"></div>
 
   <div id="fcBody">
+    <div id="fcControls" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:12px;color:var(--gray);font-weight:700">יחידת מדידה:</span>
+      <button class="mbtn active" id="mbtn-kg" onclick="setFcMetric('kg')">ק"ג</button>
+      <button class="mbtn" id="mbtn-pkg" onclick="setFcMetric('pkg')">אריזות</button>
+    </div>
     <div class="grid2">
       <div class="card">
-        <div class="card-title">פילוח התחזית לימי השבוע <span class="card-badge g">ק"ג</span></div>
+        <div class="card-title">פילוח התחזית לימי השבוע <span class="card-badge g" id="dailyBadge">ק"ג</span></div>
         <div class="cw t"><canvas id="dailyChart"></canvas></div>
         <div class="ins g" id="dailyIns"></div>
       </div>
       <div class="card">
-        <div class="card-title">18 המוצרים המובילים בתחזית <span class="card-badge">ק"ג לשבוע</span></div>
+        <div class="card-title">18 המוצרים המובילים בתחזית <span class="card-badge" id="topBadge">ק"ג לשבוע</span></div>
         <div class="cw xt"><canvas id="topChart"></canvas></div>
       </div>
     </div>
@@ -305,9 +313,18 @@ const tickOpts={color:'#64748b',font:{size:11}};
 const ttip={backgroundColor:'rgba(15,23,42,.92)',titleColor:'#fff',bodyColor:'#cbd5e1',padding:10,cornerRadius:8};
 
 // נתונים מעובדים לתצוגה
-let PRODUCTS=[];      // [{name, kg, id, daily:{day:kg}}], ממוין יורד לפי ק"ג
-let DAILY=[];         // [{day, kg}] לפי סדר DAYS
-let TOTAL_KG=0, PEAK_DAY='', NEXT_HOL='';
+let PRODUCTS=[];      // [{name,id, kg,pkg, daily_kg:{}, daily_pkg:{}, std_kg,std_pkg}]
+let DAILY=[];         // [{day, v}] במדד הנבחר
+let TOTAL=0, PEAK_DAY='', NEXT_HOL='';
+let fcMetric='kg';    // 'kg' | 'pkg'
+let HAS_PKG=false, HAS_STD=false;
+
+// עזרי מדד נבחר
+function unitLbl(){ return fcMetric==='kg'?'ק"ג':'אריזות'; }
+function pVal(p){ return fcMetric==='kg'?p.kg:p.pkg; }
+function pDaily(p){ return fcMetric==='kg'?p.daily_kg:p.daily_pkg; }
+function pStd(p){ return fcMetric==='kg'?p.std_kg:p.std_pkg; }
+function stdev(arr){ const n=arr.length; if(n<2) return 0; const m=arr.reduce((a,b)=>a+b,0)/n; let s=0; arr.forEach(v=>{const x=v-m;s+=x*x;}); return Math.sqrt(s/(n-1)); }
 
 function holName(h){ if(!h) return ''; if(typeof h==='string') return h; return h.name||''; }
 function holText(h){ if(!h) return ''; if(typeof h==='string') return h; return (h.name||'')+(h.date?(' ('+h.date+')'):''); }
@@ -333,53 +350,74 @@ function computeForecastFromData(d){
   const products=[];
   for(const name in PD){
     const wk=PD[name];
-    const sums=DAYS.map(()=>0); let any=false;
-    recent.forEach(w=>{ const dd=wk[w]; if(!dd) return;
-      for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){ sums[i]+=num(dd[di][1]); any=true; } } });
+    const sumP=DAYS.map(()=>0), sumK=DAYS.map(()=>0);  // 0=אריזות, 1=ק"ג בנתוני המקור
+    const wkP=[], wkK=[]; let any=false;
+    recent.forEach(w=>{
+      const dd=wk[w]; let tp=0, tk=0;
+      if(dd){ for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){
+        const p=num(dd[di][0]), k=num(dd[di][1]); sumP[i]+=p; sumK[i]+=k; tp+=p; tk+=k; if(p||k) any=true; } } }
+      wkP.push(tp); wkK.push(tk);
+    });
     if(!any) continue;
-    const daily={}; let tot=0;
-    DAYS.forEach((day,i)=>{ const v=sums[i]/denom; daily[day]=v; tot+=v; });
-    if(tot<=0) continue;
-    products.push({name:String(name), kg:tot, daily});
+    const dailyP={}, dailyK={}; let totP=0, totK=0;
+    DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/denom; dailyK[day]=sumK[i]/denom; totP+=dailyP[day]; totK+=dailyK[day]; });
+    if(totK<=0 && totP<=0) continue;
+    products.push({name:String(name), pkg:totP, kg:totK, daily_pkg:dailyP, daily_kg:dailyK, std_pkg:stdev(wkP), std_kg:stdev(wkK)});
   }
   if(!products.length) return null;
   products.sort((a,b)=>b.kg-a.kg);
-  const dailyTot={}; DAYS.forEach(day=>dailyTot[day]=0);
-  products.forEach(p=>DAYS.forEach(day=>dailyTot[day]+=p.daily[day]));
-  let peak=DAYS[0]; DAYS.forEach(day=>{ if(dailyTot[day]>dailyTot[peak]) peak=day; });
+  const dtP={}, dtK={}; DAYS.forEach(day=>{ dtP[day]=0; dtK[day]=0; });
+  products.forEach(p=>DAYS.forEach(day=>{ dtP[day]+=p.daily_pkg[day]; dtK[day]+=p.daily_kg[day]; }));
   return {
-    computed:true,
+    computed:true, metrics:true,
     based_on:'שבועות '+recent[0]+'–'+recent[recent.length-1],
     week:'', week_start:'', generated:'',
     total_kg:products.reduce((a,p)=>a+p.kg,0),
-    active_products:products.length,
-    peak_day:peak, next_holiday:'',
-    daily:dailyTot, products
+    total_pkg:products.reduce((a,p)=>a+p.pkg,0),
+    active_products:products.length, next_holiday:'',
+    daily_kg:dtK, daily_pkg:dtP, products
   };
 }
 
 function prepareForecast(){
   const f=FORECAST||{};
+  HAS_PKG = !!f.metrics;        // אריזות זמינות רק כשהתחזית מחושבת מ-DATA
+  HAS_STD = !!f.metrics;        // סטיית תקן זמינה רק במצב המחושב
+  if(!HAS_PKG) fcMetric='kg';
   PRODUCTS=(f.products||[]).map(p=>({
     name:String(p.name!=null?p.name:p.id||'—'),
     id:p.id!=null?String(p.id):'',
     kg:num(p.kg!=null?p.kg:p.total_kg),
-    daily:normDaily(p.daily)
-  })).sort((a,b)=>b.kg-a.kg);
-
-  // פילוח יומי: מהשדה daily אם קיים, אחרת סכימה מהמוצרים
-  const fd=normDaily(f.daily);
-  const hasTop=DAYS.some(day=>fd[day]>0);
-  const dayObj={}; DAYS.forEach(day=>dayObj[day]=0);
-  if(hasTop){ DAYS.forEach(day=>dayObj[day]=fd[day]); }
-  else { PRODUCTS.forEach(p=>DAYS.forEach(day=>dayObj[day]+=p.daily[day])); }
-  DAILY=DAYS.map(day=>({day, kg:dayObj[day]}));
-
-  TOTAL_KG = f.total_kg!=null && num(f.total_kg)>0 ? num(f.total_kg)
-           : (DAILY.some(d=>d.kg>0) ? DAILY.reduce((a,d)=>a+d.kg,0) : PRODUCTS.reduce((a,p)=>a+p.kg,0));
-
-  PEAK_DAY = f.peak_day || (DAILY.reduce((b,d)=>!b||d.kg>b.kg?d:b,null)||{}).day || '—';
+    pkg:num(p.pkg),
+    daily_kg:normDaily(p.daily_kg||p.daily),
+    daily_pkg:normDaily(p.daily_pkg),
+    std_kg:num(p.std_kg),
+    std_pkg:num(p.std_pkg)
+  }));
   NEXT_HOL = holName(f.next_holiday);
+  // הסתרת בורר היחידה אם אין נתוני אריזות
+  const ctrl=document.getElementById('fcControls');
+  if(ctrl) ctrl.style.display = HAS_PKG ? 'flex' : 'none';
+  applyMetric();
+}
+
+// מחשב מחדש את התצוגות לפי המדד הנבחר (ק"ג/אריזות) וממיין
+function applyMetric(){
+  PRODUCTS.sort((a,b)=>pVal(b)-pVal(a));
+  const dayObj={}; DAYS.forEach(day=>dayObj[day]=0);
+  PRODUCTS.forEach(p=>{ const dd=pDaily(p); DAYS.forEach(day=>dayObj[day]+=dd[day]); });
+  DAILY=DAYS.map(day=>({day, v:dayObj[day]}));
+  TOTAL=PRODUCTS.reduce((a,p)=>a+pVal(p),0);
+  PEAK_DAY=(DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null)||{}).day||'—';
+}
+
+// החלפת יחידת מדידה ורענון התצוגה
+function setFcMetric(m){
+  if(m===fcMetric) return;
+  fcMetric=m;
+  ['kg','pkg'].forEach(x=>{ const b=document.getElementById('mbtn-'+x); if(b) b.classList.toggle('active',x===m); });
+  applyMetric();
+  renderHeader(); renderForecastKpis(); buildDailyChart(); buildTopProductsChart(); buildProductsTable();
 }
 
 function renderHeader(){
@@ -391,7 +429,7 @@ function renderHeader(){
   if(f.computed) sub.push('תחזית זמנית · מבוסס על '+(f.based_on||'הנתונים האחרונים'));
   document.getElementById('hdrSub').textContent=sub.join(' · ');
   document.getElementById('hdrKpis').innerHTML=
-    '<div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג לשבוע</div><div class="hkpi-val">'+fmt(TOTAL_KG)+'</div></div>'+
+    '<div class="hkpi"><div class="hkpi-lbl">סה"כ '+unitLbl()+' לשבוע</div><div class="hkpi-val">'+fmt(TOTAL)+'</div></div>'+
     '<div class="hkpi"><div class="hkpi-lbl">מוצרים פעילים</div><div class="hkpi-val">'+fmt(FORECAST.active_products!=null?FORECAST.active_products:PRODUCTS.length)+'</div></div>'+
     '<div class="hkpi"><div class="hkpi-lbl">יום השיא</div><div class="hkpi-val">'+PEAK_DAY+'</div></div>';
 }
@@ -399,46 +437,66 @@ function renderHeader(){
 function kc(cls,lbl,val,sub,subCls){ return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub '+(subCls||'')+'">'+(sub||'')+'</div></div>'; }
 
 function renderForecastKpis(){
-  const peak=DAILY.reduce((b,d)=>!b||d.kg>b.kg?d:b,null);
+  const peak=DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null);
   const activeProducts=FORECAST.active_products!=null?FORECAST.active_products:PRODUCTS.length;
+  const avgStd=HAS_STD&&PRODUCTS.length?PRODUCTS.reduce((a,p)=>a+pStd(p),0)/PRODUCTS.length:0;
   document.getElementById('fcKpis').innerHTML=
-    kc('g','סה"כ ק"ג לשבוע',fmt(TOTAL_KG),'תחזית מצרפית')+
+    kc('g','סה"כ '+unitLbl()+' לשבוע',fmt(TOTAL),'תחזית מצרפית')+
     kc('t','מוצרים פעילים',fmt(activeProducts),'בתחזית השבוע')+
-    kc('a','יום השיא',PEAK_DAY,peak&&peak.kg>0?(fmt(peak.kg)+' ק"ג · '+pct(peak.kg,TOTAL_KG)):'')+
-    kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?holText(FORECAST.next_holiday):'בשבוע הקרוב', NEXT_HOL?'a':'');
+    kc('a','יום השיא',PEAK_DAY,peak&&peak.v>0?(fmt(peak.v)+' '+unitLbl()+' · '+pct(peak.v,TOTAL)):'')+
+    (HAS_STD
+      ? kc('n','סטיית תקן ממוצעת','±'+fmt1(avgStd),'תנודתיות שבועית למוצר ('+unitLbl()+')')
+      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?holText(FORECAST.next_holiday):'בשבוע הקרוב', NEXT_HOL?'a':''));
 }
 
 function buildDailyChart(){
-  makeChart('dailyChart',{type:'bar',data:{labels:DAYS,datasets:[{label:'ק"ג',data:DAILY.map(d=>d.kg),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' ק"ג ('+pct(c.raw,TOTAL_KG)+')'}}},
+  makeChart('dailyChart',{type:'bar',data:{labels:DAYS,datasets:[{label:unitLbl(),data:DAILY.map(d=>d.v),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' '+unitLbl()+' ('+pct(c.raw,TOTAL)+')'}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}}});
-  const peak=DAILY.reduce((b,d)=>!b||d.kg>b.kg?d:b,null);
+  const badge=document.getElementById('dailyBadge'); if(badge) badge.textContent=unitLbl();
+  const peak=DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null);
   const e=document.getElementById('dailyIns');
-  if(e&&peak) e.textContent='🔵 יום השיא הצפוי: '+peak.day+' ('+fmt(peak.kg)+' ק"ג). סה"כ שבועי צפוי: '+fmt(TOTAL_KG)+' ק"ג.';
+  if(e&&peak) e.textContent='🔵 יום השיא הצפוי: '+peak.day+' ('+fmt(peak.v)+' '+unitLbl()+'). סה"כ שבועי צפוי: '+fmt(TOTAL)+' '+unitLbl()+'.';
 }
 
 function buildTopProductsChart(){
   const top=PRODUCTS.slice(0,18);
+  const vals=top.map(p=>pVal(p)), errs=top.map(p=>pStd(p));
+  // קווי סטיית תקן אופקיים (רק במצב מחושב)
+  const errPlugin={id:'fcTopErr',afterDatasetsDraw(chart){
+    if(!HAS_STD) return;
+    const x=chart.scales.x, ctx=chart.ctx, meta=chart.getDatasetMeta(0);
+    ctx.save(); ctx.strokeStyle='#334155'; ctx.lineWidth=1.5;
+    meta.data.forEach((bar,i)=>{ const e=errs[i]; if(!e) return;
+      const cy=bar.y, right=x.getPixelForValue(vals[i]+e), left=x.getPixelForValue(Math.max(0,vals[i]-e));
+      ctx.beginPath(); ctx.moveTo(left,cy); ctx.lineTo(right,cy);
+      ctx.moveTo(right,cy-4); ctx.lineTo(right,cy+4); ctx.moveTo(left,cy-4); ctx.lineTo(left,cy+4); ctx.stroke(); });
+    ctx.restore(); }};
   makeChart('topChart',{type:'bar',data:{labels:top.map(p=>p.name.length>22?p.name.slice(0,22)+'…':p.name),
-    datasets:[{label:'ק"ג',data:top.map(p=>p.kg),backgroundColor:'rgba(13,148,136,0.75)',borderColor:'#0d9488',borderWidth:2,borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' ק"ג'}}},
-      scales:{x:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}}}}});
+    datasets:[{label:unitLbl(),data:vals,backgroundColor:'rgba(13,148,136,0.75)',borderColor:'#0d9488',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' '+unitLbl()+(HAS_STD?(' · סטיית תקן ±'+fmt1(errs[c.dataIndex])):'')}}},
+      scales:{x:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}}}},
+    plugins:[errPlugin]});
+  const badge=document.getElementById('topBadge'); if(badge) badge.textContent=unitLbl()+' לשבוע';
 }
 
 function buildProductsTable(){
-  const maxKg=PRODUCTS.length?PRODUCTS[0].kg:0;
-  let html='<thead><tr><th>#</th><th>מוצר</th><th>ק"ג לשבוע</th><th>% מהסה"כ</th>'+DAYS.map(d=>'<th>'+d+'</th>').join('')+'</tr></thead><tbody>';
+  const maxV=PRODUCTS.length?pVal(PRODUCTS[0]):0;
+  const stdTh=HAS_STD?'<th>סטיית תקן</th>':'';
+  let html='<thead><tr><th>#</th><th>מוצר</th><th>'+unitLbl()+' לשבוע</th>'+stdTh+'<th>% מהסה"כ</th>'+DAYS.map(d=>'<th>'+d+'</th>').join('')+'</tr></thead><tbody>';
   PRODUCTS.forEach((p,i)=>{
-    const barW=maxKg?Math.round(p.kg/maxKg*100):0;
+    const v=pVal(p), dd=pDaily(p);
+    const barW=maxV?Math.round(v/maxV*100):0;
+    const stdTd=HAS_STD?'<td>±'+fmt1(pStd(p))+'</td>':'';
     html+='<tr data-name="'+p.name.replace(/"/g,'&quot;')+'"><td>'+(i+1)+'</td>'+
       '<td title="'+p.name.replace(/"/g,'&quot;')+'">'+(p.name.length>28?p.name.slice(0,28)+'…':p.name)+'</td>'+
-      '<td>'+fmt1(p.kg)+'</td>'+
-      '<td>'+pct(p.kg,TOTAL_KG)+'<div class="prod-bar-wrap"><div class="prod-bar" style="width:'+barW+'%"></div></div></td>'+
-      DAYS.map(d=>'<td>'+(p.daily[d]>0?fmt1(p.daily[d]):'<span style="color:#cbd5e1">—</span>')+'</td>').join('')+
+      '<td>'+fmt1(v)+'</td>'+stdTd+
+      '<td>'+pct(v,TOTAL)+'<div class="prod-bar-wrap"><div class="prod-bar" style="width:'+barW+'%"></div></div></td>'+
+      DAYS.map(d=>'<td>'+(dd[d]>0?fmt1(dd[d]):'<span style="color:#cbd5e1">—</span>')+'</td>').join('')+
       '</tr>';
   });
-  const totRow=DAYS.map(d=>PRODUCTS.reduce((a,p)=>a+p.daily[d],0));
-  html+='<tr class="total"><td></td><td>סה"כ</td><td>'+fmt1(PRODUCTS.reduce((a,p)=>a+p.kg,0))+'</td><td></td>'+totRow.map(v=>'<td>'+fmt1(v)+'</td>').join('')+'</tr></tbody>';
+  const totRow=DAYS.map(d=>PRODUCTS.reduce((a,p)=>a+pDaily(p)[d],0));
+  html+='<tr class="total"><td></td><td>סה"כ</td><td>'+fmt1(PRODUCTS.reduce((a,p)=>a+pVal(p),0))+'</td>'+(HAS_STD?'<td></td>':'')+'<td></td>'+totRow.map(v=>'<td>'+fmt1(v)+'</td>').join('')+'</tr></tbody>';
   document.getElementById('prodTable').innerHTML=html;
 }
 
