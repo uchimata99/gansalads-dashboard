@@ -544,6 +544,20 @@ window.addEventListener('load', ()=>{
     <div class="card-title">טבלת מוצרים — טופ 15</div>
     <div class="tbl-wrap"><table class="tbl" id="productsTable"></table></div>
   </div>
+  <div class="card">
+    <div class="card-title">
+      כל המוצרים — ק"ג וסטיית תקן
+      <div class="controls" style="margin-bottom:0">
+        <input class="ctrl-select" id="pstat-search" placeholder="חפש מוצר…" autocomplete="off" oninput="renderProdStats()" style="width:200px">
+        <button class="ctrl-btn active" id="pstat-grp-all" onclick="setPstatGrp('all',this)">הכל</button>
+        <button class="ctrl-btn" id="pstat-grp-ht" onclick="setPstatGrp('חומוס/טחינה',this)">חומוס/טחינה</button>
+        <button class="ctrl-btn" id="pstat-grp-ot" onclick="setPstatGrp('אחר',this)">אחר</button>
+      </div>
+    </div>
+    <div class="cw xt" style="margin-bottom:8px"><canvas id="prodStatsChart"></canvas></div>
+    <div class="ins" id="pstat-note"></div>
+    <div class="tbl-wrap"><table class="tbl" id="prodStatsTable"></table></div>
+  </div>
 </div>
 
 <!-- ═══════ TAB 5: PACKAGING ═══════ -->
@@ -825,6 +839,7 @@ function initProducts(){
   });
   html+='</tbody>';tbl.innerHTML=html;
   initProdDetail();
+  renderProdStats();
 }
 
 // ─── ניתוח מוצר בודד ───
@@ -917,6 +932,65 @@ function drawProdDaily(){
   makeChart('prodDailyChart',{type:'bar',data:{labels:DAYS,datasets:[{label:lbl,data:vals,backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+lbl+': '+prodFmtV(c.raw)}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>prodMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
+}
+
+// ─── כל המוצרים: ק"ג + סטיית תקן (חיפוש, סינון, מיון, גרף עם סטיות) ───
+let pstatGrp='all', pstatSort={key:'kg',dir:-1};
+function computeProdStats(){
+  const out=[];
+  for(const name in PROD_DETAIL){
+    const wks=PROD_DETAIL[name];const series=[];let pkg=0,kg=0,rv=0;
+    for(const w in wks){
+      if(!selWeeks.has(+w))continue;
+      const dd=wks[w];let wp=0,wk=0,wr=0;
+      for(const di in dd){wp+=dd[di][0];wk+=dd[di][1];wr+=dd[di][2];}
+      if(wp||wk||wr){series.push(wk);pkg+=wp;kg+=wk;rv+=wr;}
+    }
+    if(!series.length)continue;
+    const n=series.length,mean=kg/n;
+    let varr=0;series.forEach(v=>{const d=v-mean;varr+=d*d;});
+    const std=n>1?Math.sqrt(varr/(n-1)):0;
+    out.push({name,grp:grpOf(name),weeks:n,pkg,kg,rev:rv,mean,std,cv:mean?std/mean*100:0});
+  }
+  return out;
+}
+function setPstatGrp(g,btn){pstatGrp=g;document.querySelectorAll('[id^="pstat-grp-"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderProdStats();}
+function pstatSortBy(key){if(pstatSort.key===key)pstatSort.dir*=-1;else pstatSort={key,dir:key==='name'?1:-1};renderProdStats();}
+function renderProdStats(){
+  const tbl=document.getElementById('prodStatsTable');if(!tbl)return;
+  let rows=computeProdStats();
+  if(pstatGrp!=='all')rows=rows.filter(r=>r.grp===pstatGrp);
+  const q=(document.getElementById('pstat-search').value||'').trim();
+  if(q)rows=rows.filter(r=>r.name.includes(q));
+  const k=pstatSort.key,dir=pstatSort.dir;
+  rows.sort((a,b)=>typeof a[k]==='string'?a[k].localeCompare(b[k],'he')*dir:(a[k]-b[k])*dir);
+  drawProdStatsChart(rows.slice().sort((a,b)=>b.kg-a.kg).slice(0,20));
+  const arrow=key=>pstatSort.key===key?(pstatSort.dir<0?' ▾':' ▴'):'';
+  const th=(key,lbl)=>`<th onclick="pstatSortBy('${key}')" style="cursor:pointer">${lbl}${arrow(key)}</th>`;
+  let html='<thead><tr><th>#</th>'+th('name','מוצר')+'<th>קבוצה</th>'+th('weeks','שבועות')+th('pkg','אריזות')+th('kg','סה"כ ק"ג')+th('mean','ממוצע שבועי')+th('std','סטיית תקן')+th('cv','מקדם שונות')+'</tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    const grpStyle=r.grp==='חומוס/טחינה'?'background:#dcfce7;color:#16a34a':'background:#dbeafe;color:#2563a8';
+    html+=`<tr><td>${i+1}</td><td title="${r.name}">${r.name.length>24?r.name.slice(0,24)+'…':r.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${grpStyle}">${r.grp}</span></td><td>${r.weeks}</td><td>${fmtF(r.pkg)}</td><td><strong>${fmtF(r.kg)}</strong></td><td>${fmtF(r.mean)}</td><td>±${fmtF(r.std)}</td><td>${Math.round(r.cv)}%</td></tr>`;
+  });
+  if(!rows.length)html+='<tr><td colspan="9" style="text-align:center;color:var(--gray)">לא נמצא מוצר</td></tr>';
+  html+='</tbody>';tbl.innerHTML=html;
+  const note=document.getElementById('pstat-note');
+  if(note)note.textContent=`מציג ${rows.length} מוצרים · הגרף מראה עד 20 מוצרים לפי ק"ג · סטיית התקן מחושבת על השבועות שבהם המוצר יוצר בפועל (מדגמית, n−1) · לחיצה על כותרת ממיינת.`;
+}
+function drawProdStatsChart(rows){
+  const means=rows.map(r=>r.mean),errs=rows.map(r=>r.std);
+  const errorBars={id:'pstatErr',afterDatasetsDraw(chart){
+    const y=chart.scales.y,ctx=chart.ctx,meta=chart.getDatasetMeta(0);
+    ctx.save();ctx.strokeStyle='#475569';ctx.lineWidth=1.5;
+    meta.data.forEach((bar,i)=>{const e=errs[i];if(!e)return;
+      const cx=bar.x,top=y.getPixelForValue(means[i]+e),bot=y.getPixelForValue(Math.max(0,means[i]-e));
+      ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,bot);ctx.moveTo(cx-4,top);ctx.lineTo(cx+4,top);ctx.moveTo(cx-4,bot);ctx.lineTo(cx+4,bot);ctx.stroke();});
+    ctx.restore();}};
+  makeChart('prodStatsChart',{type:'bar',data:{labels:rows.map(r=>r.name.length>16?r.name.slice(0,16)+'…':r.name),
+    datasets:[{label:'ממוצע שבועי ק"ג',data:means,backgroundColor:rows.map(r=>r.grp==='חומוס/טחינה'?'rgba(22,163,74,0.75)':'rgba(37,99,168,0.75)'),borderColor:rows.map(r=>r.grp==='חומוס/טחינה'?'#16a34a':'#2563a8'),borderWidth:2,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' ממוצע '+fmtF(c.raw)+' ק"ג · סטיית תקן ±'+fmtF(errs[c.dataIndex])}}},
+      scales:{x:{grid:{display:false},ticks:{...tickOpts,font:{size:10},maxRotation:60,minRotation:45}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}},
+    plugins:[errorBars]});
 }
 
 // ═══════════════════════════════ TAB 5: PACKAGING ═══════════════════════════════
