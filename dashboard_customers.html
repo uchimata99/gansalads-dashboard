@@ -107,7 +107,7 @@ html.locked #gsLock{display:flex!important}
  </div>
 
  <div class="page" id="wk">
-  <div class="ctrl"><span class="lbl">בחרי שבוע:</span><select id="wkSel"></select></div>
+  <div class="ctrl"><span class="lbl">תצוגה:</span><select id="wkSel"></select></div>
   <div class="kpi-row" id="wkKpi"></div>
   <div class="grid2">
    <div class="card"><div class="card-t"><span>לקוחות פעילים השבוע — לחיצה פותחת את המוצרים</span><span class="lbl" id="wkCount"></span></div><div class="scroll" id="wkTab"></div></div>
@@ -339,29 +339,57 @@ function crosscheck(){
 
 
 // ---------- WEEKLY ----------
-let wkSel=null, wkCustSel=null;
+let wkSel=null, wkCustSel=null, curWC={}, _avgWC=null;
 function initWeekSel(){const s=document.getElementById('wkSel');
+ const oa=document.createElement('option');oa.value='avg';oa.textContent='ממוצע כל השבועות';s.appendChild(oa);
  D.meta.weeks.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent='שבוע '+w;s.appendChild(o);});
+ s.value='avg';
  s.addEventListener('change',()=>{wkCustSel=null;renderWeek();});}
 function pstdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length);}
+// מפת לקוח→נתונים ממוצעים על פני כל השבועות (אותו מבנה כמו D.weekly[שבוע])
+function avgWC(){
+ if(_avgWC)return _avgWC;
+ const n=D.meta.weeks.length, agg={};
+ D.meta.weeks.forEach(w=>{const wc=D.weekly[String(w)]||{};
+  for(const ci in wc){const d=wc[ci];const a=agg[ci]||(agg[ci]={m:0,q:0,it:{}});
+   a.m+=d.m;a.q+=d.q;(d.p||[]).forEach(([it,mo,qt])=>{const e=a.it[it]||(a.it[it]=[0,0]);e[0]+=mo;e[1]+=qt;});}});
+ const out={};
+ for(const ci in agg){const a=agg[ci];
+  const p=Object.entries(a.it).map(([it,v])=>[+it,v[0]/n,v[1]/n]).sort((x,y)=>y[1]-x[1]);
+  out[ci]={m:a.m/n,q:a.q/n,p};}
+ return _avgWC=out;
+}
 function renderWeek(){
- const w=document.getElementById('wkSel').value||D.meta.weeks[0];
- wkSel=String(w);
- const wc=D.weekly[wkSel]||{};
+ const val=document.getElementById('wkSel').value||'avg';
+ wkSel=String(val);
+ const isAvg=(wkSel==='avg');
+ const wc=isAvg?avgWC():(D.weekly[wkSel]||{});
+ curWC=wc;
  const entries=Object.entries(wc).map(([ci,d])=>({ci:+ci,name:D.customers[+ci].name,m:d.m,q:d.q,p:d.p}));
  entries.sort((a,b)=>b.m-a.m);
  const wtot=entries.reduce((a,e)=>a+e.m,0);
  const moneys=entries.map(e=>e.m);
  const mean=moneys.length?wtot/moneys.length:0, sd=pstdev(moneys);
- const dvsg=D.meta.wk_mean?100*(wtot-D.meta.wk_mean)/D.meta.wk_mean:0;
- document.getElementById('wkKpi').innerHTML=
-  kpi('g','מחזור השבוע',ILS(wtot),(dvsg>=0?'+':'')+dvsg.toFixed(0)+'% מול הממוצע השבועי')+
-  kpi('y','לקוחות פעילים',NUM(entries.length),'מתוך '+D.meta.n_customers)+
-  kpi('b','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
-  kpi('p','לקוח מוביל השבוע',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
+ if(isAvg){
+  const n=D.meta.weeks.length;let act=0;
+  D.meta.weeks.forEach(w=>act+=Object.keys(D.weekly[String(w)]||{}).length);
+  document.getElementById('wkKpi').innerHTML=
+   kpi('g','מחזור שבועי ממוצע',ILS(wtot),'ממוצע על פני '+n+' שבועות')+
+   kpi('y','לקוחות פעילים בשבוע (ממוצע)',NUM(Math.round(act/n)),'מתוך '+D.meta.n_customers)+
+   kpi('b','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
+   kpi('p','לקוח מוביל (בממוצע)',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
+ }else{
+  const dvsg=D.meta.wk_mean?100*(wtot-D.meta.wk_mean)/D.meta.wk_mean:0;
+  document.getElementById('wkKpi').innerHTML=
+   kpi('g','מחזור השבוע',ILS(wtot),(dvsg>=0?'+':'')+dvsg.toFixed(0)+'% מול הממוצע השבועי')+
+   kpi('y','לקוחות פעילים',NUM(entries.length),'מתוך '+D.meta.n_customers)+
+   kpi('b','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
+   kpi('p','לקוח מוביל השבוע',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
+ }
  document.getElementById('wkCount').textContent=entries.length+' לקוחות';
- let h='<table><thead><tr><th>#</th><th>לקוח</th><th>מחזור</th><th>אריזות</th><th>חלק</th></tr></thead><tbody>';
- entries.forEach((e,i)=>{h+=`<tr style="cursor:pointer" data-ci="${e.ci}"><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${e.name}</td><td class="num">${ILS(e.m)}</td><td class="num">${NUM(e.q)}</td><td class="num">${(100*e.m/wtot).toFixed(1)}%</td></tr>`;});
+ const cM=isAvg?'מחזור ממוצע':'מחזור', cP=isAvg?'אריזות (ממוצע)':'אריזות';
+ let h='<table><thead><tr><th>#</th><th>לקוח</th><th>'+cM+'</th><th>'+cP+'</th><th>חלק</th></tr></thead><tbody>';
+ entries.forEach((e,i)=>{h+=`<tr style="cursor:pointer" data-ci="${e.ci}"><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${e.name}</td><td class="num">${ILS(e.m)}</td><td class="num">${NUM(e.q)}</td><td class="num">${wtot?(100*e.m/wtot).toFixed(1):'0'}%</td></tr>`;});
  document.getElementById('wkTab').innerHTML=h+'</tbody></table>';
  document.querySelectorAll('#wkTab tbody tr').forEach(tr=>tr.addEventListener('click',()=>{wkCustSel=+tr.dataset.ci;renderWeekDet();}));
  if(wkCustSel==null && entries.length)wkCustSel=entries[0].ci;
@@ -369,14 +397,15 @@ function renderWeek(){
 }
 function renderWeekDet(){
  if(wkCustSel==null){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">בחרי לקוח מהרשימה</div>';return;}
- const d=(D.weekly[wkSel]||{})[wkCustSel];
+ const isAvg=(wkSel==='avg');
+ const d=curWC[wkCustSel];
  const name=D.customers[wkCustSel].name;
- document.getElementById('wkDetT').textContent='מוצרים · '+name+' · שבוע '+wkSel;
- if(!d){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">הלקוח לא היה פעיל בשבוע זה</div>';return;}
+ document.getElementById('wkDetT').textContent='מוצרים · '+name+(isAvg?' · ממוצע שבועי':' · שבוע '+wkSel);
+ if(!d){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">'+(isAvg?'אין נתונים ללקוח':'הלקוח לא היה פעיל בשבוע זה')+'</div>';return;}
  let h=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">`+
-   kpi('g','מחזור בשבוע',ILS(d.m),NUM(d.q)+' אריזות')+
+   kpi('g',isAvg?'מחזור שבועי ממוצע':'מחזור בשבוע',ILS(d.m),NUM(d.q)+' אריזות')+
    kpi('y','מוצרים',NUM(d.p.length),'פריטים שונים')+
-   kpi('b','מחיר ממוצע ליחידה',d.q?P2(d.m/d.q):'—','בשבוע זה')+`</div>`;
+   kpi('b','מחיר ממוצע ליחידה',d.q?P2(d.m/d.q):'—',isAvg?'בממוצע':'בשבוע זה')+`</div>`;
  h+='<table><thead><tr><th>#</th><th>מוצר</th><th>מחזור</th><th>אריזות</th><th>מחיר/יח׳</th></tr></thead><tbody>';
  d.p.forEach((x,i)=>{const pr=x[2]?x[1]/x[2]:0;h+=`<tr><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${D.items[x[0]]}</td><td class="num">${ILS(x[1])}</td><td class="num">${NUM(x[2])}</td><td class="num">${P2(pr)}</td></tr>`;});
  document.getElementById('wkDet').innerHTML=h+'</tbody></table>';
