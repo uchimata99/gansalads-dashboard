@@ -213,6 +213,7 @@ async function loadProdData(){
   ALLWEEKS=obj.WEEKS||[]; DAILY=obj.DAILY||{};
   ALLPKG=obj.PKG_WEEKLY||[];
   PROD_DETAIL=obj.PROD_DETAIL||{}; PROD_UNI=obj.PROD_UNI||{};
+  COSTS=obj.COSTS||{};
   selWeeks=new Set(ALLWEEKS.map(w=>w.w));
 }
 
@@ -270,6 +271,7 @@ window.addEventListener('load', ()=>{
   <button class="tab"         onclick="showPage('kg_analysis',this)">⚖️ ניתוח לפי ק"ג</button>
   <button class="tab"         onclick="showPage('products',this)">🏆 מוצרים</button>
   <button class="tab"         onclick="showPage('packaging',this)">🗂️ סוגי אריזה</button>
+  <button class="tab fin"     onclick="showPage('profit',this)">💰 רווחיות</button>
 </nav>
 
 <div id="weekFilter" dir="rtl">
@@ -579,6 +581,35 @@ window.addEventListener('load', ()=>{
   </div>
 </div>
 
+<!-- ═══════ TAB 6: PROFITABILITY ═══════ -->
+<div id="page-profit" class="page">
+  <div class="kpi-grid" id="profitKpis"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">פילוח רווח גולמי לפי קבוצה</div>
+      <div style="position:relative;height:260px"><canvas id="profitGroupChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">מגמת רווח גולמי לפי שבוע <span class="card-badge g">₪ ושיעור</span></div>
+      <div class="cw t"><canvas id="profitTrendChart"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      רווחיות לפי מוצר
+      <div style="display:flex;gap:6px">
+        <button class="ctrl-btn active" id="psort-total" onclick="setProfitSort('total')">רווח כולל</button>
+        <button class="ctrl-btn" id="psort-margin" onclick="setProfitSort('margin')">שיעור רווח</button>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" id="profitTable"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">מוצרים ללא תמחיר <span class="card-badge">לא נכללים בחישוב הרווח</span></div>
+    <div class="tbl-wrap"><table class="tbl" id="noCostTable"></table></div>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <script>
@@ -601,6 +632,7 @@ let PROD_DETAIL={};
 
 // מיפוי פריט ← סוג מאוחד (מקור: עמודת העזר בגיליון "דשבורד" באקסל)
 let PROD_UNI={};
+let COSTS={};   // {שם מוצר: עלות לאריזה} — נטען מהגיליון המוגבל (רגיש, פרטי)
 
 // ═══════════════════════════════ UTILS ═══════════════════════════════
 const fmt=n=>Math.round(n).toLocaleString('he-IL');
@@ -628,6 +660,7 @@ function showPage(name,btn){
   if(name==='pkg_analysis'&&!charts['pkgW-trendChart'])   initPkgAnalysis();
   if(name==='kg_analysis' &&!charts['kgW-trendChart'])    initKgAnalysis();
   if(name==='products'    &&!charts['productsChart'])     initProducts();
+  if(name==='profit'      &&!charts['profitTrendChart'])  initProfit();
   if(name==='packaging'   &&!charts['pkgDonutChart'])     initPackaging();
 }
 
@@ -1152,7 +1185,8 @@ function reinitCurrent(){Object.keys(charts).slice().forEach(destroyChart);
   else if(curPage==='pkg_analysis'){initPkgAnalysis();if(subActive('pkg')==='daily')initPkgDaily();}
   else if(curPage==='kg_analysis'){initKgAnalysis();if(subActive('kg')==='daily')initKgDaily();}
   else if(curPage==='products'){initProducts();}
-  else if(curPage==='packaging'){initPackaging();}}
+  else if(curPage==='packaging'){initPackaging();}
+  else if(curPage==='profit'){initProfit();}}
 function subActive(tab){const id=tab==='pkg'?'page-pkg_analysis':'page-kg_analysis';const a=document.querySelector('#'+id+' .subpage.active');return a&&a.id.indexOf('daily')>=0?'daily':'weekly';}
 
 // התפלגות השבועות (אריזות, ממוין, עם ממוצע וחציון)
@@ -1170,6 +1204,79 @@ function buildDistChart(){const el=document.getElementById('distChart');if(!el)r
 // לחיצה על באר שבוע בגרף → החרגה/הוספה
 function weekBarClick(evt,els){if(els&&els.length){const w=WEEKS[els[0].index];if(w)toggleWeek(w.w);}}
 
+</script>
+<script>
+// ═══════════════════════════════ TAB 6: רווחיות ═══════════════════════════════
+// עלות לאריזה מ-COSTS (מהגיליון). מכירות מ-PROD_DETAIL לפי שם. הצלבה לפי מפתח כבר נעשתה בקליטה.
+let profitSort='total', _profit={items:[],noCost:[]};
+const money2=n=>'₪'+(Math.round(n*100)/100).toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function profitAgg(){
+  const items=[], noCost=[];
+  for(const name in COSTS){
+    const cost=COSTS[name], d=PROD_DETAIL[name]; if(!d) continue;
+    let pkg=0, rv=0;
+    for(const w in d){ if(!selWeeks.has(+w)) continue; for(const di in d[w]){ pkg+=d[w][di][0]; rv+=d[w][di][2]; } }
+    if(pkg<=0) continue;
+    if(cost<=0){ noCost.push({name,grp:grpOf(name),pkg,rev:rv}); continue; }
+    const price=rv/pkg, profitPkg=price-cost, margin=price?profitPkg/price:0;
+    items.push({name,grp:grpOf(name),pkg,rev:rv,cost,price,profitPkg,margin,totalProfit:profitPkg*pkg,totalCost:cost*pkg});
+  }
+  return {items,noCost};
+}
+function initProfit(){
+  _profit=profitAgg();
+  buildProfitKpis(); buildProfitGroupChart(); buildProfitTrend(); buildProfitTable(); buildNoCost();
+}
+function buildProfitKpis(){
+  const it=_profit.items;
+  const tRev=it.reduce((a,x)=>a+x.rev,0), tCost=it.reduce((a,x)=>a+x.totalCost,0), tProf=tRev-tCost;
+  const m=tRev?tProf/tRev*100:0;
+  document.getElementById('profitKpis').innerHTML=
+    kc('a fin','סך הכנסות',rev(tRev),it.length+' מוצרים מתומחרים')+
+    kc('r fin','סך עלות ייצור',rev(tCost),'')+
+    kc('g fin','סך רווח גולמי',rev(tProf),'')+
+    kc('n fin','שיעור רווח גולמי משוקלל',m.toFixed(1)+'%','על ההכנסות המתומחרות');
+}
+function buildProfitGroupChart(){
+  const g={'חומוס/טחינה':0,'אחר':0};
+  _profit.items.forEach(x=>{ g[x.grp]=(g[x.grp]||0)+x.totalProfit; });
+  makeChart('profitGroupChart',{type:'doughnut',data:{labels:['חומוס/טחינה','אחר'],datasets:[{data:[g['חומוס/טחינה'],g['אחר']],backgroundColor:['#16a34a','#2563a8'],borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+rev(c.raw)}}}}});
+}
+function buildProfitTrend(){
+  const labels=WEEKS.map(w=>wLabel(w.w)), prof=[], marg=[];
+  WEEKS.forEach(w=>{
+    let r=0,c=0;
+    _profit.items.forEach(x=>{const d=PROD_DETAIL[x.name][w.w];if(!d)return;let p=0,rv=0;for(const di in d){p+=d[di][0];rv+=d[di][2];}r+=rv;c+=x.cost*p;});
+    prof.push(Math.round(r-c)); marg.push(r?+((r-c)/r*100).toFixed(1):0);
+  });
+  makeChart('profitTrendChart',{data:{labels,datasets:[
+    {type:'bar',label:'רווח גולמי ₪',data:prof,backgroundColor:'#16a34aCC',borderColor:'#16a34a',borderWidth:2,borderRadius:6,yAxisID:'y',order:2},
+    {type:'line',label:'שיעור רווח %',data:marg,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',tension:.35,pointRadius:4,pointBackgroundColor:'#d97706',borderWidth:2.5,yAxisID:'y1',order:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}},tooltip:ttip},
+    scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>'₪'+fmt(v/1000)+'K'}},y1:{position:'right',grid:{display:false},ticks:{...tickOpts,callback:v=>v.toFixed(0)+'%'}}}}});
+}
+function setProfitSort(s){profitSort=s;['total','margin'].forEach(x=>{const b=document.getElementById('psort-'+x);if(b)b.classList.toggle('active',x===s);});buildProfitTable();}
+function buildProfitTable(){
+  const it=_profit.items.slice().sort((a,b)=>profitSort==='margin'?b.margin-a.margin:b.totalProfit-a.totalProfit);
+  let html='<thead><tr><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th class="fin">מחיר ממוצע/ארז</th><th class="fin">עלות/ארז</th><th class="fin">רווח/ארז</th><th>רווח %</th><th class="fin">רווח כולל</th></tr></thead><tbody>';
+  it.forEach(x=>{
+    const gs=x.grp==='חומוס/טחינה'?'background:#dcfce7;color:#16a34a':'background:#dbeafe;color:#2563a8';
+    html+=`<tr><td title="${x.name}">${x.name.length>24?x.name.slice(0,24)+'…':x.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${gs}">${x.grp}</span></td><td>${fmtF(x.pkg)}</td><td class="fin">${money2(x.price)}</td><td class="fin">${money2(x.cost)}</td><td class="fin">${money2(x.profitPkg)}</td><td>${(x.margin*100).toFixed(1)}%</td><td class="fin">${rev(x.totalProfit)}</td></tr>`;
+  });
+  const tRev=it.reduce((a,x)=>a+x.rev,0),tCost=it.reduce((a,x)=>a+x.totalCost,0),tPkg=it.reduce((a,x)=>a+x.pkg,0),tProf=tRev-tCost;
+  html+=`<tr class="total"><td>סה"כ</td><td></td><td>${fmtF(tPkg)}</td><td class="fin">${tPkg?money2(tRev/tPkg):'—'}</td><td></td><td></td><td>${tRev?(tProf/tRev*100).toFixed(1):'0'}%</td><td class="fin">${rev(tProf)}</td></tr></tbody>`;
+  document.getElementById('profitTable').innerHTML=html;
+}
+function buildNoCost(){
+  const nc=_profit.noCost.slice().sort((a,b)=>b.pkg-a.pkg);
+  let html='<thead><tr><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th class="fin">הכנסות</th></tr></thead><tbody>';
+  if(!nc.length) html+='<tr><td colspan="4" style="text-align:center;color:var(--gray)">— אין מוצרים ללא תמחיר בטווח הנבחר —</td></tr>';
+  nc.forEach(x=>{ html+=`<tr><td>${x.name}</td><td>${x.grp}</td><td>${fmtF(x.pkg)}</td><td class="fin">${rev(x.rev)}</td></tr>`; });
+  html+='</tbody>';
+  document.getElementById('noCostTable').innerHTML=html;
+}
 </script>
 </body>
 </html>
