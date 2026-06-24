@@ -132,6 +132,11 @@ html.locked #gsLock{display:flex!important}
    <div class="ctrl"><span class="lbl">חיפוש מוצר:</span><input id="pcSearch" list="pcDL" placeholder="הקלידי שם מוצר…" style="min-width:300px" autocomplete="off"><datalist id="pcDL"></datalist><span class="lbl">יחידה:</span><select id="pcUnit"><option value="box">מחיר לקופסה</option><option value="kg">מחיר לקילו</option></select></div>
    <div class="kpi-row" id="pcKpi"></div>
    <div class="cw l"><canvas id="pcChart"></canvas></div>
+   <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:10px">
+    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#2d6a3f;vertical-align:middle;margin-left:5px"></span>זול או שווה למחיר הייחוס</span>
+    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#b03030;vertical-align:middle;margin-left:5px"></span>יקר ממחיר הייחוס</span>
+    <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#c9b67a;vertical-align:middle;margin-left:5px"></span>כמות נמוכה (מתחת ל‑5 אריזות) — המחיר ליחידה לא אמין</span>
+   </div>
    <div style="margin-top:14px" id="pcTab"></div>
   </div>
  </div>
@@ -144,7 +149,9 @@ html.locked #gsLock{display:flex!important}
   </div>
   <div class="card" style="margin-top:18px"><div class="card-t"><span>עקומת ריכוז (פארטו) — חלק מצטבר מהמחזור לפי דירוג הלקוח</span></div><div class="cw"><canvas id="dsPareto"></canvas></div></div>
   <div class="grid2" style="margin-top:18px">
-   <div class="card"><div class="card-t">התפלגות לפי מספר שבועות פעילים</div><div class="cw s"><canvas id="dsWeeks"></canvas></div></div>
+   <div class="card"><div class="card-t">כמה שבועות כל לקוח קונה (התמדה)</div>
+    <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.6">כל עמודה: כמה לקוחות היו פעילים במספר שבועות מסוים מתוך 25. מעט שבועות = לקוח מזדמן; קרוב ל‑25 = לקוח קבוע.</div>
+    <div class="cw s"><canvas id="dsWeeks"></canvas></div></div>
    <div class="card"><div class="card-t">פילוח לקוחות לפי פלח</div><div id="dsSegTab"></div></div>
   </div>
  </div>
@@ -166,7 +173,7 @@ const PAL=['#2d6a3f','#b8890e','#2a5a88','#6b3fa0','#b03030','#7a9c52','#c98a2b'
 Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.color='#7a7460';
 const charts={};
 function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
-function kpi(cls,label,num,sub){return `<div class="kpi ${cls}"><div class="kpi-l">${label}</div><div class="kpi-n">${num}</div><div class="kpi-s">${sub}</div></div>`;}
+function kpi(cls,label,num,sub,title){return `<div class="kpi ${cls}"${title?` title="${title}"`:''}><div class="kpi-l">${label}</div><div class="kpi-n">${num}</div><div class="kpi-s">${sub}</div></div>`;}
 function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
  if(p==='wk')renderWeek();if(p==='cu')renderCust();if(p==='pc')renderPrice();}
@@ -277,12 +284,14 @@ function renderPrice(){
  const U=useKg?'לק"ג':'לקופסה';
  const PU=v=>P2(v*f);
  if(unit==='kg' && !kg){document.getElementById('pcSearch').title='למוצר זה אין משקל ידוע — מוצג לקופסה';}
+ const b=p.buyers.slice().sort((x,y)=>x.price-y.price);
+ const cheap=b[0], dear=b[b.length-1];
+ const esc=s=>String(s).replace(/"/g,'&quot;');
  document.getElementById('pcKpi').innerHTML=
   kpi('g','מחיר ייחוס ('+U+')',PU(p.avg),'ממוצע משוקלל · פיזור ± '+PU(p.price_sd))+
-  kpi('y','מחיר נמוך',PU(p.min),'הלקוח הזול')+
-  kpi('b','מחיר גבוה',PU(p.max),'הלקוח היקר')+
+  kpi('y','מחיר נמוך',PU(p.min),cheap?cheap.name.slice(0,16)+(cheap.name.length>16?'…':''):'הלקוח הזול',cheap?esc(cheap.name)+(cheap.low?' (כמות נמוכה)':''):'')+
+  kpi('b','מחיר גבוה',PU(p.max),dear?dear.name.slice(0,16)+(dear.name.length>16?'…':''):'הלקוח היקר',dear?esc(dear.name)+(dear.low?' (כמות נמוכה)':''):'')+
   kpi('p','קונים',NUM(p.n_buyers),'סטיית תקן ± '+PU(p.price_sd));
- const b=p.buyers.slice().sort((x,y)=>x.price-y.price);
  mk('pcChart',{type:'bar',data:{labels:b.map(x=>x.name.length>16?x.name.slice(0,16)+'…':x.name),
    datasets:[
    {label:'מחיר '+U,data:b.map(x=>+(x.price*f).toFixed(2)),backgroundColor:b.map(x=>x.low?'#c9b67a':(x.price>p.avg?COL.red:COL.green)),borderRadius:4,order:3},
@@ -318,7 +327,7 @@ function distribution(){
    options:{plugins:{legend:{display:false}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}},x:{title:{display:true,text:'דירוג הלקוח'}}}}});
  const w=D.distribution.weeks;
  mk('dsWeeks',{type:'bar',data:{labels:w.map(x=>x.weeks),datasets:[{label:'לקוחות',data:w.map(x=>x.n),backgroundColor:COL.green,borderRadius:4}]},
-   options:{plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'שבועות פעילים'}}}}});
+   options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>it[0].label+' שבועות פעילים',label:ctx=>NUM(ctx.parsed.y)+' לקוחות'}}},scales:{y:{title:{display:true,text:'מספר לקוחות'}},x:{title:{display:true,text:'שבועות פעילים'}}}}});
  let h='<table><thead><tr><th>פלח</th><th>לקוחות</th><th>מחזור</th><th>חלק מהמחזור</th></tr></thead><tbody>';
  seg.forEach(s=>{h+=`<tr><td><span class="pill pg">${s.band}</span></td><td class="num">${s.n}</td><td class="num">${ILS(s.money)}</td><td class="num">${(100*s.money/TOT).toFixed(1)}%</td></tr>`;});
  document.getElementById('dsSegTab').innerHTML=h+'</tbody></table>';
