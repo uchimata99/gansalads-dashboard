@@ -923,7 +923,12 @@ function drawProdDaily(){
 function initPackaging(){
   const totP=PKG_TOTALS.reduce((a,b)=>a+b,0);
   const cls=['g','','n','a','t','','g'];const emoji=['4️⃣','2️⃣','2️⃣','3️⃣','1️⃣','½','¼'];
-  document.getElementById('pkgKpiGrid').innerHTML=PKG_TYPES.map((t,i)=>`<div class="kpi ${cls[i]}"><div class="kpi-lbl">${emoji[i]} ${t}</div><div class="kpi-val">${fmtF(PKG_TOTALS[i])}</div><div class="kpi-sub">${pct(PKG_TOTALS[i],totP)}</div></div>`).join('');
+  document.getElementById('pkgKpiGrid').innerHTML=PKG_TYPES.map((t,i)=>{
+    const vals=PKG_WEEKLY.map((r,wi)=>avgMode==='day'?(r[i]/(WEEKS[wi].days||1)):r[i]);
+    const m=vals.reduce((a,b)=>a+b,0)/(vals.length||1);
+    const sd=vals.length>1?Math.sqrt(vals.reduce((a,b)=>{const d=b-m;return a+d*d;},0)/(vals.length-1)):0;
+    return `<div class="kpi ${cls[i]}"><div class="kpi-lbl">${emoji[i]} ${t}</div><div class="kpi-val">${fmtF(m)}</div><div class="kpi-sub">± ${fmtF(sd)} ${avgMode==='day'?'ליום':'לשבוע'}</div></div>`;
+  }).join('');
   makeChart('pkgDonutChart',{type:'doughnut',data:{labels:PKG_TYPES,datasets:[{data:PKG_TOTALS,backgroundColor:PKG_COLORS,borderColor:'#fff',borderWidth:3,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:ctx=>` ${fmtF(ctx.raw)} ארז (${pct(ctx.raw,totP)})`}}}}});
   makeChart('pkgWeeklyChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),datasets:PKG_TYPES.map((t,i)=>({label:t,data:PKG_WEEKLY.map(r=>r[i]),backgroundColor:PKG_COLORS[i]+'BB',borderColor:PKG_COLORS[i],borderWidth:1,borderRadius:2}))},
