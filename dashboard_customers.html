@@ -149,7 +149,7 @@ html.locked #gsLock{display:flex!important}
    <div class="card"><div class="card-t">פילוח מחזור לפי משפחה</div><div class="cw s"><canvas id="dsFam"></canvas></div></div>
   </div>
   <div class="card" style="margin-top:18px"><div class="card-t"><span>עקומת ריכוז (פארטו) — חלק מצטבר מהמחזור לפי דירוג הלקוח</span></div>
-   <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.6">הקו המקווקו = ריכוז טיפוסי בשוק (כלל 80/20: טופ 20% מהלקוחות ≈ 80% מהמחזור). עקומת סלטי גן מעליו = ריכוז גבוה מהטיפוסי; מתחתיו = מבוזר יותר.</div>
+   <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.6">הקו המקווקו = ריכוז טיפוסי בשוק (כלל 80/20: טופ 20% מהלקוחות ≈ 80% מהמחזור). הסמנים האדומים = ספי סיכון מקובלים בענף: לקוח בודד עד כ-10% מהמחזור, וטופ 5 לקוחות עד כ-25%. עקומת סלטי גן מתחת לסמן = תלות נמוכה ובריאה; מעליו = ריכוז גבוה שמצריך מעקב.<br><span style="opacity:.75">מקור הספים: Corporate Finance Institute, Wall Street Prep.</span></div>
    <div class="cw"><canvas id="dsPareto"></canvas></div></div>
   <div class="grid2" style="margin-top:18px">
    <div class="card"><div class="card-t">כמה שבועות כל לקוח קונה (התמדה)</div>
@@ -373,10 +373,12 @@ function distribution(){
  const pa=D.distribution.pareto;
  const N=pa.length, pb=Math.log(0.2)/Math.log(0.8);
  const ref=pa.map((x,i)=>+((1-Math.pow(1-(i+1)/N,pb))*100).toFixed(1));
+ const risk=pa.map((x,i)=> i===0?10 : i===4?25 : null);
  mk('dsPareto',{type:'line',data:{labels:pa.map(x=>x.rank),datasets:[
    {label:'סלטי גן — % מצטבר מהמחזור',data:pa.map(x=>x.cum_pct),borderColor:COL.purple,backgroundColor:'rgba(107,63,160,.1)',fill:true,tension:.2,pointRadius:0,order:2},
-   {label:'ריכוז טיפוסי בשוק (כלל 80/20)',data:ref,borderColor:COL.gold,borderDash:[6,4],borderWidth:2,fill:false,pointRadius:0,order:1}]},
-   options:{plugins:{legend:{position:'bottom'}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}},x:{title:{display:true,text:'דירוג הלקוח'}}}}});
+   {label:'ריכוז טיפוסי בשוק (כלל 80/20)',data:ref,borderColor:COL.gold,borderDash:[6,4],borderWidth:2,fill:false,pointRadius:0,order:1},
+   {label:'סף סיכון מקובל בענף (לקוח בודד · טופ 5)',data:risk,borderColor:COL.red,backgroundColor:COL.red,pointStyle:'rectRot',pointRadius:7,pointHoverRadius:9,showLine:false,order:0}]},
+   options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===2?'סף סיכון בענף: '+ctx.parsed.y+'%':ctx.dataset.label+': '+ctx.parsed.y+'%'}}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}},x:{title:{display:true,text:'דירוג הלקוח'}}}}});
  const w=D.distribution.weeks;
  mk('dsWeeks',{type:'bar',data:{labels:w.map(x=>x.weeks),datasets:[{label:'לקוחות',data:w.map(x=>x.n),backgroundColor:COL.green,borderRadius:4}]},
    options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>it[0].label+' שבועות פעילים',label:ctx=>NUM(ctx.parsed.y)+' לקוחות'}}},scales:{y:{title:{display:true,text:'מספר לקוחות'}},x:{title:{display:true,text:'שבועות פעילים'}}}}});
