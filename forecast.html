@@ -132,7 +132,7 @@ const FC_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const FC_TOKEN_KEY='gsGoogleToken';   // משותף עם production.html ו-finance.html
 
 let fcTokenClient=null, fcAccessToken=null;
-let FORECAST=null, ACCURACY=null;
+let FORECAST=null, ACCURACY=null, PRODDATA=null;
 
 function gsShowErr(msg){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=msg||''; }
 
@@ -194,14 +194,25 @@ async function loadForecastData(){
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; FORECAST=null; }
   try{ ACCURACY=await fetchTabObject('ACCURACY', false); }
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; ACCURACY=null; }
+  // נתוני הייצור ההיסטוריים (אותו גיליון, לשונית DATA כמו ב-production.html) —
+  // משמשים לחישוב תחזית זמנית כל עוד לשונית FORECAST ריקה.
+  try{ PRODDATA=await fetchTabObject('DATA', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; PRODDATA=null; }
 }
 
 function startDashboard(){
   const go=()=>{
     try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
+    // אם אין עדיין תחזית רשמית בלשונית FORECAST — מחשבים תחזית זמנית מנתוני DATA
+    if(!(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null))){
+      const c=computeForecastFromData(PRODDATA);
+      if(c) FORECAST=c;
+    }
     if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
       document.getElementById('fcBody').style.display='';
-      document.getElementById('fcEmpty').innerHTML='';
+      document.getElementById('fcEmpty').innerHTML = FORECAST.computed
+        ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
+        : '';
       prepareForecast();
       renderHeader();
       renderForecastKpis();
@@ -310,6 +321,43 @@ function normDaily(d){
   return out;
 }
 
+// ─── תחזית זמנית מנתוני DATA (ממוצע נע של 4 השבועות האחרונים, פר מוצר ופר יום) ───
+// אינה ממציאה מספרים: כל ערך הוא ממוצע של הק"ג בפועל בשבועות האחרונים.
+function computeForecastFromData(d){
+  if(!d || !d.PROD_DETAIL) return null;
+  const PD=d.PROD_DETAIL;
+  const weeks=(d.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
+  if(!weeks.length) return null;
+  const recent=weeks.slice(-Math.min(4,weeks.length));
+  const denom=recent.length;
+  const products=[];
+  for(const name in PD){
+    const wk=PD[name];
+    const sums=DAYS.map(()=>0); let any=false;
+    recent.forEach(w=>{ const dd=wk[w]; if(!dd) return;
+      for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){ sums[i]+=num(dd[di][1]); any=true; } } });
+    if(!any) continue;
+    const daily={}; let tot=0;
+    DAYS.forEach((day,i)=>{ const v=sums[i]/denom; daily[day]=v; tot+=v; });
+    if(tot<=0) continue;
+    products.push({name:String(name), kg:tot, daily});
+  }
+  if(!products.length) return null;
+  products.sort((a,b)=>b.kg-a.kg);
+  const dailyTot={}; DAYS.forEach(day=>dailyTot[day]=0);
+  products.forEach(p=>DAYS.forEach(day=>dailyTot[day]+=p.daily[day]));
+  let peak=DAYS[0]; DAYS.forEach(day=>{ if(dailyTot[day]>dailyTot[peak]) peak=day; });
+  return {
+    computed:true,
+    based_on:'שבועות '+recent[0]+'–'+recent[recent.length-1],
+    week:'', week_start:'', generated:'',
+    total_kg:products.reduce((a,p)=>a+p.kg,0),
+    active_products:products.length,
+    peak_day:peak, next_holiday:'',
+    daily:dailyTot, products
+  };
+}
+
 function prepareForecast(){
   const f=FORECAST||{};
   PRODUCTS=(f.products||[]).map(p=>({
@@ -340,6 +388,7 @@ function renderHeader(){
   const sub=[wk?('תחזית ל'+wk):'תחזית השבוע הקרוב'];
   if(f.week_start) sub.push('שבוע מתחיל '+f.week_start);
   if(f.generated) sub.push('הופק '+f.generated);
+  if(f.computed) sub.push('תחזית זמנית · מבוסס על '+(f.based_on||'הנתונים האחרונים'));
   document.getElementById('hdrSub').textContent=sub.join(' · ');
   document.getElementById('hdrKpis').innerHTML=
     '<div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג לשבוע</div><div class="hkpi-val">'+fmt(TOTAL_KG)+'</div></div>'+
