@@ -51,11 +51,57 @@ def extract_json(path):
     return json.dumps(obj, ensure_ascii=False, separators=(", ", ": "))
 
 
+def load_costs(sh):
+    """קריאת מפת העלויות (עלות לאריזה לכל מוצר) מלשונית DATA של הייצור."""
+    try:
+        rows = sh.values().get(spreadsheetId=SHEET_ID, range="DATA!A:A").execute().get("values", [])
+        obj = json.loads("".join(r[0] for r in rows if r))  # לשונית DATA = JSON רגיל (לא base64)
+        return obj.get("COSTS", {}) or {}
+    except Exception as e:
+        print("אזהרה: לא ניתן לקרוא COSTS מלשונית DATA —", e)
+        return {}
+
+
+def enrich_profit(D, costs):
+    """הצלבת רכישות הלקוח (top_prod) עם עלות לאריזה → רווח גולמי לכל לקוח ולכל מוצר.
+    מדויק על המוצרים המתומחרים; coverage = אחוז ההכנסות המכוסה. אם אין עלויות — דילוג."""
+    if not costs:
+        print("אזהרה: אין COSTS — דילוג על העשרת רווחיות."); return False
+    ikg = D.get("item_kg", {}) or {}
+    tot_money = tot_cost = 0.0
+    for c in D.get("customers", []):
+        pm = pc = pq = pk = 0.0; pr = 0
+        for tp in c.get("top_prod", []):
+            it = tp.get("item"); cost = costs.get(it); q = tp.get("qty", 0) or 0
+            if cost and cost > 0 and q > 0:
+                line_cost = cost * q; kg = q * (ikg.get(it, 0) or 0)
+                tp["cost"] = round(cost, 4)
+                tp["profit"] = round((tp.get("money", 0) or 0) - line_cost, 2)
+                if kg: tp["profit_kg"] = round(((tp.get("money", 0) or 0) - line_cost) / kg, 4)
+                pm += tp.get("money", 0) or 0; pc += line_cost; pq += q; pk += kg; pr += 1
+        prof = pm - pc; money = c.get("money") or 0
+        c["gp"] = dict(money_priced=round(pm, 2), cost=round(pc, 2), profit=round(prof, 2),
+                       margin=round(prof / pm * 100, 2) if pm else 0,
+                       per_box=round(prof / pq, 4) if pq else 0,
+                       per_kg=round(prof / pk, 4) if pk else 0,
+                       coverage=round(pm / money * 100, 1) if money else 0,
+                       priced_items=pr)
+        tot_money += pm; tot_cost += pc
+    D["gp_meta"] = dict(money_priced=round(tot_money, 2), cost=round(tot_cost, 2),
+                        profit=round(tot_money - tot_cost, 2),
+                        margin=round((tot_money - tot_cost) / tot_money * 100, 2) if tot_money else 0,
+                        priced_costs=len(costs))
+    print(f"העשרת רווחיות: {len(D.get('customers', []))} לקוחות | רווח גולמי כולל "
+          f"₪{tot_money - tot_cost:,.0f} (על מוצרי הטופ המתומחרים).")
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("data_file", help="dashboard_customers.html או קובץ .json")
     ap.add_argument("--key", default=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
                     help="נתיב למפתח חשבון השירות (JSON)")
+    ap.add_argument("--no-profit", action="store_true", help="לדלג על העשרת רווח גולמי")
     args = ap.parse_args()
     if not args.key:
         sys.exit("חסר מפתח חשבון שירות: --key או GOOGLE_APPLICATION_CREDENTIALS")
@@ -63,14 +109,19 @@ def main():
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
 
-    json_str = extract_json(args.data_file)
-    obj = json.loads(json_str)
-    b64 = base64.b64encode(json_str.encode("utf-8")).decode("ascii")
-    chunks = [b64[i:i + CHUNK] for i in range(0, len(b64), CHUNK)]
+    obj = json.loads(extract_json(args.data_file))
 
     creds = Credentials.from_service_account_file(
         args.key, scopes=["https://www.googleapis.com/auth/spreadsheets"])
     sh = build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
+
+    # העשרת רווח גולמי בהצלבה עם עלויות הייצור (לפי שם מוצר)
+    if not args.no_profit:
+        enrich_profit(obj, load_costs(sh))
+
+    json_str = json.dumps(obj, ensure_ascii=False, separators=(", ", ": "))
+    b64 = base64.b64encode(json_str.encode("utf-8")).decode("ascii")
+    chunks = [b64[i:i + CHUNK] for i in range(0, len(b64), CHUNK)]
 
     tabs = [s["properties"]["title"] for s in
             sh.get(spreadsheetId=SHEET_ID, fields="sheets.properties").execute()["sheets"]]
@@ -89,8 +140,9 @@ def main():
     ok = json.loads(back) == obj
     n_cust = len(obj.get("customers", []))
     money = obj.get("meta", {}).get("total_money")
-    print(f"נכתבו {len(chunks)} שורות ללשונית {TAB} | לקוחות: {n_cust} | "
-          f"מחזור: {money} | אימות זהות: {'תקין' if ok else 'נכשל'}")
+    gp = obj.get("gp_meta", {}).get("profit")
+    print(f"נכתבו {len(chunks)} שורות ללשונית {TAB} | לקוחות: {n_cust} | מחזור: {money} | "
+          f"רווח גולמי: {gp} | אימות זהות: {'תקין' if ok else 'נכשל'}")
     if not ok:
         sys.exit(1)
 
