@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+# מפתח חשבון שירות — לעולם לא לעלות למאגר
+service_account*.json
+*sa*.json
+.env
