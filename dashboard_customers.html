@@ -97,6 +97,7 @@ html.locked #gsLock{display:flex!important}
  <div class="tab" data-p="pc">השוואת מחירים</div>
  <div class="tab" data-p="ds">התפלגות לקוחות</div>
  <div class="tab" data-p="ck">הצלבה מול ייצור</div>
+ <div class="tab" data-p="pr">רווחיות</div>
 </div>
 <div class="main">
 
@@ -164,6 +165,16 @@ html.locked #gsLock{display:flex!important}
   <div class="card"><div class="card-t">מחזור הלקוחות מול סך הייצור לפי שבוע</div><div class="cw"><canvas id="ckCov"></canvas></div></div>
  </div>
 
+ <div class="page" id="pr">
+  <div class="note" id="prNote" style="display:none">אין עדיין נתוני רווחיות. יש לקלוט מחדש את נתוני הלקוחות — העלות מוצלבת אוטומטית בקליטה.</div>
+  <div class="kpi-row" id="prKpi"></div>
+  <div class="grid2">
+   <div class="card"><div class="card-t">טופ 15 לקוחות לפי רווח גולמי</div><div class="cw"><canvas id="prChart"></canvas></div></div>
+   <div class="card"><div class="card-t">רווח גולמי לפי קבוצה</div><div class="cw s"><canvas id="prGroup"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>רווחיות לפי לקוח</span><span style="font-size:11px;color:var(--muted);font-weight:400">רווח גולמי לאריזה ולק"ג · "כיסוי" = אחוז המכירות המתומחר</span></div><div id="prTab"></div></div>
+ </div>
+
 </div>
 
 <script>let D=null;
@@ -178,7 +189,7 @@ function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(docu
 function kpi(cls,label,num,sub,title){return `<div class="kpi ${cls}"${title?` title="${title}"`:''}><div class="kpi-l">${label}</div><div class="kpi-n">${num}</div><div class="kpi-s">${sub}</div></div>`;}
 function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
- if(p==='wk')renderWeek();if(p==='cu')renderCust();if(p==='pc')renderPrice();}
+ if(p==='wk')renderWeek();if(p==='cu')renderCust();if(p==='pc')renderPrice();if(p==='pr')renderProfit();}
 
 let TOT=0;
 let gAvgPrice=0;
@@ -237,7 +248,8 @@ function renderCust(){
   kpi('g','מחזור שבועי ממוצע',ILS(c.wk_mean),'± '+ILS(c.wk_sd)+' סטיית תקן (25 שבועות)')+
   kpi('y','מחזור בתקופה',ILS(c.money),(100*c.money/TOT).toFixed(1)+'% · '+NUM(c.qty)+' אריזות')+
   kpi('b','מחיר ממוצע לקופסה',P2(c.avg_box),'ולק"ג: '+kgTxt)+
-  kpi('p','שבועות פעילים',NUM(c.n_weeks),'מתוך 25 · '+c.n_prod+' מוצרים');
+  kpi('p','שבועות פעילים',NUM(c.n_weeks),'מתוך 25 · '+c.n_prod+' מוצרים')+
+  (c.gp?kpi('g','רווח גולמי בתקופה',ILS(c.gp.profit),'שוליים '+c.gp.margin.toFixed(0)+'% · ₪/ק"ג '+P2(c.gp.per_kg)+' · כיסוי '+c.gp.coverage.toFixed(0)+'%'):'');
  const wk=D.meta.weeks.map(String);
  mk('cuWeek',{type:'bar',data:{labels:wk.map(w=>'ש'+w),datasets:[
    {label:'מחזור שבועי',data:wk.map(w=>c.by_week[w]||0),backgroundColor:COL.gold,borderRadius:4},
@@ -247,15 +259,49 @@ function renderCust(){
  const fam=Object.entries(c.by_fam);
  mk('cuFam',{type:'doughnut',data:{labels:fam.map(f=>f[0]),datasets:[{data:fam.map(f=>f[1]),backgroundColor:PAL}]},options:{plugins:{legend:{position:'bottom'}}}});
  const mlbl=(mode==='avg')?'ממוצע שבועי':'בתקופה';
- let h=`<table><thead><tr><th>#</th><th>מוצר</th><th>מחזור ${mlbl}</th><th>אריזות ${mlbl}</th><th>מחיר לקופסה</th><th>מחיר לק"ג</th></tr></thead><tbody>`;
+ let h=`<table><thead><tr><th>#</th><th>מוצר</th><th>מחזור ${mlbl}</th><th>אריזות ${mlbl}</th><th>מחיר לקופסה</th><th>מחיר לק"ג</th><th>עלות/ארז</th><th>רווח/ארז</th><th>רווח/ק"ג</th></tr></thead><tbody>`;
  c.top_prod.forEach((x,i)=>{
    const pbox=x.qty?x.money/x.qty:0;
    const kg=itemKg(x.item);
    const pkg=(kg&&x.qty)?x.money/(x.qty*kg):null;
+   const cBox=(x.cost!=null)?P2(x.cost):'—';
+   const prBox=(x.profit!=null&&x.qty)?P2(x.profit/x.qty):'—';
+   const prKg=(x.profit_kg!=null)?P2(x.profit_kg):'—';
    h+=`<tr><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${x.item}</td>`+
       `<td class="num">${ILS(x.money/div)}</td><td class="num">${NUM(x.qty/div)}</td>`+
-      `<td class="num">${P2(pbox)}</td><td class="num">${pkg!=null?P2(pkg):'—'}</td></tr>`;});
+      `<td class="num">${P2(pbox)}</td><td class="num">${pkg!=null?P2(pkg):'—'}</td>`+
+      `<td class="num">${cBox}</td><td class="num">${prBox}</td><td class="num">${prKg}</td></tr>`;});
  document.getElementById('cuProd').innerHTML=h+'</tbody></table>';
+}
+
+// ---------- PROFITABILITY ----------
+function grpOf(n){return ((n.indexOf('חומוס')>=0||n.indexOf('טחינה')>=0)&&n.indexOf('גרגרי')<0&&n.indexOf('חציל')<0)?'חומוס/טחינה':'אחר';}
+function renderProfit(){
+ if(!D.gp_meta){document.getElementById('prNote').style.display='';['prKpi','prTab'].forEach(id=>document.getElementById(id).innerHTML='');return;}
+ document.getElementById('prNote').style.display='none';
+ const g=D.gp_meta;
+ document.getElementById('prKpi').innerHTML=
+  kpi('g','סך רווח גולמי',ILS(g.profit),'על '+ILS(g.money_priced)+' מכירות מתומחרות')+
+  kpi('y','שיעור רווח גולמי משוקלל',Number(g.margin).toFixed(1)+'%','')+
+  kpi('b','רווח גולמי / אריזה',P2(g.per_box),'ממוצע משוקלל')+
+  kpi('p','רווח גולמי / ק"ג',P2(g.per_kg),'ממוצע משוקלל');
+ const cs=D.customers.filter(c=>c.gp).slice().sort((a,b)=>b.gp.profit-a.gp.profit);
+ const t15=cs.slice(0,15);
+ mk('prChart',{type:'bar',data:{labels:t15.map(c=>c.name.length>18?c.name.slice(0,18)+'…':c.name),
+   datasets:[{label:'רווח גולמי',data:t15.map(c=>c.gp.profit),backgroundColor:COL.green,borderRadius:5}]},
+   options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+ const grp={};
+ D.customers.forEach(c=>(c.top_prod||[]).forEach(tp=>{if(tp.profit!=null){const k=grpOf(tp.item);grp[k]=(grp[k]||0)+tp.profit;}}));
+ const ge=Object.entries(grp);
+ mk('prGroup',{type:'doughnut',data:{labels:ge.map(e=>e[0]),datasets:[{data:ge.map(e=>e[1]),backgroundColor:PAL}]},options:{plugins:{legend:{position:'bottom'}}}});
+ let h='<table><thead><tr><th>#</th><th>לקוח</th><th>מכירות מתומחרות</th><th>עלות</th><th>רווח גולמי</th><th>שוליים</th><th>₪/אריזה</th><th>₪/ק"ג</th><th>כיסוי</th></tr></thead><tbody>';
+ cs.forEach((c,i)=>{const x=c.gp;
+   h+=`<tr><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${c.name}</td>`+
+      `<td class="num">${ILS(x.money_priced)}</td><td class="num">${ILS(x.cost)}</td>`+
+      `<td class="num">${ILS(x.profit)}</td><td class="num">${Number(x.margin).toFixed(1)}%</td>`+
+      `<td class="num">${P2(x.per_box)}</td><td class="num">${P2(x.per_kg)}</td>`+
+      `<td class="num">${Number(x.coverage).toFixed(0)}%</td></tr>`;});
+ document.getElementById('prTab').innerHTML=h+'</tbody></table>';
 }
 
 // ---------- PRICE COMPARISON ----------

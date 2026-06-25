@@ -68,7 +68,7 @@ def enrich_profit(D, costs):
     if not costs:
         print("אזהרה: אין COSTS — דילוג על העשרת רווחיות."); return False
     ikg = D.get("item_kg", {}) or {}
-    tot_money = tot_cost = 0.0
+    tot_money = tot_cost = tot_qty = tot_kg = 0.0
     for c in D.get("customers", []):
         pm = pc = pq = pk = 0.0; pr = 0
         for tp in c.get("top_prod", []):
@@ -86,10 +86,13 @@ def enrich_profit(D, costs):
                        per_kg=round(prof / pk, 4) if pk else 0,
                        coverage=round(pm / money * 100, 1) if money else 0,
                        priced_items=pr)
-        tot_money += pm; tot_cost += pc
+        tot_money += pm; tot_cost += pc; tot_qty += pq; tot_kg += pk
+    prof = tot_money - tot_cost
     D["gp_meta"] = dict(money_priced=round(tot_money, 2), cost=round(tot_cost, 2),
-                        profit=round(tot_money - tot_cost, 2),
-                        margin=round((tot_money - tot_cost) / tot_money * 100, 2) if tot_money else 0,
+                        profit=round(prof, 2),
+                        margin=round(prof / tot_money * 100, 2) if tot_money else 0,
+                        per_box=round(prof / tot_qty, 4) if tot_qty else 0,
+                        per_kg=round(prof / tot_kg, 4) if tot_kg else 0,
                         priced_costs=len(costs))
     print(f"העשרת רווחיות: {len(D.get('customers', []))} לקוחות | רווח גולמי כולל "
           f"₪{tot_money - tot_cost:,.0f} (על מוצרי הטופ המתומחרים).")
