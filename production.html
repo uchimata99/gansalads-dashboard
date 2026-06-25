@@ -597,7 +597,10 @@ window.addEventListener('load', ()=>{
   <div class="card">
     <div class="card-title">
       רווחיות לפי מוצר
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="ctrl-btn active" id="punit-pkg" onclick="setProfitUnit('pkg')">לאריזה</button>
+        <button class="ctrl-btn" id="punit-kg" onclick="setProfitUnit('kg')">לק"ג</button>
+        <span style="width:10px;display:inline-block"></span>
         <button class="ctrl-btn active" id="psort-total" onclick="setProfitSort('total')">רווח כולל</button>
         <button class="ctrl-btn" id="psort-margin" onclick="setProfitSort('margin')">שיעור רווח</button>
       </div>
@@ -1208,19 +1211,22 @@ function weekBarClick(evt,els){if(els&&els.length){const w=WEEKS[els[0].index];i
 <script>
 // ═══════════════════════════════ TAB 6: רווחיות ═══════════════════════════════
 // עלות לאריזה מ-COSTS (מהגיליון). מכירות מ-PROD_DETAIL לפי שם. הצלבה לפי מפתח כבר נעשתה בקליטה.
-let profitSort='total', _profit={items:[],noCost:[]};
+let profitSort='total', profitUnit='pkg', _profit={items:[],noCost:[]};
+function setProfitUnit(u){profitUnit=u;['pkg','kg'].forEach(x=>{const b=document.getElementById('punit-'+x);if(b)b.classList.toggle('active',x===u);});buildProfitTable();}
 const money2=n=>'₪'+(Math.round(n*100)/100).toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 function profitAgg(){
   const items=[], noCost=[];
   for(const name in COSTS){
     const cost=COSTS[name], d=PROD_DETAIL[name]; if(!d) continue;
-    let pkg=0, rv=0;
-    for(const w in d){ if(!selWeeks.has(+w)) continue; for(const di in d[w]){ pkg+=d[w][di][0]; rv+=d[w][di][2]; } }
+    let pkg=0, kg=0, rv=0;
+    for(const w in d){ if(!selWeeks.has(+w)) continue; for(const di in d[w]){ pkg+=d[w][di][0]; kg+=d[w][di][1]; rv+=d[w][di][2]; } }
     if(pkg<=0) continue;
-    if(cost<=0){ noCost.push({name,grp:grpOf(name),pkg,rev:rv}); continue; }
+    if(cost<=0){ noCost.push({name,grp:grpOf(name),pkg,kg,rev:rv}); continue; }
+    const totalCost=cost*pkg, totalProfit=rv-totalCost;
     const price=rv/pkg, profitPkg=price-cost, margin=price?profitPkg/price:0;
-    items.push({name,grp:grpOf(name),pkg,rev:rv,cost,price,profitPkg,margin,totalProfit:profitPkg*pkg,totalCost:cost*pkg});
+    const priceKg=kg?rv/kg:0, costKg=kg?totalCost/kg:0, profitKg=priceKg-costKg;
+    items.push({name,grp:grpOf(name),pkg,kg,rev:rv,cost,price,profitPkg,margin,totalProfit,totalCost,priceKg,costKg,profitKg});
   }
   return {items,noCost};
 }
@@ -1231,12 +1237,15 @@ function initProfit(){
 function buildProfitKpis(){
   const it=_profit.items;
   const tRev=it.reduce((a,x)=>a+x.rev,0), tCost=it.reduce((a,x)=>a+x.totalCost,0), tProf=tRev-tCost;
+  const tPkg=it.reduce((a,x)=>a+x.pkg,0), tKg=it.reduce((a,x)=>a+x.kg,0);
   const m=tRev?tProf/tRev*100:0;
   document.getElementById('profitKpis').innerHTML=
     kc('a fin','סך הכנסות',rev(tRev),it.length+' מוצרים מתומחרים')+
     kc('r fin','סך עלות ייצור',rev(tCost),'')+
     kc('g fin','סך רווח גולמי',rev(tProf),'')+
-    kc('n fin','שיעור רווח גולמי משוקלל',m.toFixed(1)+'%','על ההכנסות המתומחרות');
+    kc('n fin','שיעור רווח גולמי משוקלל',m.toFixed(1)+'%','על ההכנסות המתומחרות')+
+    kc('g fin','רווח גולמי / אריזה',tPkg?money2(tProf/tPkg):'—','ממוצע משוקלל')+
+    kc('g fin','רווח גולמי / ק"ג',tKg?money2(tProf/tKg):'—','ממוצע משוקלל');
 }
 function buildProfitGroupChart(){
   const g={'חומוס/טחינה':0,'אחר':0};
@@ -1260,13 +1269,15 @@ function buildProfitTrend(){
 function setProfitSort(s){profitSort=s;['total','margin'].forEach(x=>{const b=document.getElementById('psort-'+x);if(b)b.classList.toggle('active',x===s);});buildProfitTable();}
 function buildProfitTable(){
   const it=_profit.items.slice().sort((a,b)=>profitSort==='margin'?b.margin-a.margin:b.totalProfit-a.totalProfit);
-  let html='<thead><tr><th>מוצר</th><th>קבוצה</th><th>אריזות</th><th class="fin">מחיר ממוצע/ארז</th><th class="fin">עלות/ארז</th><th class="fin">רווח/ארז</th><th>רווח %</th><th class="fin">רווח כולל</th></tr></thead><tbody>';
+  const KG=profitUnit==='kg', U=KG?'ק"ג':'ארז', qLbl=KG?'ק"ג':'אריזות';
+  const qF=x=>KG?x.kg:x.pkg, prF=x=>KG?x.priceKg:x.price, coF=x=>KG?x.costKg:x.cost, pfF=x=>KG?x.profitKg:x.profitPkg;
+  let html=`<thead><tr><th>מוצר</th><th>קבוצה</th><th>${qLbl}</th><th class="fin">מחיר ממוצע/${U}</th><th class="fin">עלות/${U}</th><th class="fin">רווח/${U}</th><th>רווח %</th><th class="fin">רווח כולל</th></tr></thead><tbody>`;
   it.forEach(x=>{
     const gs=x.grp==='חומוס/טחינה'?'background:#dcfce7;color:#16a34a':'background:#dbeafe;color:#2563a8';
-    html+=`<tr><td title="${x.name}">${x.name.length>24?x.name.slice(0,24)+'…':x.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${gs}">${x.grp}</span></td><td>${fmtF(x.pkg)}</td><td class="fin">${money2(x.price)}</td><td class="fin">${money2(x.cost)}</td><td class="fin">${money2(x.profitPkg)}</td><td>${(x.margin*100).toFixed(1)}%</td><td class="fin">${rev(x.totalProfit)}</td></tr>`;
+    html+=`<tr><td title="${x.name}">${x.name.length>24?x.name.slice(0,24)+'…':x.name}</td><td><span style="font-size:10px;padding:2px 7px;border-radius:12px;${gs}">${x.grp}</span></td><td>${fmtF(qF(x))}</td><td class="fin">${money2(prF(x))}</td><td class="fin">${money2(coF(x))}</td><td class="fin">${money2(pfF(x))}</td><td>${(x.margin*100).toFixed(1)}%</td><td class="fin">${rev(x.totalProfit)}</td></tr>`;
   });
-  const tRev=it.reduce((a,x)=>a+x.rev,0),tCost=it.reduce((a,x)=>a+x.totalCost,0),tPkg=it.reduce((a,x)=>a+x.pkg,0),tProf=tRev-tCost;
-  html+=`<tr class="total"><td>סה"כ</td><td></td><td>${fmtF(tPkg)}</td><td class="fin">${tPkg?money2(tRev/tPkg):'—'}</td><td></td><td></td><td>${tRev?(tProf/tRev*100).toFixed(1):'0'}%</td><td class="fin">${rev(tProf)}</td></tr></tbody>`;
+  const tRev=it.reduce((a,x)=>a+x.rev,0),tCost=it.reduce((a,x)=>a+x.totalCost,0),tQty=it.reduce((a,x)=>a+qF(x),0),tProf=tRev-tCost;
+  html+=`<tr class="total"><td>סה"כ</td><td></td><td>${fmtF(tQty)}</td><td class="fin">${tQty?money2(tRev/tQty):'—'}</td><td></td><td></td><td>${tRev?(tProf/tRev*100).toFixed(1):'0'}%</td><td class="fin">${rev(tProf)}</td></tr></tbody>`;
   document.getElementById('profitTable').innerHTML=html;
 }
 function buildNoCost(){
