@@ -8,7 +8,8 @@
 <meta name="theme-color" content="#173f30">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D7%A0%D7%99%D7%94%D7%95%D7%9C%20%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%20%E2%80%94%20%D7%A1%D7%9C%D7%98%D7%99%20%D7%92%D7%9F%22%2C%22short_name%22%3A%22%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%22%2C%22display%22%3A%22standalone%22%2C%22theme_color%22%3A%22%23173f30%22%2C%22background_color%22%3A%22%23f4f0e8%22%7D">
 <title>ניהול רצפת ייצור | סלטי גן</title>
-<script>try{if(localStorage.getItem('gsAuth')!=='05e56c25e4e36671c7bb4ff853d37218b3304c8048db6a7c4447b5226b649edb')document.documentElement.classList.add('locked')}catch(e){document.documentElement.classList.add('locked')}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>document.documentElement.classList.add('locked')</script>
 <style>
 html.locked{overflow:hidden}
 html.locked body>*{display:none!important}
@@ -16,6 +17,10 @@ html.locked #gsLock{display:flex!important}
 #gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
 #gsLock .lock-logo{font-size:38px}
 #gsLock .lock-title{color:#a7d7c2;font-size:19px;font-weight:800}
+#gsLock .lock-sub{color:#cfe8db;font-size:13px;max-width:300px;text-align:center;line-height:1.7}
+#gsLock .gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#3c4043;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+#gsLock .gbtn:hover{background:#f1f5f9}
+#gsLock .gbtn svg{width:18px;height:18px}
 #gsLock input{border:2px solid #2e6b52;background:#0f2b21;color:#fff;border-radius:10px;padding:11px 16px;font-size:17px;width:230px;text-align:center;outline:none;letter-spacing:2px}
 #gsLock input:focus{border-color:#52b788}
 #gsLock button{background:#52b788;color:#fff;border:none;border-radius:10px;padding:11px 34px;font-size:15px;font-weight:700;cursor:pointer}
@@ -274,28 +279,46 @@ html.nofin .fin{display:none!important}
 <body>
 <div id="gsLock">
   <div class="lock-logo">🌿</div>
-  <div class="lock-title">סלטי גן — דשבורדים</div>
-  <input type="password" id="gsLockInput" placeholder="קוד כניסה" autocomplete="current-password" onkeydown="if(event.key==='Enter')gsUnlock()">
-  <button onclick="gsUnlock()">כניסה</button>
+  <div class="lock-title">סלטי גן — ניהול רצפת ייצור</div>
+  <div class="lock-sub" id="gsLockSub">גישה לאחר התחברות עם חשבון גוגל מורשה.</div>
+  <button class="gbtn" id="gsSignin" onclick="gsSignIn()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    התחבר עם Google
+  </button>
   <div class="lock-err" id="gsLockErr"></div>
 </div>
 <script>
-const GS_AUTH_HASH='05e56c25e4e36671c7bb4ff853d37218b3304c8048db6a7c4447b5226b649edb';
-async function gsUnlock(){
-  const code=document.getElementById('gsLockInput').value;
-  if(!code)return;
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gansalads:v1:'+code));
-  const hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(hex===GS_AUTH_HASH){
-    try{localStorage.setItem('gsAuth',hex);}catch(e){}
-    document.documentElement.classList.remove('locked');
-    document.getElementById('gsLock').style.display='none';
-  }else{
-    document.getElementById('gsLockErr').textContent='קוד שגוי — נסה שוב';
-    document.getElementById('gsLockInput').value='';
-  }
+// כניסת גוגל — גישה לדשבורד רצפת הייצור (מפתח סשן משותף עם שאר הדפים)
+const GANS_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const GANS_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
+const GANS_TOKEN_KEY='gsGoogleToken';
+let gansTokenClient=null, gansToken=null, gansStarted=false;
+function gsShowErr(m){const e=document.getElementById('gsLockErr');if(e)e.textContent=m||'';}
+function gsInitClient(){
+  if(gansTokenClient)return gansTokenClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
+  gansTokenClient=google.accounts.oauth2.initTokenClient({client_id:GANS_CLIENT_ID,scope:GANS_SCOPE,
+    callback:(resp)=>{if(resp&&resp.error){gsShowErr('ההתחברות נכשלה — נסה שוב');return;}
+      gansToken=resp.access_token;
+      try{sessionStorage.setItem(GANS_TOKEN_KEY,JSON.stringify({t:gansToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+      gsAfterToken();}});
+  return gansTokenClient;
 }
-if(document.documentElement.classList.contains('locked'))setTimeout(()=>document.getElementById('gsLockInput').focus(),100);
+function gsSignIn(){gsShowErr('');const c=gsInitClient();if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע');return;}c.requestAccessToken({prompt:gansToken?'':'consent'});}
+function gsAfterToken(){
+  document.documentElement.classList.remove('locked');
+  const l=document.getElementById('gsLock');if(l)l.style.display='none';
+  if(!gansStarted){gansStarted=true;startDashboard();}
+}
+function startDashboard(){
+  try{loadLiveData();setInterval(loadLiveData,2*60*1000);}catch(e){console.error(e);}
+  try{loadPackagingData();setInterval(loadPackagingData,5*60*1000);}catch(e){console.error(e);}
+}
+window.addEventListener('load',()=>{
+  let tok=null;try{tok=JSON.parse(sessionStorage.getItem(GANS_TOKEN_KEY)||'null');}catch(e){}
+  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){gansToken=tok.t;gsAfterToken();return;}
+  let tries=0;const iv=setInterval(()=>{if(gsInitClient()||++tries>40)clearInterval(iv);},150);
+});
 </script>
 <div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0 0 14px 0">
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
@@ -1509,9 +1532,7 @@ async function loadLiveData() {
   }
 }
 
-// רענון כל 2 דקות
-loadLiveData();
-setInterval(loadLiveData, 2 * 60 * 1000);
+// טעינה ורענון רצף הייצור מופעלים אחרי כניסת גוגל (ב-startDashboard)
 
 // ===== PACKAGING LIVE DATA =====
 const PKG_SHEET_ID = '16Eq8L6mH6Bcvj7aEE9h0yIy_uLbeB7eV9DWJhJq_6MU';
@@ -2190,9 +2211,7 @@ async function loadPackagingData() {
   }
 }
 
-// טעינה ורענון כל 5 דקות
-loadPackagingData();
-setInterval(loadPackagingData, 5 * 60 * 1000);
+// טעינה ורענון אריזות מופעלים אחרי כניסת גוגל (ב-startDashboard)
 
 // Init
 renderDay();
