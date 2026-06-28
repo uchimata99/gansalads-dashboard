@@ -58,6 +58,8 @@ select:focus,input:focus{border-color:var(--green)}
 #finToggle{margin-inline-start:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:3px 9px;font-size:16px;line-height:1.3;cursor:pointer;font-family:inherit}
 #finToggle:hover{background:rgba(255,255,255,.22)}
 html.nofin .fin{display:none!important}
+html.nofin .m{filter:blur(6px);display:inline-block;user-select:none}
+html.nofin #rkChart,html.nofin #cuWeek,html.nofin #cuFam,html.nofin #dsSeg,html.nofin #dsFam,html.nofin #pcChart,html.nofin #ckCov{filter:blur(9px)}
 html.locked #gsLock{display:flex!important}
 #gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
 #gsLock .lock-logo{font-size:38px}
@@ -183,9 +185,9 @@ html.locked #gsLock{display:flex!important}
 </div>
 
 <script>let D=null;
-const ILS=n=>'₪'+Math.round(n).toLocaleString('en-US');
+const ILS=n=>'<span class="m">₪'+Math.round(n).toLocaleString('en-US')+'</span>';
 const NUM=n=>Math.round(n).toLocaleString('en-US');
-const P2=n=>'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const P2=n=>'<span class="m">₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</span>';
 const COL={green:'#2d6a3f',gold:'#b8890e',blue:'#2a5a88',purple:'#6b3fa0',red:'#b03030'};
 const PAL=['#2d6a3f','#b8890e','#2a5a88','#6b3fa0','#b03030','#7a9c52','#c98a2b','#4a7ba6'];
 Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.color='#7a7460';
