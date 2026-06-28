@@ -93,6 +93,7 @@ html.locked #gsLock{display:flex!important}
 <div class="tabs">
  <div class="tab active" data-p="rk">דירוג לקוחות</div>
  <div class="tab" data-p="in">תובנות</div>
+ <div class="tab" data-p="rf">דגלים אדומים</div>
  <div class="tab" data-p="wk">ניתוח שבועי</div>
  <div class="tab" data-p="cu">פרופיל לקוח</div>
  <div class="tab" data-p="pc">השוואת מחירים</div>
@@ -110,6 +111,10 @@ html.locked #gsLock{display:flex!important}
 
  <div class="page" id="in">
   <div id="inWrap"></div>
+ </div>
+
+ <div class="page" id="rf">
+  <div id="rfWrap"></div>
  </div>
 
  <div class="page" id="wk">
@@ -443,6 +448,29 @@ function insights(){
  el.innerHTML=h;
 }
 
+// ---------- RED FLAGS (דגלים אדומים) ----------
+function redflags(){
+ const el=document.getElementById('rfWrap'); if(!el) return;
+ const F=D.red_flags;
+ if(!F){el.innerHTML='<div class="note">אין נתוני דגלים בקובץ הנתונים — הם יתווספו בעדכון הבא.</div>';return;}
+ if(!F.length){el.innerHTML='<div class="note">לא נמצאו מכירות חריגות — כל המכירות במחיר הרגיל ✓</div>';return;}
+ const totImpact=F.reduce((s,f)=>s+(f.impact||0),0);
+ const nZero=F.filter(f=>f.zero).length;
+ const up=F.filter(f=>f.dev>0).length, down=F.filter(f=>f.dev<0&&!f.zero).length;
+ let h=`<div class="note">מכירות שבהן המחיר חורג מהמחיר הרגיל של אותו לקוח לאותו מוצר (סטייה של 3% ומעלה), או מכירה במחיר אפס. אלה <b>סימנים לבדיקה</b> — טעות תמחור, הנחה מיוחדת, או עדכון מחירון באמצע התקופה.</div>`;
+ h+=`<div class="kpi-row">`+
+    kpi('y','מכירות חריגות',NUM(F.length),'סך השורות לבדיקה')+
+    kpi('g fin','השפעה כספית מצטברת',ILS(totImpact),'הפרש מול המחיר הרגיל')+
+    kpi('b','מעל / מתחת למחיר',NUM(up)+' / '+NUM(down),'כיוון הסטייה')+
+    kpi('p','מכירות במחיר 0',NUM(nZero),'דורש בדיקה דחופה')+
+    `</div>`;
+ h+=`<div class="card" style="margin-top:18px;border-right:4px solid var(--red)"><div class="card-t"><span>מכירות חריגות — ממוינות לפי השפעה כספית</span><span class="lbl">${F.length}</span></div>`+
+    `<div style="overflow-x:auto"><table><thead><tr><th>לקוח</th><th>מוצר</th><th>שב׳</th><th>אריזות</th><th class="fin">מחיר</th><th class="fin">רגיל</th><th>סטייה</th><th class="fin">השפעה</th></tr></thead><tbody>`+
+    F.map(f=>`<tr${f.zero?' style="background:var(--red-l)"':''}><td>${f.cust}</td><td>${f.item}</td><td class="num">${f.week}</td><td class="num">${NUM(f.pkg)}</td><td class="num fin">${f.zero?'<b style="color:var(--red)">0</b>':'₪'+f.price}</td><td class="num fin">₪${f.normal}</td><td class="num" style="color:${f.dev>0?'var(--red)':'var(--gold)'}">${f.dev>0?'+':''}${f.dev}%</td><td class="num fin">${ILS(f.impact)}</td></tr>`).join('')+
+    `</tbody></table></div></div>`;
+ el.innerHTML=h;
+}
+
 
 // ---------- WEEKLY ----------
 let wkSel=null, wkCustSel=null, curWC={}, _avgWC=null;
@@ -524,7 +552,7 @@ function startDashboard(){
   const rng='1–'+NW;
   setTxt('hdrRange','שבועות '+rng); setTxt('rkRange',rng); setTxt('rkNC',NUM(NC)+' לקוחות');
   setTxt('dsTW',NW); setTxt('dsTW2',NW); setTxt('ckW1',CW);
-  ranking();insights();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
+  ranking();insights();redflags();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 /* ====== התחברות גוגל + טעינת נתוני הלקוחות מגיליון מוגבל (קריאה בלבד) ======
