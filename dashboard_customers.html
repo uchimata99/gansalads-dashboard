@@ -89,9 +89,10 @@ html.locked #gsLock{display:flex!important}
   <a href="finance.html" class="fin" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
   <button id="finToggle" onclick="toggleFin()">🙂</button>
 </div>
-<div class="topbar"><div class="brand"><span class="brand-i">🥗</span><div><div class="brand-n">סלטי גן</div><div class="brand-s">דשבורד לקוחות</div></div></div><div class="range">שבועות 1–25</div></div>
+<div class="topbar"><div class="brand"><span class="brand-i">🥗</span><div><div class="brand-n">סלטי גן</div><div class="brand-s">דשבורד לקוחות</div></div></div><div class="range" id="hdrRange">שבועות 1–25</div></div>
 <div class="tabs">
  <div class="tab active" data-p="rk">דירוג לקוחות</div>
+ <div class="tab" data-p="in">תובנות</div>
  <div class="tab" data-p="wk">ניתוח שבועי</div>
  <div class="tab" data-p="cu">פרופיל לקוח</div>
  <div class="tab" data-p="pc">השוואת מחירים</div>
@@ -103,8 +104,12 @@ html.locked #gsLock{display:flex!important}
 
  <div class="page active" id="rk">
   <div class="kpi-row" id="rkKpi"></div>
-  <div class="card"><div class="card-t"><span>טופ 15 לקוחות לפי מחזור</span><span class="lbl">1–25</span></div><div class="cw l"><canvas id="rkChart"></canvas></div></div>
-  <div class="card" style="margin-top:18px"><div class="card-t"><span>דירוג מלא — לחיצה על כותרת ממיינת</span><span class="lbl">103 לקוחות</span></div><div class="scroll" id="rkTab"></div></div>
+  <div class="card"><div class="card-t"><span>טופ 15 לקוחות לפי מחזור</span><span class="lbl" id="rkRange">1–25</span></div><div class="cw l"><canvas id="rkChart"></canvas></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>דירוג מלא — לחיצה על כותרת ממיינת</span><span class="lbl" id="rkNC">103 לקוחות</span></div><div class="scroll" id="rkTab"></div></div>
+ </div>
+
+ <div class="page" id="in">
+  <div id="inWrap"></div>
  </div>
 
  <div class="page" id="wk">
@@ -153,14 +158,14 @@ html.locked #gsLock{display:flex!important}
    <div class="cw"><canvas id="dsPareto"></canvas></div></div>
   <div class="grid2" style="margin-top:18px">
    <div class="card"><div class="card-t">כמה שבועות כל לקוח קונה (התמדה)</div>
-    <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.6">כל עמודה: כמה לקוחות היו פעילים במספר שבועות מסוים מתוך 25. מעט שבועות = לקוח מזדמן; קרוב ל‑25 = לקוח קבוע.</div>
+    <div style="font-size:11.5px;color:var(--muted);margin:-4px 0 10px;line-height:1.6">כל עמודה: כמה לקוחות היו פעילים במספר שבועות מסוים מתוך <span id="dsTW">25</span>. מעט שבועות = לקוח מזדמן; קרוב ל‑<span id="dsTW2">25</span> = לקוח קבוע.</div>
     <div class="cw s"><canvas id="dsWeeks"></canvas></div></div>
    <div class="card"><div class="card-t">פילוח לקוחות לפי פלח</div><div id="dsSegTab"></div></div>
   </div>
  </div>
 
  <div class="page" id="ck">
-  <div class="note">בהצלבה מלאה מול קובץ הייצור על פני כל 25 השבועות, נתוני הלקוחות <b>תואמים ב‑100%</b> לסך הייצור בכל שבוע, ולא נמצאו חריגות. כל המכירות מוקצות ללקוחות.</div>
+  <div class="note">בהצלבה מלאה מול קובץ הייצור על פני כל <span id="ckW1">25</span> השבועות, נתוני הלקוחות <b>תואמים ב‑100%</b> לסך הייצור בכל שבוע, ולא נמצאו חריגות. כל המכירות מוקצות ללקוחות.</div>
   <div class="kpi-row" id="ckKpi"></div>
   <div class="card"><div class="card-t">מחזור הלקוחות מול סך הייצור לפי שבוע</div><div class="cw"><canvas id="ckCov"></canvas></div></div>
  </div>
@@ -187,19 +192,21 @@ Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.co
 const charts={};
 function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 function kpi(cls,label,num,sub,title){return `<div class="kpi ${cls}"${title?` title="${title}"`:''}><div class="kpi-l">${label}</div><div class="kpi-n">${num}</div><div class="kpi-s">${sub}</div></div>`;}
+function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
  if(p==='wk')renderWeek();if(p==='cu')renderCust();if(p==='pc')renderPrice();if(p==='pr')renderProfit();}
 
 let TOT=0;
 let gAvgPrice=0;
+let NW=25,NC=0,CW=25;
 
 // ---------- RANKING ----------
 let rkSort={key:'money',dir:-1};
 function ranking(){
  const top10=D.customers.slice(0,10).reduce((a,c)=>a+c.money,0);
  document.getElementById('rkKpi').innerHTML=
-  kpi('g','סך מחזור',ILS(TOT),NUM(D.meta.n_customers)+' לקוחות · שבועות 1–25')+
+  kpi('g','סך מחזור',ILS(TOT),NUM(D.meta.n_customers)+' לקוחות · שבועות 1–'+NW)+
   kpi('y','מחזור שבועי ממוצע',ILS(D.meta.wk_mean),'± '+ILS(D.meta.wk_sd)+' סטיית תקן (CV '+D.meta.wk_cv+'%)')+
   kpi('b','מחיר ממוצע ליחידה',P2(gAvgPrice),'פיזור ± '+P2(D.meta.price_sd)+' בין לקוחות')+
   kpi('p','ריכוז טופ 10',(100*top10/TOT).toFixed(0)+'%','מהמחזור');
@@ -245,10 +252,10 @@ function renderCust(){
  const dp=100*(c.avg_box-gAvgPrice)/gAvgPrice;
  const kgTxt=c.avg_kg?P2(c.avg_kg)+' לק"ג':'—';
  document.getElementById('cuKpi').innerHTML=
-  kpi('g','מחזור שבועי ממוצע',ILS(c.wk_mean),'± '+ILS(c.wk_sd)+' סטיית תקן (25 שבועות)')+
+  kpi('g','מחזור שבועי ממוצע',ILS(c.wk_mean),'± '+ILS(c.wk_sd)+' סטיית תקן ('+NW+' שבועות)')+
   kpi('y','מחזור בתקופה',ILS(c.money),(100*c.money/TOT).toFixed(1)+'% · '+NUM(c.qty)+' אריזות')+
   kpi('b','מחיר ממוצע לקופסה',P2(c.avg_box),'ולק"ג: '+kgTxt)+
-  kpi('p','שבועות פעילים',NUM(c.n_weeks),'מתוך 25 · '+c.n_prod+' מוצרים')+
+  kpi('p','שבועות פעילים',NUM(c.n_weeks),'מתוך '+NW+' · '+c.n_prod+' מוצרים')+
   (c.gp?kpi('g','רווח גולמי בתקופה',ILS(c.gp.profit),'שוליים '+c.gp.margin.toFixed(0)+'% · ₪/ק"ג '+P2(c.gp.per_kg)+' · כיסוי '+c.gp.coverage.toFixed(0)+'%'):'');
  const wk=D.meta.weeks.map(String);
  mk('cuWeek',{type:'bar',data:{labels:wk.map(w=>'ש'+w),datasets:[
@@ -391,13 +398,49 @@ function distribution(){
 function crosscheck(){
  const cov=D.coverage;const wk=Object.keys(cov);
  document.getElementById('ckKpi').innerHTML=
-  kpi('g','כיסוי מול הייצור',D.anom_totals.avg_cov+'%','כל 25 השבועות')+
+  kpi('g','כיסוי מול הייצור',D.anom_totals.avg_cov+'%','כל '+CW+' השבועות')+
   kpi('y','מחזור שבועי ממוצע',ILS(D.meta.wk_mean),'± '+ILS(D.meta.wk_sd)+' סטיית תקן')+
-  kpi('b','חריגות שנמצאו','0','הנתונים עקביים · 25/25 שבועות');
+  kpi('b','חריגות שנמצאו','0','הנתונים עקביים · '+CW+'/'+CW+' שבועות');
  mk('ckCov',{type:'bar',data:{labels:wk.map(w=>'ש'+w),datasets:[
    {label:'לקוחות',data:wk.map(w=>cov[w].cust),backgroundColor:COL.green,borderRadius:3},
    {label:'ייצור',data:wk.map(w=>cov[w].prod),backgroundColor:'rgba(184,137,14,.45)',borderRadius:3}]},
    options:{plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+}
+
+// ---------- INSIGHTS (תובנות) ----------
+function insights(){
+ const I=D.insights, el=document.getElementById('inWrap');
+ if(!el) return;
+ if(!I){el.innerHTML='<div class="note">אין נתוני תובנות בקובץ הנתונים — הם יתווספו בעדכון הבא.</div>';return;}
+ const tbl=(rows,headers,rowFn,empty)=> (rows&&rows.length)
+   ? `<div style="overflow-x:auto"><table><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(rowFn).join('')}</tbody></table></div>`
+   : `<div style="padding:14px 4px;color:var(--muted)">${empty}</div>`;
+ const sect=(title,rows,headers,rowFn,empty,border)=>
+   `<div class="card" style="margin-top:18px${border?';border-right:4px solid '+border:''}"><div class="card-t"><span>${title}</span>${rows&&rows.length?`<span class="lbl">${rows.length}</span>`:''}</div>${tbl(rows,headers,rowFn,empty)}</div>`;
+ let h=`<div class="note">תובנות לשבוע <b>${I.week}</b> בהשוואה לבסיס ממוצע של ששת השבועות הקודמים (שבועות ${I.base}). אלה <b>סימנים לבדיקה</b> — לעיתים מדובר רק בהסטה בתזמון ההזמנה.</div>`;
+ if(I.flags&&I.flags.length)
+   h+=`<div class="card" style="border-right:4px solid var(--red)"><div class="card-t"><span>⚠️ דגלים חוצי-לקוחות</span></div>`+
+      I.flags.map(f=>`<div style="padding:9px 4px;line-height:1.7">${f}</div>`).join('')+`</div>`;
+ h+=sect('🔴 לקוחות שנעלמו השבוע',I.gone,['לקוח','ממוצע אחרון','היה פעיל'],
+     g=>`<tr><td>${g.name}</td><td class="num">${ILS(g.avg)}/שב׳</td><td class="num">${g.recN}/6</td></tr>`,
+     'כל הלקוחות הרגילים הזמינו השבוע ✓',COL.red);
+ h+=sect('📉 צניחות חדות במחזור',I.drop,['לקוח','השבוע','ממוצע אחרון','שינוי'],
+     d=>`<tr><td>${d.name}</td><td class="num">${ILS(d.w26)}</td><td class="num">${ILS(d.avg)}</td><td class="num" style="color:var(--red)">−${d.pct}%</td></tr>`,
+     'אין צניחות חריגות',COL.gold);
+ if(I.surge&&I.surge.length)
+   h+=sect('📈 קפיצות חדות במחזור',I.surge,['לקוח','השבוע','ממוצע אחרון','שינוי'],
+     s=>`<tr><td>${s.name}</td><td class="num">${ILS(s.w26)}</td><td class="num">${ILS(s.avg)}</td><td class="num" style="color:var(--green)">+${s.pct}%</td></tr>`,
+     '',COL.green);
+ h+=sect('🟠 מוצרים שלקוח הפסיק לקחת',I.pdrop,['לקוח','מוצר','נהג לקחת','אובדן/שבוע'],
+     p=>`<tr><td>${p.name}</td><td>${p.item}</td><td class="num">${NUM(p.avgQ)} יח׳</td><td class="num">${ILS(p.avgM)}</td></tr>`,
+     'אין מוצרים שנזנחו',COL.gold);
+ h+=sect('🟢 מוצרים שלקוח הגדיל משמעותית',I.psurge,['לקוח','מוצר','השבוע','ממוצע','פי'],
+     p=>`<tr><td>${p.name}</td><td>${p.item}</td><td class="num">${ILS(p.m26)} (${NUM(p.q26)})</td><td class="num">${ILS(p.avgM)}</td><td class="num">×${p.ratio}</td></tr>`,
+     'אין גידולים חריגים',COL.green);
+ h+=sect('✨ מוצרים חדשים אצל לקוח',I.pnew,['לקוח','מוצר','השבוע'],
+     p=>`<tr><td>${p.name}</td><td>${p.item}</td><td class="num">${ILS(p.m26)} (${NUM(p.q26)} יח׳)</td></tr>`,
+     'אין מוצרים חדשים',COL.blue);
+ el.innerHTML=h;
 }
 
 
@@ -477,7 +520,11 @@ function renderWeekDet(){
 function startDashboard(){
   TOT=D.meta.total_money;
   gAvgPrice=D.meta.total_money/D.meta.total_qty;
-  ranking();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
+  NW=D.meta.weeks.length; NC=D.meta.n_customers; CW=Object.keys(D.coverage||{}).length||NW;
+  const rng='1–'+NW;
+  setTxt('hdrRange','שבועות '+rng); setTxt('rkRange',rng); setTxt('rkNC',NUM(NC)+' לקוחות');
+  setTxt('dsTW',NW); setTxt('dsTW2',NW); setTxt('ckW1',CW);
+  ranking();insights();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 /* ====== התחברות גוגל + טעינת נתוני הלקוחות מגיליון מוגבל (קריאה בלבד) ======
