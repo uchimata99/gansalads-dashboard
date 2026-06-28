@@ -533,6 +533,7 @@ function renderAccuracy(){
   const wape=a.wape!=null?num(a.wape):(at?Math.abs(ft-at)/at*100:0);
   const diff=at?((ft-at)/at*100):0;
   const wk=a.week?(' — '+a.week):'';
+  const hist=(a.history||[]).filter(h=>h&&h.wape!=null);
 
   let html='<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה'+wk+' <span class="card-badge g">חיזוי מול פועל</span></div>';
   html+='<div class="kpi-grid">'+
@@ -560,8 +561,25 @@ function renderAccuracy(){
         (under.length?'<div class="tags">'+under.map(n=>'<span class="tag dn">'+String(n)+'</span>').join('')+'</div>':'<div class="kpi-sub">אין</div>')+'</div>'+
       '</div>';
   }
+
+  // מגמת דיוק לאורך זמן — מאפשר לראות אם המודל משתפר
+  if(hist.length>=2){
+    html+='<div class="card-title" style="border:none;margin-top:6px">מגמת דיוק לאורך זמן '+
+      '<span class="card-badge g">WAPE שבועי — נמוך יותר = מדויק יותר</span></div>'+
+      '<div class="cw t"><canvas id="accHist"></canvas></div>';
+  }
   html+='</div>';
   host.innerHTML=html;
+
+  if(hist.length>=2){
+    makeChart('accHist',{type:'line',data:{labels:hist.map(h=>'שבוע '+h.week),
+      datasets:[
+        {label:'שגיאה ק"ג',data:hist.map(h=>num(h.wape)),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#d97706',borderWidth:2.5},
+        {label:'שגיאה אריזות',data:hist.map(h=>num(h.wape_pkg)),borderColor:'#2563a8',borderDash:[5,3],fill:false,tension:.3,pointRadius:3,borderWidth:1.8}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+fmt1(c.raw)+'%'}}},
+        scales:{x:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v+'%'}}}}});
+  }
 
   if(prods.length){
     makeChart('accChart',{type:'bar',data:{labels:prods.map(p=>p.name.length>16?p.name.slice(0,16)+'…':p.name),
