@@ -4,3 +4,7 @@ __pycache__/
 service_account*.json
 *sa*.json
 .env
+# קבצי גלם של מחשבשבת — לקוחות/ייצור, לא לעלות למאגר (נתונים רגישים)
+C_*.xlsx
+I_*.xlsx
+customers_D.json
