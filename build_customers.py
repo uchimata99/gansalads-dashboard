@@ -25,6 +25,7 @@ insights, red_flags[], gp_meta(=null עד שיהיו עלויות).
 import argparse
 import csv
 import json
+import re
 from collections import defaultdict
 from statistics import mean, median, pstdev
 
@@ -72,13 +73,30 @@ def load_rows(path):
     return rows
 
 
+def parse_weight(name):
+    """משקל אריזה (ק\"ג) נגזר משם הפריט — זהה לכלל המנוע. None אם לא ניתן לגזור."""
+    s = (name or "").strip()
+    m = re.search(r'(\d+(?:\.\d+)?)\s*(גרם|גר|ליטר|ק"?ג|קג|ק"כ|ל)', s)
+    if m:
+        n = float(m.group(1)); u = m.group(2)
+        return n / 1000 if u in ("גרם", "גר") else n
+    m2 = re.search(r"(\d+(?:\.\d+)?)\s*$", s)        # מספר בודד בסוף (למשל 'משוויאה 250')
+    if m2:
+        n = float(m2.group(1))
+        return n / 1000 if n >= 50 else n
+    return None
+
+
 def dirs(row):
-    """ערכים מכווננים: מכירה חיובית, זיכוי שלילי — עקבי לאריזות/ק\"ג/כסף."""
+    """אריזות וכסף מכווננים: מכירה חיובית, זיכוי שלילי.
+    הערה חשובה: עמודת המשקל בקובץ הגלם **אינה אמינה** — בזיכוי המשקל מופיע בפלוס
+    (לא במינוס), כך שסכימה עיוורת מנפחת (אפשר אפס אריזות אך משקל חיובי). לכן הק\"ג
+    מחושב תמיד = אריזות נטו × משקל אריזה (parse_weight), לעולם לא מהעמודה הגולמית."""
     if row["bal"] < 0:        # מכירה
-        return -row["bal"], abs(row["kg"]), abs(row["money"])
+        return -row["bal"], abs(row["money"])
     if row["bal"] > 0:        # זיכוי
-        return -row["bal"], -abs(row["kg"]), -abs(row["money"])
-    return 0.0, 0.0, row["money"]
+        return -row["bal"], -abs(row["money"])
+    return 0.0, row["money"]
 
 
 def normal_prices(rows):
@@ -111,8 +129,9 @@ def build_D(rows, prod_rev=None):
     buyer = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))          # item->acc->[money,qty] (מכירות)
 
     for r in rows:
-        pk, kg, mon = dirs(r)
+        pk, mon = dirs(r)
         a, it, fam, w = r["acc"], r["name"], r["fam"], r["week"]
+        kg = pk * (parse_weight(it) or 0.0)   # ק"ג = אריזות נטו × משקל אריזה (לא מהעמודה הגולמית)
         c = cust[a]
         c["money"] += mon; c["qty"] += pk; c["kg"] += kg
         c["weeks"].add(w); c["by_week"][w] += mon; c["by_fam"][fam] += mon
@@ -127,9 +146,10 @@ def build_D(rows, prod_rev=None):
     items_sorted = sorted(item_tot, key=lambda it: -item_tot[it]["money"])
     item_idx = {it: i for i, it in enumerate(items_sorted)}
     item_kg = {}
-    for it, t in item_tot.items():
-        if t["qty"] > 0 and t["kg"] > 0:
-            item_kg[it] = round(t["kg"] / t["qty"], 3)
+    for it in item_tot:
+        w = parse_weight(it)
+        if w:
+            item_kg[it] = round(w, 3)   # משקל אריזה ישיר מהשם — אמין, לא מהעמודה הגולמית
 
     # ── רשימת לקוחות (מדורגת לפי כסף יורד) ──
     accs = sorted(cust, key=lambda a: -cust[a]["money"])
@@ -266,7 +286,7 @@ def build_insights(rows, weeks, cust, cust_item):
     cw = defaultdict(lambda: defaultdict(float))
     cwiq = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))  # (acc,item)->week->[money,qty]
     for r in rows:
-        _, _, mon = dirs(r)
+        _, mon = dirs(r)
         pk = -r["bal"] if r["bal"] < 0 else 0.0
         cw[r["acc"]][r["week"]] += mon
         cwiq[(r["acc"], r["name"])][r["week"]][0] += mon
