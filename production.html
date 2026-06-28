@@ -267,24 +267,29 @@ window.addEventListener('load', ()=>{
 
 <nav class="tabs">
   <button class="tab active"  onclick="showPage('summary',this)">📊 סיכום</button>
+  <button class="tab"         onclick="showPage('products',this)">🏆 מוצרים</button>
+  <button class="tab fin"     onclick="showPage('profit',this)">💰 רווחיות</button>
   <button class="tab"         onclick="showPage('pkg_analysis',this)">📦 ניתוח לפי אריזות</button>
   <button class="tab"         onclick="showPage('kg_analysis',this)">⚖️ ניתוח לפי ק"ג</button>
-  <button class="tab"         onclick="showPage('products',this)">🏆 מוצרים</button>
   <button class="tab"         onclick="showPage('packaging',this)">🗂️ סוגי אריזה</button>
-  <button class="tab fin"     onclick="showPage('profit',this)">💰 רווחיות</button>
 </nav>
 
 <div id="weekFilter" dir="rtl">
   <div class="wf-row">
     <span class="wf-ttl">בורר שבועות</span>
-    <button class="wf-btn" onclick="selectAllWeeks()">הכל</button>
-    <button class="wf-btn" onclick="clearWeeks()">נקה</button>
-    <button class="wf-btn" onclick="onlyFullWeeks()">רק שבועות מלאים</button>
     <input id="weekRange" class="wf-input" placeholder="טווח: 1-5, 8, 10-12" onchange="applyWeekRange(this.value)" onkeydown="if(event.key==='Enter'){applyWeekRange(this.value);this.blur();}">
+    <button class="wf-btn" id="weekToggle" onclick="toggleWeekPanel()">📅 בחר שבועות ▾</button>
     <span class="wf-seg"><button id="avg-week" class="active" onclick="setAvgMode('week')">ממוצע שבועי</button><button id="avg-day" onclick="setAvgMode('day')">לפי יום-עבודה</button></span>
     <span id="weekCount"></span>
   </div>
-  <div id="weekChips"></div>
+  <div id="weekPanel" style="display:none;margin-top:8px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="wf-btn" onclick="selectAllWeeks()">הכל</button>
+      <button class="wf-btn" onclick="clearWeeks()">נקה</button>
+      <button class="wf-btn" onclick="onlyFullWeeks()">רק שבועות מלאים</button>
+    </div>
+    <div id="weekChips"></div>
+  </div>
 </div>
 
 <div class="main">
@@ -1094,8 +1099,14 @@ function recompute(){
 }
 
 function agg(){const s={pkg:0,kg:0,rev:0,htp:0,otp:0,htk:0,otk:0,htr:0,otr:0,days:0};
-  WEEKS.forEach(w=>{s.pkg+=w.pkg;s.kg+=w.kg;s.rev+=w.rev;s.htp+=w.ht_pkg;s.otp+=w.ot_pkg;s.htk+=w.ht_kg;s.otk+=w.ot_kg;s.htr+=w.ht_rev;s.otr+=w.ot_rev;s.days+=w.days;});
-  s.n=WEEKS.length;s.den=avgMode==='day'?(s.days||1):(s.n||1);s.avgLbl=avgMode==='day'?'ממוצע/יום':'ממוצע שבועי';return s;}
+  // ממוצע: במצב 'יום' כל השבועות נספרים (לפי יום-עבודה); במצב 'שבוע' רק שבועות מלאים —
+  // שבוע חלקי (כמו שבוע 1, "תחילת רישום") נכנס לממוצע היומי אך לא משפיע על הממוצע השבועי.
+  const an={pkg:0,kg:0,rev:0,htp:0,otp:0,htk:0,otk:0,htr:0,otr:0};let awn=0;
+  WEEKS.forEach(w=>{s.pkg+=w.pkg;s.kg+=w.kg;s.rev+=w.rev;s.htp+=w.ht_pkg;s.otp+=w.ot_pkg;s.htk+=w.ht_kg;s.otk+=w.ot_kg;s.htr+=w.ht_rev;s.otr+=w.ot_rev;s.days+=w.days;
+    const partial=w.hol&&String(w.hol).indexOf('חלקי')>=0;
+    if(avgMode==='day'||!partial){an.pkg+=w.pkg;an.kg+=w.kg;an.rev+=w.rev;an.htp+=w.ht_pkg;an.otp+=w.ot_pkg;an.htk+=w.ht_kg;an.otk+=w.ot_kg;an.htr+=w.ht_rev;an.otr+=w.ot_rev;awn++;}});
+  s.n=WEEKS.length;s.den=avgMode==='day'?(s.days||1):(awn||1);
+  s.avgLbl=avgMode==='day'?'ממוצע/יום':'ממוצע שבועי';s.avg=k=>an[k]/s.den;return s;}
 function maxBy(f){return WEEKS.reduce((b,w)=>!b||w[f]>b[f]?w:b,null);}
 function minBy(f){return WEEKS.reduce((b,w)=>!b||w[f]<b[f]?w:b,null);}
 function kc(cls,lbl,val,sub){return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+(sub||'')+'</div></div>';}
@@ -1108,19 +1119,19 @@ function renderAllKPIs(){
     '<div class="hkpi"><div class="hkpi-lbl">סה"כ אריזות</div><div class="hkpi-val">'+fmt(s.pkg)+'</div></div>'+
     '<div class="hkpi"><div class="hkpi-lbl">סה"כ ק"ג</div><div class="hkpi-val">'+fmt(s.kg)+'</div></div>'+
     '<div class="hkpi fin"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">'+rev(s.rev)+'</div></div>'+
-    '<div class="hkpi fin"><div class="hkpi-lbl">'+s.avgLbl+' (₪)</div><div class="hkpi-val">'+rev(s.rev/s.den)+'</div></div>');
+    '<div class="hkpi fin"><div class="hkpi-lbl">'+s.avgLbl+' (₪)</div><div class="hkpi-val">'+rev(s.avg('rev'))+'</div></div>');
   setT('hdrSub',weekRangeText());
   setH('sumKpis',
-    kc('g','אריזות — '+s.avgLbl,fmtF(s.pkg/s.den),'סה"כ '+fmtF(s.pkg))+
-    kc('t','ק"ג — '+s.avgLbl,fmtF(s.kg/s.den),'סה"כ '+fmtF(s.kg))+
-    kc('a fin','הכנסות — '+s.avgLbl,rev(s.rev/s.den),'סה"כ '+rev(s.rev))+
+    kc('g','אריזות — '+s.avgLbl,fmtF(s.avg('pkg')),'סה"כ '+fmtF(s.pkg))+
+    kc('t','ק"ג — '+s.avgLbl,fmtF(s.avg('kg')),'סה"כ '+fmtF(s.kg))+
+    kc('a fin','הכנסות — '+s.avgLbl,rev(s.avg('rev')),'סה"כ '+rev(s.rev))+
     kc('n fin','₪ לק"ג ממוצע',s.kg?'₪'+(s.rev/s.kg).toFixed(2):'—','כולל כל המוצרים')+
-    kc('','חומוס/טחינה — '+s.avgLbl,fmtF(s.htp/s.den),'סה"כ '+fmtF(s.htp)+' | '+pct(s.htp,s.pkg))+
-    kc('','אחרים — '+s.avgLbl,fmtF(s.otp/s.den),'סה"כ '+fmtF(s.otp)+' | '+pct(s.otp,s.pkg)));
+    kc('','חומוס/טחינה — '+s.avgLbl,fmtF(s.avg('htp')),'סה"כ '+fmtF(s.htp)+' | '+pct(s.htp,s.pkg))+
+    kc('','אחרים — '+s.avgLbl,fmtF(s.avg('otp')),'סה"כ '+fmtF(s.otp)+' | '+pct(s.otp,s.pkg)));
   const pkPeak=maxBy('pkg'),pkLow=minBy('pkg');
   setH('pkgW-kpis',
     kc('g','סה"כ אריזות',fmtF(s.pkg),s.n+' שבועות')+
-    kc('g',s.avgLbl,fmtF(s.pkg/s.den),'אריזות')+
+    kc('g',s.avgLbl,fmtF(s.avg('pkg')),'אריזות')+
     kc('a','שיא — שבוע '+(pkPeak?pkPeak.w:'-'),pkPeak?fmtF(pkPeak.pkg):'-',pkPeak&&pkPeak.hol!=='—'?pkPeak.hol:'')+
     kc('r','שפל — שבוע '+(pkLow?pkLow.w:'-'),pkLow?fmtF(pkLow.pkg):'-',pkLow&&pkLow.hol!=='—'?pkLow.hol:'')+
     kc('','חומוס/טחינה',fmtF(s.htp),pct(s.htp,s.pkg)+' מהאריזות')+
@@ -1128,7 +1139,7 @@ function renderAllKPIs(){
   const kgPeak=maxBy('kg'),kgLow=minBy('kg');
   setH('kgwKpis',
     kc('t','סה"כ ק"ג',fmtF(s.kg),s.n+' שבועות')+
-    kc('t',s.avgLbl,fmtF(s.kg/s.den),'ק"ג')+
+    kc('t',s.avgLbl,fmtF(s.avg('kg')),'ק"ג')+
     kc('a','שיא — שבוע '+(kgPeak?kgPeak.w:'-'),kgPeak?fmtF(kgPeak.kg):'-','ק"ג')+
     kc('r','שפל — שבוע '+(kgLow?kgLow.w:'-'),kgLow?fmtF(kgLow.kg):'-','ק"ג')+
     kc('','ממוצע ק"ג/ארז',s.pkg?(s.kg/s.pkg).toFixed(2):'—','כלל המוצרים')+
@@ -1161,10 +1172,13 @@ function fillWeekSelect(id){const sel=document.getElementById(id);if(!sel)return
 // ── פס הבורר ──
 function buildFilterBar(){renderChips();
   ['week','day'].forEach(m=>{const b=document.getElementById('avg-'+m);if(b)b.classList.toggle('active',m===avgMode);});}
+function toggleWeekPanel(){const p=document.getElementById('weekPanel'),b=document.getElementById('weekToggle');if(!p)return;
+  const open=p.style.display==='none';p.style.display=open?'block':'none';if(b)b.classList.toggle('active',open);}
 function renderChips(){const c=document.getElementById('weekChips');if(!c)return;
   c.innerHTML=ALLWEEKS.map(w=>{const on=selWeeks.has(w.w);const hol=w.hol&&w.hol!=='—';
     return '<button class="wchip'+(on?'':' off')+(hol?' hol':'')+'" title="'+(hol?w.hol:('שבוע '+w.w))+'" onclick="toggleWeek('+w.w+')">ש'+w.w+(on?'':' ✕')+'</button>';}).join('');
   const cnt=document.getElementById('weekCount');if(cnt)cnt.textContent='נבחרו '+selWeeks.size+' / '+ALLWEEKS.length;
+  const tb=document.getElementById('weekToggle');if(tb)tb.textContent='📅 '+selWeeks.size+' שבועות ▾';
   const inp=document.getElementById('weekRange');if(inp&&document.activeElement!==inp)inp.value=rangesToString();}
 function parseWeekRange(str){const set=new Set();if(!str)return set;
   str.split(',').forEach(tok=>{tok=tok.trim();if(!tok)return;const m=tok.match(/^(\d+)\s*-\s*(\d+)$/);
