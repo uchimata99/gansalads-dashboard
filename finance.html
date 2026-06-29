@@ -454,16 +454,19 @@ window.addEventListener('load', ()=>{
   <style>
   #gsNav{position:relative}
   #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer}
+  #gsNotesBtn{background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:15px;line-height:1;padding:3px 10px;cursor:pointer;position:relative}
+  #gsNotesBtn[data-ln-count]:not([data-ln-count=""])::after{content:attr(data-ln-count);position:absolute;top:-6px;inset-inline-end:-6px;background:#ff7a8a;color:#fff;font:600 10px sans-serif;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   @media(max-width:680px){
     #gsNav{flex-wrap:nowrap;gap:8px}
     #gsNav>span{flex:1;text-align:center}
-    #gsNavToggle{display:inline-block;order:-1}
+    #gsNavToggle{display:inline-block;order:-1}#gsNotesBtn{order:-1}
     #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline-start:8px;width:max-content;min-width:150px;max-width:72vw;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
     #gsNav.gsopen #gsNavLinks{display:flex!important}
     #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
   }
   </style>
   <button id="gsNavToggle" type="button" aria-label="תפריט ניווט" onclick="this.closest('#gsNav').classList.toggle('gsopen')">☰</button>
+  <button id="gsNotesBtn" data-ln-trigger type="button" aria-label="הערות" title="הערות">📝</button>
   <div id="gsNavLinks" style="display:contents">
   <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
   <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
@@ -2577,5 +2580,7 @@ function updateFinBtn(){
 }
 updateFinBtn();
 </script>
+<script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
+<script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
 </body>
 </html>
