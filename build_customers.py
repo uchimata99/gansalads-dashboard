@@ -158,7 +158,7 @@ def build_D(rows, prod_rev=None):
     for a in accs:
         c = cust[a]
         nw = len(c["weeks"])
-        wk_vals = [c["by_week"][w] for w in sorted(c["weeks"])]
+        wk_vals = [c["by_week"][w] for w in sorted(c["weeks"]) if w != 1]  # שבוע 1 חלקי — מחוץ לממוצע
         # מוצרים מובילים ללקוח
         mine = [(it, cust_item[(a, it)]) for (aa, it) in cust_item if aa == a]
         mine.sort(key=lambda kv: -kv[1]["money"])
@@ -243,8 +243,8 @@ def build_D(rows, prod_rev=None):
     distribution = dict(cust_mean=round(mean(monies), 2) if monies else 0.0,
                         cust_sd=sd(monies), segments=segments, pareto=pareto, weeks=dist_weeks)
 
-    # ── meta ──
-    wk_totals = [sum(c["by_week"].get(w, 0.0) for c in cust.values()) for w in weeks]
+    # ── meta ── (שבוע 1 חלקי — מחוץ לממוצע השבועי)
+    wk_totals = [sum(c["by_week"].get(w, 0.0) for c in cust.values()) for w in weeks if w != 1]
     wk_mean = round(mean(wk_totals), 2) if wk_totals else 0.0
     wk_sd = sd(wk_totals)
     box_prices = [c["avg_box"] for c in customers if c["avg_box"]]
