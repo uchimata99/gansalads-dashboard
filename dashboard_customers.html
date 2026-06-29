@@ -737,6 +737,28 @@ document.addEventListener('DOMContentLoaded',updateFinBtn);
 </script>
 <div id="ciModal" onclick="if(event.target===this)closeCustInsight()"><div class="ci-card"><button class="ci-x" onclick="closeCustInsight()">✕</button><div class="ci-body"></div></div></div>
 <!-- מודול הערות חי (drop-in) — רדום כברירת מחדל; הפעלה במכשירך עם ?notes=1 בכתובת -->
+<style>
+/* קיפול הטאבים הפנימיים לרשימת בחירה (המבורגר) בסלולר */
+.tabsToggle{display:none}
+@media(max-width:680px){
+  .tabs{flex-wrap:wrap;overflow:visible}
+  .tabsToggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;box-sizing:border-box;padding:11px 16px;font:inherit;font-weight:700;cursor:pointer;background:transparent;color:inherit;border:none;border-bottom:2px solid rgba(128,128,128,.25)}
+  .tabsToggle .tabsCaret{font-size:17px;opacity:.9}
+  .tabs>.tab{display:none!important}
+  .tabs.open>.tab{display:block!important;width:100%;box-sizing:border-box;text-align:center}
+}
+</style>
+<script>
+(function(){
+  var strip=document.querySelector('.tabs'); if(!strip||strip.querySelector('.tabsToggle'))return;
+  var tg=document.createElement('button'); tg.type='button'; tg.className='tabsToggle';
+  function label(){ var a=strip.querySelector('.tab.active'); tg.innerHTML='<span class="tabsLbl">'+(((a&&a.textContent)||'תפריט').trim())+'</span><span class="tabsCaret">☰</span>'; }
+  tg.addEventListener('click',function(e){ e.stopPropagation(); strip.classList.toggle('open'); });
+  strip.addEventListener('click',function(e){ var t=e.target.closest('.tab'); if(!t)return; strip.classList.remove('open'); setTimeout(label,0); });
+  strip.insertBefore(tg,strip.firstChild);
+  label();
+})();
+</script>
 <script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
 <script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
 </body></html>
