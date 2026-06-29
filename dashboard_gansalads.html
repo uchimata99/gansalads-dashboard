@@ -326,11 +326,12 @@ window.addEventListener('load',()=>{
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
   <style>
   #gsNav{position:relative}
-  #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer;margin-inline-start:auto}
+  #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer}
   @media(max-width:680px){
     #gsNav{flex-wrap:nowrap;gap:8px}
-    #gsNavToggle{display:inline-block}
-    #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline:0;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:0 0 12px 12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+    #gsNav>span{flex:1;text-align:center}
+    #gsNavToggle{display:inline-block;order:-1}
+    #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline-start:8px;width:max-content;min-width:150px;max-width:72vw;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
     #gsNav.gsopen #gsNavLinks{display:flex!important}
     #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
   }
