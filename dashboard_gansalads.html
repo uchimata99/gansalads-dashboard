@@ -1520,19 +1520,27 @@ async function loadLiveData() {
 
     // שומר את היום שנצפה כדי לא לקפוץ בזמן רענון אוטומטי
     const prevDate = DAYS[currentDayIdx] ? DAYS[currentDayIdx].date : null;
-    if (newDays.length > 0) {
-      DAYS.length = 0;
-      newDays.forEach(d => DAYS.push(d));
+    const dayNamesAll = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    DAYS.length = 0;
+    newDays.forEach(d => DAYS.push(d));
+    // נבחר תאריך שאין בו ייצור — להזריק יום ריק כדי שיוצג "אין ייצור ביום זה"
+    if (gotoDateProc && !DAYS.some(d => d.date === gotoDateProc)) {
+      const dt = dateFromDMY(gotoDateProc);
+      if (dt) {
+        DAYS.push({ name: 'יום ' + dayNamesAll[dt.getDay()], date: gotoDateProc, isToday: false, done: [], pending: [] });
+        DAYS.sort((a, b) => dateFromDMY(a.date) - dateFromDMY(b.date));
+      }
+    }
+    if (DAYS.length === 0) {
+      currentDayIdx = 0;
+      gotoDateProc = null;
+    } else {
       let idx = -1;
       if (gotoDateProc) { idx = DAYS.findIndex(d => d.date === gotoDateProc); gotoDateProc = null; }
       if (idx < 0 && prevDate) idx = DAYS.findIndex(d => d.date === prevDate);
       if (idx < 0) idx = isCur ? DAYS.findIndex(d => d.isToday) : DAYS.length - 1;
       if (idx < 0) idx = DAYS.length - 1;
       currentDayIdx = idx;
-    } else {
-      DAYS.length = 0;
-      currentDayIdx = 0;
-      gotoDateProc = null;
     }
     renderDay();
 
