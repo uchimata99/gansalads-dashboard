@@ -225,6 +225,8 @@ html.nofin .fin{display:none!important}
   .week-nav .wk-range{font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;margin-right:6px;}
   .week-nav .wk-spacer{flex:1;}
   .week-nav .wk-btn{font-size:11px;font-weight:700;padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s;}
+  .week-nav .wk-date{font-size:11px;font-weight:700;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:inherit;}
+  .week-nav .wk-datelbl{font-size:11px;font-weight:700;color:var(--text-muted);}
   .week-nav .wk-btn:hover{background:var(--green-light);color:var(--green);border-color:var(--green);}
   .week-nav .wk-btn.on{background:var(--green);color:#fff;border-color:var(--green);}
   .week-nav .wk-today{background:var(--yellow-light);color:var(--yellow);border-color:rgba(184,137,14,0.4);}
@@ -367,6 +369,8 @@ window.addEventListener('load',()=>{
     </div>
     <button class="wk-arrow" onclick="shiftWeek('proc',1)" title="שבוע הבא">&#x25BA;</button>
     <button class="wk-btn wk-today" id="wktoday-proc" onclick="goToCurrentWeek('proc')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-proc" onchange="goToDate('proc',this.value)" title="בחר תאריך לקפיצה ליום">
     <div class="wk-spacer"></div>
     <button class="wk-btn" id="wkcmpbtn-proc" onclick="toggleCompare('proc')">⇄ השוואה</button>
   </div>
@@ -696,6 +700,7 @@ window.addEventListener('load',()=>{
 const DAYS = [];
 
 let currentDayIdx = 0;
+let gotoDateProc = null;   // יעד קפיצה לתאריך (בורר התאריך), בפורמט D/M/YYYY כמו DAYS[].date
 
 // ===== מצב שבוע נפרד לכל לשונית (0 = השבוע הנוכחי, מספר שלילי = אחורה) =====
 let weekOffsetProcessing = 0, weekOffsetPackaging = 0, weekOffsetHummus = 0;
@@ -734,6 +739,21 @@ function shiftWeek(t,dir){
   wkReload(t);
 }
 function goToCurrentWeek(t){ wkSetOff(t,0); wkSetCmp(t,-1); wkReload(t); }
+// קפיצה לתאריך מדויק (בורר התאריך). מחשב את שבוע התאריך, ובעיבוד ירקות בוחר את היום עצמו.
+function goToDate(t, value){
+  if(!value) return;
+  const p = String(value).split('-');     // YYYY-MM-DD מ-input type=date
+  if(p.length!==3) return;
+  const y=+p[0], mo=+p[1], d=+p[2];
+  const target = new Date(y, mo-1, d); target.setHours(0,0,0,0);
+  const curSun = getWeekRange(0).wkStart;
+  const tgtSun = new Date(target); tgtSun.setDate(target.getDate()-target.getDay());
+  let off = Math.round((tgtSun - curSun)/(7*86400000));
+  if(off>0) off=0;                          // אין דפדוף לעתיד
+  wkSetOff(t, off); wkSetCmp(t, off-1);
+  if(t==='proc') gotoDateProc = `${d}/${mo}/${y}`;   // תואם לפורמט DAYS[].date
+  wkReload(t);
+}
 function toggleCompare(t){ wkSetOpen(t, !wkGetOpen(t)); updateWeekNav(t); renderCompare(t); }
 function shiftCompare(t,dir){ let c = wkGetCmp(t) + dir; if(c > 0) c = 0; wkSetCmp(t,c); renderCompare(t); }
 
@@ -892,6 +912,15 @@ function renderDay() {
     return;
   }
   const day = DAYS[currentDayIdx];
+
+  // סנכרון בורר התאריך ליום הנבחר + תקרת היום
+  const di = document.getElementById('wkdate-proc');
+  if (di) {
+    const td = new Date();
+    di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+    const pr = String(day.date).split('/');
+    if (pr.length === 3) di.value = `${pr[2]}-${String(pr[1]).padStart(2,'0')}-${String(pr[0]).padStart(2,'0')}`;
+  }
 
   // Nav info
   document.getElementById('nav-dayname').innerHTML = day.name +
@@ -1472,13 +1501,16 @@ async function loadLiveData() {
     if (newDays.length > 0) {
       DAYS.length = 0;
       newDays.forEach(d => DAYS.push(d));
-      let idx = prevDate ? DAYS.findIndex(d => d.date === prevDate) : -1;
+      let idx = -1;
+      if (gotoDateProc) { idx = DAYS.findIndex(d => d.date === gotoDateProc); gotoDateProc = null; }
+      if (idx < 0 && prevDate) idx = DAYS.findIndex(d => d.date === prevDate);
       if (idx < 0) idx = isCur ? DAYS.findIndex(d => d.isToday) : DAYS.length - 1;
       if (idx < 0) idx = DAYS.length - 1;
       currentDayIdx = idx;
     } else {
       DAYS.length = 0;
       currentDayIdx = 0;
+      gotoDateProc = null;
     }
     renderDay();
 
