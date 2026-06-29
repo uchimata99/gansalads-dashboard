@@ -75,7 +75,15 @@ html.locked #gsLock{display:flex!important}
 .ci-title{font-weight:800;font-size:16px;margin-bottom:6px;padding-inline-end:24px}
 .ci-sec{margin-top:12px;font-size:13px;line-height:1.75}.ci-sec b{display:block;margin-bottom:4px}
 .ci-warn{border-inline-start:3px solid var(--red);padding-inline-start:9px}
-.ci-good{border-inline-start:3px solid var(--blue);padding-inline-start:9px}</style>
+.ci-good{border-inline-start:3px solid var(--blue);padding-inline-start:9px}
+#wkCtrl .wkb{background:var(--surface);border:1px solid var(--border);color:var(--green);border-radius:8px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#wkCtrl .wkb:hover{background:var(--green-l)}
+#wkCtrl .wkseg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+#wkCtrl .wkseg button{background:var(--surface);border:none;color:var(--green);padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#wkCtrl .wkseg button.active{background:var(--green);color:#fff}
+#wkChips{display:flex;flex-wrap:wrap;gap:5px;max-height:130px;overflow-y:auto}
+.wkchip{background:var(--green);color:#fff;border:1px solid var(--green);border-radius:7px;padding:4px 9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.2}
+.wkchip.off{background:var(--surface);color:var(--muted);border-color:var(--border);text-decoration:line-through}</style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
 <script>document.documentElement.classList.add('locked')</script></head><body>
@@ -127,7 +135,18 @@ html.locked #gsLock{display:flex!important}
  </div>
 
  <div class="page" id="wk">
-  <div class="ctrl"><span class="lbl">תצוגה:</span><select id="wkSel"></select></div>
+  <div class="ctrl" id="wkCtrl" dir="rtl" style="flex-wrap:wrap;gap:8px">
+   <button class="wkb" id="wkToggle" onclick="toggleWkPanel()">📅 בחר שבועות ▾</button>
+   <span class="wkseg"><button id="wkm-avg" class="active" onclick="setWkMode('avg')">ממוצע שבועי</button><button id="wkm-tot" onclick="setWkMode('total')">סך התקופה</button></span>
+   <span id="wkSelCount" class="lbl"></span>
+   <div id="wkPanel" style="display:none;width:100%;margin-top:6px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+     <button class="wkb" onclick="wkSelectAll()">הכל</button>
+     <button class="wkb" onclick="wkClear()">נקה</button>
+    </div>
+    <div id="wkChips"></div>
+   </div>
+  </div>
   <div class="kpi-row" id="wkKpi"></div>
   <div class="grid2">
    <div class="card"><div class="card-t"><span>לקוחות פעילים השבוע — לחיצה פותחת את המוצרים</span><span class="lbl" id="wkCount"></span></div><div class="scroll" id="wkTab"></div></div>
@@ -511,52 +530,54 @@ function redflags(){
 
 
 // ---------- WEEKLY ----------
-let wkSel=null, wkCustSel=null, curWC={}, _avgWC=null;
-function initWeekSel(){const s=document.getElementById('wkSel');
- const oa=document.createElement('option');oa.value='avg';oa.textContent='ממוצע כל השבועות';s.appendChild(oa);
- D.meta.weeks.forEach(w=>{const o=document.createElement('option');o.value=w;o.textContent='שבוע '+w;s.appendChild(o);});
- s.value='avg';
- s.addEventListener('change',()=>{wkCustSel=null;renderWeek();});}
+let selWk=new Set(), wkMode='avg', wkCustSel=null, curWC={};
 function pstdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length);}
-// מפת לקוח→נתונים ממוצעים על פני כל השבועות (אותו מבנה כמו D.weekly[שבוע])
-function avgWC(){
- if(_avgWC)return _avgWC;
- const n=D.meta.weeks.length, agg={};
- D.meta.weeks.forEach(w=>{const wc=D.weekly[String(w)]||{};
+// בורר רב-שבועי (כמו בדף הייצור): ברירת מחדל — כל השבועות, מצב ממוצע.
+function initWkSel(){selWk=new Set(D.meta.weeks);renderWkChips();}
+function renderWkChips(){const c=document.getElementById('wkChips');
+ if(c)c.innerHTML=D.meta.weeks.map(w=>{const on=selWk.has(w);
+   return '<button class="wkchip'+(on?'':' off')+'" onclick="toggleWkWeek('+w+')">ש'+w+(on?'':' ✕')+'</button>';}).join('');
+ const cnt=document.getElementById('wkSelCount');if(cnt)cnt.textContent='נבחרו '+selWk.size+' / '+D.meta.weeks.length+' שבועות';
+ const tb=document.getElementById('wkToggle');if(tb)tb.textContent='📅 '+selWk.size+' שבועות ▾';}
+function toggleWkPanel(){const p=document.getElementById('wkPanel'),b=document.getElementById('wkToggle');if(!p)return;
+ const open=p.style.display==='none';p.style.display=open?'block':'none';if(b)b.classList.toggle('active',open);}
+function setWkMode(m){wkMode=m;document.getElementById('wkm-avg').classList.toggle('active',m==='avg');document.getElementById('wkm-tot').classList.toggle('active',m!=='avg');renderWeek();}
+function wkSelectAll(){selWk=new Set(D.meta.weeks);renderWkChips();renderWeek();}
+function wkClear(){selWk=new Set(D.meta.weeks.length?[D.meta.weeks[D.meta.weeks.length-1]]:[]);renderWkChips();renderWeek();}
+function toggleWkWeek(w){if(selWk.has(w)){if(selWk.size<=1)return;selWk.delete(w);}else selWk.add(w);renderWkChips();renderWeek();}
+// צבירת D.weekly על פני השבועות שנבחרו; mode 'avg' = חלוקה במספר השבועות הנבחרים
+function weekWC(){
+ const agg={},n=selWk.size||1;
+ selWk.forEach(w=>{const wc=D.weekly[String(w)]||{};
   for(const ci in wc){const d=wc[ci];const a=agg[ci]||(agg[ci]={m:0,q:0,it:{}});
    a.m+=d.m;a.q+=d.q;(d.p||[]).forEach(([it,mo,qt])=>{const e=a.it[it]||(a.it[it]=[0,0]);e[0]+=mo;e[1]+=qt;});}});
- const out={};
+ const div=wkMode==='avg'?n:1,out={};
  for(const ci in agg){const a=agg[ci];
-  const p=Object.entries(a.it).map(([it,v])=>[+it,v[0]/n,v[1]/n]).sort((x,y)=>y[1]-x[1]);
-  out[ci]={m:a.m/n,q:a.q/n,p};}
- return _avgWC=out;
+  const p=Object.entries(a.it).map(([it,v])=>[+it,v[0]/div,v[1]/div]).sort((x,y)=>y[1]-x[1]);
+  out[ci]={m:a.m/div,q:a.q/div,p};}
+ return out;
 }
 function renderWeek(){
- const val=document.getElementById('wkSel').value||'avg';
- wkSel=String(val);
- const isAvg=(wkSel==='avg');
- const wc=isAvg?avgWC():(D.weekly[wkSel]||{});
- curWC=wc;
+ const isAvg=(wkMode==='avg'), ns=selWk.size;
+ const wc=weekWC();curWC=wc;
  const entries=Object.entries(wc).map(([ci,d])=>({ci:+ci,name:D.customers[+ci].name,m:d.m,q:d.q,p:d.p}));
  entries.sort((a,b)=>b.m-a.m);
  const wtot=entries.reduce((a,e)=>a+e.m,0);
  const moneys=entries.map(e=>e.m);
  const mean=moneys.length?wtot/moneys.length:0, sd=pstdev(moneys);
  if(isAvg){
-  const n=D.meta.weeks.length;let act=0;
-  D.meta.weeks.forEach(w=>act+=Object.keys(D.weekly[String(w)]||{}).length);
+  let act=0;selWk.forEach(w=>act+=Object.keys(D.weekly[String(w)]||{}).length);
   document.getElementById('wkKpi').innerHTML=
-   kpi('g fin','מחזור שבועי ממוצע',ILS(wtot),'ממוצע על פני '+n+' שבועות')+
-   kpi('y','לקוחות פעילים בשבוע (ממוצע)',NUM(Math.round(act/n)),'מתוך '+D.meta.n_customers)+
+   kpi('g fin','מחזור שבועי ממוצע',ILS(wtot),'ממוצע על פני '+ns+' שבועות נבחרים')+
+   kpi('y','לקוחות פעילים בשבוע (ממוצע)',NUM(Math.round(act/(ns||1))),'מתוך '+D.meta.n_customers)+
    kpi('b fin','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
    kpi('p fin','לקוח מוביל (בממוצע)',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
  }else{
-  const dvsg=D.meta.wk_mean?100*(wtot-D.meta.wk_mean)/D.meta.wk_mean:0;
   document.getElementById('wkKpi').innerHTML=
-   kpi('g fin','מחזור השבוע',ILS(wtot),(dvsg>=0?'+':'')+dvsg.toFixed(0)+'% מול הממוצע השבועי')+
+   kpi('g fin','מחזור בתקופה',ILS(wtot),'סך '+ns+' שבועות נבחרים')+
    kpi('y','לקוחות פעילים',NUM(entries.length),'מתוך '+D.meta.n_customers)+
    kpi('b fin','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
-   kpi('p fin','לקוח מוביל השבוע',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
+   kpi('p fin','לקוח מוביל',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
  }
  document.getElementById('wkCount').textContent=entries.length+' לקוחות';
  const cM=isAvg?'מחזור ממוצע':'מחזור', cP=isAvg?'אריזות (ממוצע)':'אריזות';
@@ -564,20 +585,20 @@ function renderWeek(){
  entries.forEach((e,i)=>{h+=`<tr style="cursor:pointer" data-ci="${e.ci}"><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${e.name}${flagSpan(e.name)}</td><td class="num fin">${ILS(e.m)}</td><td class="num">${NUM(e.q)}</td><td class="num">${wtot?(100*e.m/wtot).toFixed(1):'0'}%</td></tr>`;});
  document.getElementById('wkTab').innerHTML=h+'</tbody></table>';
  document.querySelectorAll('#wkTab tbody tr').forEach(tr=>tr.addEventListener('click',()=>{wkCustSel=+tr.dataset.ci;renderWeekDet();}));
- if(wkCustSel==null && entries.length)wkCustSel=entries[0].ci;
+ if((wkCustSel==null||!curWC[wkCustSel]) && entries.length)wkCustSel=entries[0].ci;
  renderWeekDet();
 }
 function renderWeekDet(){
  if(wkCustSel==null){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">בחרי לקוח מהרשימה</div>';return;}
- const isAvg=(wkSel==='avg');
+ const isAvg=(wkMode==='avg');
  const d=curWC[wkCustSel];
  const name=D.customers[wkCustSel].name;
- document.getElementById('wkDetT').textContent='מוצרים · '+name+(isAvg?' · ממוצע שבועי':' · שבוע '+wkSel);
- if(!d){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">'+(isAvg?'אין נתונים ללקוח':'הלקוח לא היה פעיל בשבוע זה')+'</div>';return;}
+ document.getElementById('wkDetT').textContent='מוצרים · '+name+(isAvg?' · ממוצע שבועי':' · סך התקופה');
+ if(!d){document.getElementById('wkDet').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">הלקוח לא היה פעיל בשבועות שנבחרו</div>';return;}
  let h=`<div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">`+
-   kpi('g',isAvg?'מחזור שבועי ממוצע':'מחזור בשבוע',ILS(d.m),NUM(d.q)+' אריזות')+
+   kpi('g',isAvg?'מחזור שבועי ממוצע':'מחזור בתקופה',ILS(d.m),NUM(d.q)+' אריזות')+
    kpi('y','מוצרים',NUM(d.p.length),'פריטים שונים')+
-   kpi('b','מחיר ממוצע ליחידה',d.q?P2(d.m/d.q):'—',isAvg?'בממוצע':'בשבוע זה')+`</div>`;
+   kpi('b','מחיר ממוצע ליחידה',d.q?P2(d.m/d.q):'—',isAvg?'בממוצע':'בתקופה')+`</div>`;
  h+='<table><thead><tr><th>#</th><th>מוצר</th><th class="fin">מחזור</th><th>אריזות</th><th class="fin">מחיר/יח׳</th></tr></thead><tbody>';
  d.p.forEach((x,i)=>{const pr=x[2]?x[1]/x[2]:0;h+=`<tr><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${D.items[x[0]]}</td><td class="num fin">${ILS(x[1])}</td><td class="num">${NUM(x[2])}</td><td class="num fin">${P2(pr)}</td></tr>`;});
  document.getElementById('wkDet').innerHTML=h+'</tbody></table>';
@@ -590,7 +611,7 @@ function startDashboard(){
   const rng='1–'+NW;
   setTxt('hdrRange','שבועות '+rng); setTxt('rkRange',rng); setTxt('rkNC',NUM(NC)+' לקוחות');
   setTxt('dsTW',NW); setTxt('dsTW2',NW); setTxt('ckW1',CW);
-  buildCustFlags();ranking();insights();redflags();initWeekSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
+  buildCustFlags();ranking();insights();redflags();initWkSel();renderWeek();initCustSel();renderCust();priceGaps();initPriceSel();document.getElementById('pcSearch').value=D.price_prods[0].item;renderPrice();distribution();crosscheck();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 /* ====== התחברות גוגל + טעינת נתוני הלקוחות מגיליון מוגבל (קריאה בלבד) ======
