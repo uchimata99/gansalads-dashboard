@@ -564,8 +564,9 @@ function redflags(){
 // ---------- WEEKLY ----------
 let selWk=new Set(), wkMode='avg', wkCustSel=null, curWC={};
 function pstdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length);}
-// בורר רב-שבועי (כמו בדף הייצור): ברירת מחדל — כל השבועות, מצב ממוצע.
-function initWkSel(){selWk=new Set(D.meta.weeks);renderWkChips();}
+// בורר רב-שבועי: ברירת מחדל — השבוע האחרון בלבד; לחיצה על שבוע מוסיפה אותו לתצוגה
+// (שבועות שלוחצים עליהם = שבועות שרוצים לראות). כפתור "הכל" בוחר את כולם.
+function initWkSel(){selWk=new Set(D.meta.weeks.length?[D.meta.weeks[D.meta.weeks.length-1]]:[]);renderWkChips();}
 function renderWkChips(){const c=document.getElementById('wkChips');
  if(c)c.innerHTML=D.meta.weeks.map(w=>{const on=selWk.has(w);
    return '<button class="wkchip'+(on?'':' off')+'" onclick="toggleWkWeek('+w+')">ש'+w+(on?'':' ✕')+'</button>';}).join('');
