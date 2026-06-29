@@ -29,7 +29,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # בדיקה שהוגדר מפתח ה-API — אם לא, מדלגים בשקט (בלי כשל רועש פעמיים ביום)
+      - name: בדיקת מפתח
+        id: check
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT";
+          else echo "ANTHROPIC_API_KEY לא הוגדר — מדלג."; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Claude — סקירת הערות ותיקון
+        if: steps.check.outputs.ok == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
