@@ -87,6 +87,30 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 .tag.dn{background:var(--lgreen);color:#15803d}
 .empty-note{background:var(--lamber);border-right:4px solid var(--amber);padding:16px 18px;border-radius:0 10px 10px 0;font-size:14px;color:#92400e;line-height:1.8;font-weight:600}
 .tbl-scroll{max-height:520px;overflow-y:auto;border-radius:8px}
+/* ─── תוכנית ייצור יומית ─── */
+.plan-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:10px}
+@media(max-width:1000px){.plan-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.plan-grid{grid-template-columns:1fr}}
+.day-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.day-hd{padding:8px 11px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.day-hd .d-name{font-weight:800;font-size:14px}
+.day-hd .d-kg{font-weight:700;font-size:12px;white-space:nowrap}
+.day-dev{font-size:10px;font-weight:600;opacity:.85}
+.day-body{padding:9px 11px}
+.pg{margin-bottom:9px}
+.pg:last-child{margin-bottom:0}
+.pg-h{display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:12px;color:var(--navy);border-bottom:1px dashed #e2e8f0;padding-bottom:2px;margin-bottom:3px}
+.pg-i{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#475569;padding:1px 0}
+.pg-i .pg-kg{color:#94a3b8;white-space:nowrap}
+@media print{
+  body{background:#fff}
+  #gsNav,.header,#fcKpis,#fcEmpty,#fcBody,#accSection,.live-notes,#gsLock{display:none!important}
+  .main{padding:0;max-width:none}
+  #planCard{box-shadow:none;border:none}
+  #planCard .mbtn{display:none!important}
+  .plan-grid{grid-template-columns:repeat(5,1fr)!important}
+  .day-card{break-inside:avoid}
+}
 @media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}}
 </style>
 </head>
@@ -135,7 +159,7 @@ const FC_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const FC_TOKEN_KEY='gsGoogleToken';   // משותף עם production.html ו-finance.html
 
 let fcTokenClient=null, fcAccessToken=null;
-let FORECAST=null, ACCURACY=null, PRODDATA=null;
+let FORECAST=null, ACCURACY=null, PRODDATA=null, PLAN=null;
 
 function gsShowErr(msg){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=msg||''; }
 
@@ -197,6 +221,9 @@ async function loadForecastData(){
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; FORECAST=null; }
   try{ ACCURACY=await fetchTabObject('ACCURACY', false); }
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; ACCURACY=null; }
+  // PLAN — תוכנית הייצור היומית (production_plan.py). אם ריקה — מחושבת מהתחזית.
+  try{ PLAN=await fetchTabObject('PLAN', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; PLAN=null; }
   // נתוני הייצור ההיסטוריים (אותו גיליון, לשונית DATA כמו ב-production.html) —
   // משמשים לחישוב תחזית זמנית כל עוד לשונית FORECAST ריקה.
   try{ PRODDATA=await fetchTabObject('DATA', false); }
@@ -225,6 +252,7 @@ function startDashboard(){
     } else {
       renderForecastEmpty();
     }
+    renderProductionPlan();
     renderAccuracy();
   };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go, {once:true});
@@ -290,7 +318,10 @@ window.addEventListener('load', ()=>{
       </div>
       <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
     </div>
-  </div>
+  </div><!-- /fcBody -->
+
+  <!-- ═══════ תוכנית ייצור יומית (מתוך PLAN, או מחושבת מהתחזית) ═══════ -->
+  <div id="planSection"></div>
 
   <!-- ═══════ בדיקת החיזוי (מתוך ACCURACY) ═══════ -->
   <div id="accSection"></div>
@@ -518,6 +549,70 @@ function renderForecastEmpty(){
   document.getElementById('fcEmpty').innerHTML=
     '<div class="card"><div class="card-title">תחזית השבוע הקרוב <span class="card-badge a">ממתין</span></div>'+
     '<div class="empty-note">התחזית לשבוע הקרוב תופיע כאן ביום חמישי, אחרי הפקת החיזוי.</div></div>';
+}
+
+// ═══════════════════════════════ תוכנית ייצור יומית ═══════════════════════════════
+// מציג את לשונית PLAN (production_plan.py). אם אינה קיימת עדיין — מחשב את אותו
+// שיבוץ בצד הלקוח מתוך מוצרי התחזית: 5 ימים (א'–ה'), איזון לפי ק"ג, קיבוץ לפי
+// סוג מוצר, חומוס/טחינה מוחרגים. מראה גם את התחזית הזמנית.
+const PLAN_DAYS=['ראשון','שני','שלישי','רביעי','חמישי'];
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function isHummusTahina(n){ return (n.indexOf('חומוס')>=0||n.indexOf('טחינה')>=0)&&n.indexOf('גרגרי')<0&&n.indexOf('חציל')<0; }
+function planType(n){ const s=String(n).replace(/\d+.*$/,'').trim().split(/\s+/); return s[0]||'אחר'; }
+
+function computePlanFromForecast(){
+  const src=((FORECAST||{}).products)||[];
+  if(!src.length) return null;
+  const prods=[], excl=[];
+  src.forEach(p=>{ const o={name:String(p.name!=null?p.name:(p.id||'—')), kg:num(p.kg!=null?p.kg:p.total_kg), pkg:num(p.pkg)};
+    (isHummusTahina(o.name)?excl:prods).push(o); });
+  if(!prods.length) return null;
+  prods.sort((a,b)=>b.kg-a.kg);
+  const types={}; prods.forEach(p=>{ const t=planType(p.name); (types[t]=types[t]||[]).push(p); });
+  const total=prods.reduce((a,p)=>a+p.kg,0), target=total/PLAN_DAYS.length;
+  const load={}, bins={}; PLAN_DAYS.forEach(d=>{ load[d]=0; bins[d]=[]; });
+  const leastDay=ex=>{ let best=null; PLAN_DAYS.forEach(d=>{ if(d===ex)return; if(best===null||load[d]<load[best])best=d; }); return best; };
+  const place=(p,t,d)=>{ load[d]+=p.kg; bins[d].push({type:t,p:p}); };
+  const units=Object.keys(types).map(t=>({t,items:types[t],kg:types[t].reduce((a,p)=>a+p.kg,0)})).sort((a,b)=>b.kg-a.kg);
+  units.forEach(u=>{
+    if(u.kg<=target*1.15 || u.items.length===1){ const d=leastDay(null); u.items.forEach(p=>place(p,u.t,d)); }
+    else { const d1=leastDay(null), d2=leastDay(d1); let a=0,b=0;
+      u.items.slice().sort((x,y)=>y.kg-x.kg).forEach(p=>{ if(a<=b){ place(p,u.t,d1); a+=p.kg; } else { place(p,u.t,d2); b+=p.kg; } }); }
+  });
+  const days=PLAN_DAYS.map(d=>{
+    const byType={};
+    bins[d].forEach(o=>{ const g=byType[o.type]=byType[o.type]||{type:o.type,kg:0,pkg:0,items:[]}; g.kg+=o.p.kg; g.pkg+=o.p.pkg; g.items.push(o.p); });
+    const groups=Object.keys(byType).map(k=>byType[k]).sort((x,y)=>y.kg-x.kg);
+    return {day:d, kg:load[d], pct:target?((load[d]-target)/target*100):0, n_products:bins[d].length, groups};
+  });
+  return {computed:true, n_days:PLAN_DAYS.length, target_kg:target, total_kg:total,
+    excluded_label:'חומוס/טחינה', excluded_kg:excl.reduce((a,p)=>a+p.kg,0), excluded_n:excl.length, days};
+}
+
+function renderProductionPlan(){
+  const host=document.getElementById('planSection'); if(!host) return;
+  const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
+  if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
+  const COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706'];
+  let cards='';
+  plan.days.forEach((d,i)=>{
+    const dev=(d.pct>=0?'+':'')+Math.round(d.pct)+'%';
+    let groups='';
+    (d.groups||[]).forEach(g=>{
+      const items=(g.items||[]).map(it=>'<div class="pg-i"><span>'+esc(it.name)+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>').join('');
+      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
+    });
+    cards+='<div class="day-card"><div class="day-hd" style="background:'+COLORS[i%5]+'">'+
+      '<span class="d-name">'+esc(d.day)+'</span>'+
+      '<span class="d-kg">'+fmt(d.kg)+' ק"ג <span class="day-dev">('+dev+')</span></span></div>'+
+      '<div class="day-body">'+(groups||'<div class="pg-i">—</div>')+'</div></div>';
+  });
+  const badge=plan.computed?'<span class="card-badge a">מחושב מהתחזית</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
+  host.innerHTML='<div class="card" id="planCard"><div class="card-title">תוכנית ייצור יומית — 5 ימים '+badge+
+    '<button class="mbtn" onclick="window.print()">🖨️ הדפס</button></div>'+
+    '<div class="ins g" style="margin-top:0">📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> מחולקים ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b> · '+
+    'איזון לפי ק"ג, קיבוץ לפי סוג מוצר · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) מיוצרים בנפרד.</div>'+
+    '<div class="plan-grid">'+cards+'</div></div>';
 }
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
