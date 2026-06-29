@@ -669,7 +669,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(
    מפתח הסשן משותף עם finance/production כך שלא נדרשת כניסה כפולה. */
 const CUST_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
 const CUST_SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
-const CUST_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
+const CUST_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const CUST_TOKEN_KEY='gsGoogleToken';
 let custTokenClient=null, custAccessToken=null;
 function gsShowErr(msg){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=msg||''; }
@@ -761,5 +761,25 @@ document.addEventListener('DOMContentLoaded',updateFinBtn);
 })();
 </script>
 <script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
+<script>
+/* מעלה צילומי מסך של ההערות לתיקייה פרטית ב-Drive (מנצל את כניסת Google הקיימת),
+   ומשתף קריאה עם חשבון הסוכן. ללא הצלחה (לא מחוברת/אין הרשאה) — נפילה בחן להורדה. */
+(function(){
+  var SHARE_WITH='uchi.mata1@gmail.com';
+  function tok(){ try{ var o=JSON.parse(sessionStorage.getItem('gsGoogleToken')||'null'); if(o&&o.t&&(!o.exp||Date.now()<o.exp)) return o.t; }catch(e){} return null; }
+  function up(dataUrl,name){
+    var t=tok(); if(!t) return Promise.reject(new Error('no-token'));
+    return fetch(dataUrl).then(function(r){return r.blob();}).then(function(blob){
+      var fd=new FormData();
+      fd.append('metadata',new Blob([JSON.stringify({name:name,mimeType:'image/jpeg',description:'live-notes — סלטי גן'})],{type:'application/json'}));
+      fd.append('file',blob);
+      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
+    }).then(function(r){ if(!r.ok) throw new Error('upload '+r.status); return r.json(); }).then(function(j){
+      return fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions?sendNotificationEmail=false',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'user',emailAddress:SHARE_WITH})}).catch(function(){}).then(function(){ return {id:j.id,url:j.webViewLink||('https://drive.google.com/file/d/'+j.id+'/view')}; });
+    });
+  }
+  window.LIVE_NOTES_CONFIG=Object.assign(window.LIVE_NOTES_CONFIG||{},{uploadImage:up});
+})();
+</script>
 <script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
 </body></html>
