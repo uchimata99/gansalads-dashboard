@@ -476,6 +476,8 @@ window.addEventListener('load',()=>{
     </div>
     <button class="wk-arrow" onclick="shiftWeek('pkg',1)" title="שבוע הבא">&#x25BA;</button>
     <button class="wk-btn wk-today" id="wktoday-pkg" onclick="goToCurrentWeek('pkg')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-pkg" onchange="goToDate('pkg',this.value)" title="בחר תאריך לתצוגת יום בודד">
     <div class="wk-spacer"></div>
     <button class="wk-btn" id="wkcmpbtn-pkg" onclick="toggleCompare('pkg')">⇄ השוואה</button>
   </div>
@@ -612,6 +614,8 @@ window.addEventListener('load',()=>{
     </div>
     <button class="wk-arrow" onclick="shiftWeek('ht',1)" title="שבוע הבא">&#x25BA;</button>
     <button class="wk-btn wk-today" id="wktoday-ht" onclick="goToCurrentWeek('ht')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-ht" onchange="goToDate('ht',this.value)" title="בחר תאריך לתצוגת יום בודד">
     <div class="wk-spacer"></div>
     <button class="wk-btn" id="wkcmpbtn-ht" onclick="toggleCompare('ht')">⇄ השוואה</button>
   </div>
@@ -701,6 +705,8 @@ const DAYS = [];
 
 let currentDayIdx = 0;
 let gotoDateProc = null;   // יעד קפיצה לתאריך (בורר התאריך), בפורמט D/M/YYYY כמו DAYS[].date
+let pkgSelectedDay = null; // יום נבחר בלשונית אריזה (Date) — תצוגת יום בודד; null = שבוע/היום
+let htSelectedDay = null;  // יום נבחר בלשונית חומוס/טחינה (Date)
 
 // ===== מצב שבוע נפרד לכל לשונית (0 = השבוע הנוכחי, מספר שלילי = אחורה) =====
 let weekOffsetProcessing = 0, weekOffsetPackaging = 0, weekOffsetHummus = 0;
@@ -736,9 +742,11 @@ function shiftWeek(t,dir){
   if(off > 0) off = 0;            // לא מדפדפים לעתיד
   wkSetOff(t, off);
   wkSetCmp(t, off - 1);           // שבוע ההשוואה = השבוע שלפני הנבחר
+  if(t==='pkg') pkgSelectedDay = null;   // דפדוף חיצים חוזר לתצוגת שבוע
+  if(t==='ht') htSelectedDay = null;
   wkReload(t);
 }
-function goToCurrentWeek(t){ wkSetOff(t,0); wkSetCmp(t,-1); wkReload(t); }
+function goToCurrentWeek(t){ wkSetOff(t,0); wkSetCmp(t,-1); if(t==='pkg') pkgSelectedDay=null; if(t==='ht') htSelectedDay=null; wkReload(t); }
 // קפיצה לתאריך מדויק (בורר התאריך). מחשב את שבוע התאריך, ובעיבוד ירקות בוחר את היום עצמו.
 function goToDate(t, value){
   if(!value) return;
@@ -752,6 +760,8 @@ function goToDate(t, value){
   if(off>0) off=0;                          // אין דפדוף לעתיד
   wkSetOff(t, off); wkSetCmp(t, off-1);
   if(t==='proc') gotoDateProc = `${d}/${mo}/${y}`;   // תואם לפורמט DAYS[].date
+  else if(t==='pkg') pkgSelectedDay = target;         // תצוגת יום בודד באריזה
+  else if(t==='ht') htSelectedDay = target;           // תצוגת יום בודד בחומוס/טחינה
   wkReload(t);
 }
 function toggleCompare(t){ wkSetOpen(t, !wkGetOpen(t)); updateWeekNav(t); renderCompare(t); }
@@ -1062,9 +1072,10 @@ async function loadHummusTahiniTab() {
     const R = getWeekRange(weekOffsetHummus);
     const wkStart = R.wkStart, wkEnd = R.wkEnd;
     const isCur = weekOffsetHummus === 0;
-    // היקף "יומי": היום עצמו בשבוע הנוכחי, או כל השבוע הנבחר בהיסטוריה
-    const scopeStart = isCur ? actualToday : wkStart;
-    const scopeEnd   = isCur ? actualToday : wkEnd;
+    // היקף "יומי": יום נבחר (בורר תאריך) > היום בשבוע הנוכחי > כל השבוע הנבחר
+    const dayMode = !!htSelectedDay;
+    const scopeStart = dayMode ? htSelectedDay : (isCur ? actualToday : wkStart);
+    const scopeEnd   = dayMode ? htSelectedDay : (isCur ? actualToday : wkEnd);
 
     const todayRows = reportRows.filter(r => { const d = parseDate(r[2]); return d && d >= scopeStart && d <= scopeEnd; });
 
@@ -1090,13 +1101,22 @@ async function loadHummusTahiniTab() {
     document.getElementById('ht-kpi-qty').textContent = htQty;
     document.getElementById('ht-kpi-batches').textContent = htOpenBatches;
 
-    // תוויות לפי השבוע הנבחר (היום מול שבוע נבחר)
-    const htDayWord = isCur ? 'היום' : 'בשבוע';
+    // תוויות לפי המצב: יום נבחר / היום / שבוע נבחר
+    const htDayStr = dayMode ? fmtD(htSelectedDay) : '';
+    const htDayWord = dayMode ? 'ביום' : (isCur ? 'היום' : 'בשבוע');
     document.getElementById('ht-lbl-kg').textContent = `סה"כ ק"ג ${htDayWord}`;
     document.getElementById('ht-lbl-qty').textContent = `אריזות ${htDayWord}`;
-    const htTitleSuffix = isCur ? 'יומי' : 'שבוע נבחר';
+    const htTitleSuffix = dayMode ? htDayStr : (isCur ? 'יומי' : 'שבוע נבחר');
     document.getElementById('ht-title-hummus').textContent = `חומוס – ${htTitleSuffix} 🫘`;
     document.getElementById('ht-title-tahini').textContent = `טחינה – ${htTitleSuffix} 🫙`;
+    // סנכרון בורר התאריך של חומוס/טחינה
+    { const di = document.getElementById('wkdate-ht');
+      if (di) {
+        const td = new Date();
+        di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+        const dd = dayMode ? htSelectedDay : (isCur ? actualToday : null);
+        if (dd) di.value = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+      } }
 
     // טבלאות יומיות
     function buildTable(bodyId, rows) {
@@ -1648,9 +1668,10 @@ async function loadPackagingData() {
     const wkStart = R.wkStart, wkEnd = R.wkEnd;
     const isCur = weekOffsetPackaging === 0;
     const today = actualToday; // נשמר לחישובי 'אתמול' ולגרף הרב-שבועי (תמיד מעוגן להיום בפועל)
-    // היקף "יומי": היום עצמו בשבוע הנוכחי, או כל השבוע הנבחר בהיסטוריה
-    const scopeStart = isCur ? actualToday : wkStart;
-    const scopeEnd   = isCur ? actualToday : wkEnd;
+    // היקף "יומי": יום נבחר (בורר תאריך) > היום עצמו בשבוע הנוכחי > כל השבוע הנבחר בהיסטוריה
+    const dayMode = !!pkgSelectedDay;
+    const scopeStart = dayMode ? pkgSelectedDay : (isCur ? actualToday : wkStart);
+    const scopeEnd   = dayMode ? pkgSelectedDay : (isCur ? actualToday : wkEnd);
 
     // דיווח: עמודות: מזהה_דיווח, מזהה_אצווה, תאריך, שעה, אורזת, מוצר, משקל_אריזה, כמות_אריזות, סהכ_משקל_קג
     const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
@@ -1683,26 +1704,42 @@ async function loadPackagingData() {
 
     document.getElementById('pkg-kpi-reports').textContent = todayReports.length;
     document.getElementById('pkg-kpi-kg').textContent = totalKg.toFixed(1);
-    document.getElementById('pkg-date-pill').textContent = isCur
-      ? `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`
-      : `שבוע ${R.weekNum} · ${R.sunStr}–${R.satStr}`;
+    const dayStr = dayMode ? fmtD(pkgSelectedDay) : '';
+    document.getElementById('pkg-date-pill').textContent = dayMode
+      ? dayStr
+      : (isCur
+        ? `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`
+        : `שבוע ${R.weekNum} · ${R.sunStr}–${R.satStr}`);
 
-    // תוויות KPI לפי השבוע הנבחר (היום מול שבוע נבחר)
-    const pkgDayWord = isCur ? 'היום' : 'בשבוע';
+    // תוויות KPI לפי המצב: יום נבחר / היום / שבוע נבחר
+    const pkgDayWord = dayMode ? 'ביום' : (isCur ? 'היום' : 'בשבוע');
     document.getElementById('pkg-lbl-kg').textContent = `סה"כ ק"ג ${pkgDayWord}`;
     document.getElementById('pkg-lbl-reports').textContent = `אריזות ${pkgDayWord}`;
     document.getElementById('pkg-lbl-batches-today').textContent = `אצוות שנפתחו ${pkgDayWord}`;
-    document.getElementById('pkg-daily-chart-title').textContent = isCur ? 'אריזה יומית לפי אורזת' : 'אריזה לפי אורזת — שבוע נבחר';
-    // שורות 'אתמול' רלוונטיות רק לשבוע הנוכחי; בהיסטוריה מציגים את טווח השבוע
+    document.getElementById('pkg-daily-chart-title').textContent = dayMode
+      ? ('אריזה לפי אורזת — ' + dayStr)
+      : (isCur ? 'אריזה יומית לפי אורזת' : 'אריזה לפי אורזת — שבוע נבחר');
+    // שורות 'אתמול' רלוונטיות רק לשבוע הנוכחי; ביום נבחר/היסטוריה מציגים את התאריך/הטווח
     window._pkgSubKgHTML = window._pkgSubKgHTML || document.getElementById('pkg-sub-kg').innerHTML;
     window._pkgSubRepHTML = window._pkgSubRepHTML || document.getElementById('pkg-sub-reports').innerHTML;
-    if (isCur) {
+    if (dayMode) {
+      document.getElementById('pkg-sub-kg').textContent = dayStr;
+      document.getElementById('pkg-sub-reports').textContent = dayStr;
+    } else if (isCur) {
       document.getElementById('pkg-sub-kg').innerHTML = window._pkgSubKgHTML;
       document.getElementById('pkg-sub-reports').innerHTML = window._pkgSubRepHTML;
     } else {
       document.getElementById('pkg-sub-kg').textContent = `ראשון ${R.sunStr} – שבת ${R.satStr}`;
       document.getElementById('pkg-sub-reports').textContent = `ראשון ${R.sunStr} – שבת ${R.satStr}`;
     }
+    // סנכרון בורר התאריך של האריזה ליום המוצג + תקרת היום
+    { const di = document.getElementById('wkdate-pkg');
+      if (di) {
+        const td = new Date();
+        di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+        const dd = dayMode ? pkgSelectedDay : (isCur ? actualToday : null);
+        if (dd) di.value = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+      } }
 
     // אצוות פתוחות = סכום כמות_אמבטיות_מדווח < כמות_אמבטיות באצווה
     // עמודה 16 בדיווח = כמות_אמבטיות_מדווח
