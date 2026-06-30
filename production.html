@@ -137,7 +137,11 @@ html.nofin .fin-pair{grid-template-columns:1fr}
 #prod-panel.open{display:block}
 .prod-opt{padding:7px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .prod-opt:hover{background:var(--lgreen)}
-@media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}.tab{padding:10px 12px;font-size:12px}}
+@media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}.tab{padding:10px 12px;font-size:12px}
+  /* ארבעת מלבני הסיכום בכותרת — נמתחים על כל רוחב העמוד (שניים בשורה) */
+  .header-kpis{width:100%;gap:8px}
+  .hkpi{flex:1 1 calc(50% - 4px);min-width:0;box-sizing:border-box}
+}
 </style>
 </head>
 <body>
