@@ -254,6 +254,8 @@ const P2=n=>'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maxi
 const COL={green:'#2d6a3f',gold:'#b8890e',blue:'#2a5a88',purple:'#6b3fa0',red:'#b03030'};
 const PAL=['#2d6a3f','#b8890e','#2a5a88','#6b3fa0','#b03030','#7a9c52','#c98a2b','#4a7ba6'];
 Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.color='#7a7460';
+/* הגרפים ימלאו את גובה המכל הקבוע (.cw) במקום יחס-גובה 2:1 — מתקן פרופורציות (טופ 15 וכו') */
+Chart.defaults.maintainAspectRatio=false;
 const charts={};
 function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
 function kpi(cls,label,num,sub,title){return `<div class="kpi ${cls}"${title?` title="${title}"`:''}><div class="kpi-l">${label}</div><div class="kpi-n">${num}</div><div class="kpi-s">${sub}</div></div>`;}
