@@ -652,8 +652,10 @@ function renderAccuracy(){
   const hist=(a.history||[]).filter(h=>h&&h.wape!=null);
 
   let html='<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה'+wk+' <span class="card-badge g">חיזוי מול פועל</span></div>';
+  const w50=a.wape_top50!=null?num(a.wape_top50):null;
   html+='<div class="kpi-grid">'+
-    kc('a','שגיאה שבועית מצרפית (WAPE)',fmt1(wape)+'%',wape<=12?'דיוק טוב':'לשיפור', wape<=12?'g':'r')+
+    kc('a','שגיאה מצרפית — כל המוצרים (WAPE)',fmt1(wape)+'%',wape<=12?'דיוק טוב':'לשיפור', wape<=12?'g':'r')+
+    (w50!=null?kc('g','שגיאה מצרפית — טופ 50 מוצרים',fmt1(w50)+'%','~90% מהנפח — המספר לייצור', w50<=18?'g':'a'):'')+
     kc('t','חיזוי',fmt(ft)+' ק"ג','השבוע שעבר')+
     kc('g','בפועל',fmt(at)+' ק"ג','השבוע שעבר')+
     kc('n','פער',(diff>=0?'+':'')+fmt1(diff)+'%',diff>=0?'חיזוי גבוה מהפועל':'חיזוי נמוך מהפועל', diff>=0?'a':'r')+
@@ -690,7 +692,8 @@ function renderAccuracy(){
   if(hist.length>=2){
     makeChart('accHist',{type:'line',data:{labels:hist.map(h=>'שבוע '+h.week),
       datasets:[
-        {label:'שגיאה ק"ג',data:hist.map(h=>num(h.wape)),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#d97706',borderWidth:2.5},
+        {label:'שגיאה ק"ג — כל המוצרים',data:hist.map(h=>num(h.wape)),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#d97706',borderWidth:2.5},
+        {label:'שגיאה ק"ג — טופ 50',data:hist.map(h=>h.wape_top50!=null?num(h.wape_top50):null),borderColor:'#16a34a',fill:false,tension:.3,pointRadius:4,pointBackgroundColor:'#16a34a',borderWidth:2.2,spanGaps:true},
         {label:'שגיאה אריזות',data:hist.map(h=>num(h.wape_pkg)),borderColor:'#2563a8',borderDash:[5,3],fill:false,tension:.3,pointRadius:3,borderWidth:1.8}
       ]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+fmt1(c.raw)+'%'}}},
