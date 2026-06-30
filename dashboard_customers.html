@@ -187,12 +187,13 @@ html.locked #gsLock{display:flex!important}
  </div>
 
  <div class="page" id="cu">
-  <div class="ctrl"><span class="lbl">בחרי לקוח:</span><input id="cuSearch" list="cuList" placeholder="🔍 חיפוש בכתיבה…" autocomplete="off"><datalist id="cuList"></datalist><select id="cuSel"></select><span class="lbl">תצוגה:</span><select id="cuMode"><option value="avg">ממוצע שבועי</option><option value="tot">סך התקופה</option></select></div>
+  <div class="ctrl"><span class="lbl">בחרי לקוח:</span><input id="cuSearch" list="cuList" placeholder="🔍 חיפוש בכתיבה…" autocomplete="off"><datalist id="cuList"></datalist><select id="cuSel"></select><span class="lbl">תצוגה:</span><select id="cuMode"><option value="mavg" selected>ממוצע חודשי</option><option value="avg">ממוצע שבועי</option><option value="tot">סך התקופה</option></select></div>
   <div class="kpi-row" id="cuKpi"></div>
   <div class="grid2">
    <div class="card fin"><div class="card-t">מחזור לפי שבוע</div><div class="cw"><canvas id="cuWeek"></canvas></div></div>
    <div class="card fin"><div class="card-t">פילוח לפי משפחה</div><div class="cw s"><canvas id="cuFam"></canvas></div></div>
   </div>
+  <div class="card" style="margin-top:18px"><div class="card-t">מחזור חודשי</div><div id="cuMonths"></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t">מוצרים מובילים אצל הלקוח</div><div id="cuProd"></div></div>
  </div>
 
@@ -311,7 +312,7 @@ function ranking(){
  rkTable();
 }
 function rkTable(){
- const cols=[['name','לקוח',0],['money','מחזור',1,1],['share','חלק',1],['wk_mean','שבועי ממוצע',1,1],['qty','אריזות',1],['avg_price','מחיר/יח׳',1,1],['n_prod','מוצרים',1],['n_weeks','שבועות',1]];
+ const cols=[['name','לקוח',0],['money','מחזור',1,1],['share','חלק',1],['wk_mean','שבועי ממוצע',1,1],['month_avg','חודשי ממוצע',1,1],['qty','אריזות',1],['avg_price','מחיר/יח׳',1,1],['n_prod','מוצרים',1],['n_weeks','שבועות',1]];
  const arr=D.customers.map((c,i)=>({...c,orig:i+1,share:100*c.money/TOT}));
  arr.sort((a,b)=>{let k=rkSort.key;if(k==='name')return rkSort.dir*a.name.localeCompare(b.name,'he');return rkSort.dir*((a[k]||0)-(b[k]||0));});
  let h='<table><thead><tr><th>#</th>';
@@ -324,6 +325,7 @@ function rkTable(){
      `<td class="num fin">${ILS(c.money)}</td>`+
      `<td class="num">${c.share.toFixed(1)}%</td>`+
      `<td class="num fin">${ILS(c.wk_mean)}<br><span style="color:var(--muted);font-size:10px">± ${ILS(c.wk_sd)}</span></td>`+
+     `<td class="num fin">${ILS(c.month_avg)}</td>`+
      `<td class="num">${NUM(c.qty)}</td>`+
      `<td class="num fin">${P2(c.avg_price)}</td>`+
      `<td class="num">${c.n_prod}</td>`+
@@ -347,11 +349,13 @@ function initCustSel(){const s=document.getElementById('cuSel');const dl=documen
 function itemKg(name){return D.item_kg[name];}
 function renderCust(){
  const c=D.customers[document.getElementById('cuSel').value||0];
- const mode=document.getElementById('cuMode').value;          // 'avg' | 'tot'
- const nW=D.meta.weeks.length, div=(mode==='avg')?nW:1;
+ const mode=document.getElementById('cuMode').value;          // 'mavg' | 'avg' | 'tot'
+ const nMo=completeMonthKeys().length||Math.max(1,Math.round(D.meta.weeks.length/4.345));
+ const nW=D.meta.weeks.length, div=(mode==='avg')?nW:(mode==='mavg')?nMo:1;
  const dp=100*(c.avg_box-gAvgPrice)/gAvgPrice;
  const kgTxt=c.avg_kg?P2(c.avg_kg)+' לק"ג':'—';
  document.getElementById('cuKpi').innerHTML=
+  kpi('a fin','מחזור חודשי ממוצע',ILS(c.month_avg),completeMonthKeys().length+' חודשים מלאים')+
   kpi('g fin','מחזור שבועי ממוצע',ILS(c.wk_mean),'± '+ILS(c.wk_sd)+' סטיית תקן ('+NW+' שבועות)')+
   kpi('y fin','מחזור בתקופה',ILS(c.money),(100*c.money/TOT).toFixed(1)+'% · '+NUM(c.qty)+' אריזות')+
   kpi('b fin','מחיר ממוצע לקופסה',P2(c.avg_box),'ולק"ג: '+kgTxt)+
@@ -365,7 +369,13 @@ function renderCust(){
    options:{plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
  const fam=Object.entries(c.by_fam);
  mk('cuFam',{type:'doughnut',data:{labels:fam.map(f=>f[0]),datasets:[{data:fam.map(f=>f[1]),backgroundColor:PAL}]},options:{plugins:{legend:{position:'bottom'}}}});
- const mlbl=(mode==='avg')?'ממוצע שבועי':'בתקופה';
+ // טבלת מחזור חודשי — שורה לכל חודש (מתווספת אוטומטית כשנוסף חודש בנתונים)
+ const mm=custMonthly(c);
+ let mh='<div class="scroll"><table><thead><tr><th>חודש</th><th class="fin">מחזור</th><th>שבועות</th></tr></thead><tbody>';
+ MONTH_KEYS.forEach(k=>{const part=MONTH_WKC[k]<4?' <span style="color:var(--muted);font-size:10px">(חלקי)</span>':'';mh+=`<tr><td>${monthLabel(k)}${part}</td><td class="num fin">${ILS(mm[k])}</td><td class="num">${MONTH_WKC[k]}</td></tr>`;});
+ mh+='</tbody></table></div>';
+ document.getElementById('cuMonths').innerHTML=mh;
+ const mlbl=(mode==='avg')?'ממוצע שבועי':(mode==='mavg')?'ממוצע חודשי':'בתקופה';
  let h=`<table><thead><tr><th>#</th><th>מוצר</th><th class="fin">מחזור ${mlbl}</th><th>אריזות ${mlbl}</th><th class="fin">מחיר לקופסה</th><th class="fin">מחיר לק"ג</th><th class="fin">עלות/ארז</th><th class="fin">רווח/ארז</th><th class="fin">רווח/ק"ג</th></tr></thead><tbody>`;
  c.top_prod.forEach((x,i)=>{
    const pbox=x.qty?x.money/x.qty:0;
@@ -645,6 +655,16 @@ function renderWeekDet(){
  document.getElementById('wkDet').innerHTML=h+'</tbody></table>';
 }
 
+// ── מיפוי שבוע→חודש (עוגן: שבוע 27 = ראשון 28/6/2026) — למחזור חודשי ──
+const WK_ANCHOR_SUN=new Date(2026,5,28), WK_ANCHOR_N=27;
+const HE_MON=['','ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function weekMonthKey(w){const d=new Date(WK_ANCHOR_SUN);d.setDate(d.getDate()+7*(w-WK_ANCHOR_N)+3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function monthLabel(k){const p=k.split('-');return HE_MON[+p[1]]+' '+p[0];}
+let MONTH_KEYS=[], MONTH_WKC={};
+function buildMonths(){MONTH_KEYS=[];MONTH_WKC={};const seen={};(D.meta.weeks||[]).forEach(w=>{const k=weekMonthKey(w);MONTH_WKC[k]=(MONTH_WKC[k]||0)+1;if(!seen[k]){seen[k]=1;MONTH_KEYS.push(k);}});MONTH_KEYS.sort();}
+function custMonthly(c){const m={};MONTH_KEYS.forEach(k=>m[k]=0);(D.meta.weeks||[]).forEach(w=>{m[weekMonthKey(w)]+=(c.by_week[String(w)]||0);});return m;}
+function completeMonthKeys(){return MONTH_KEYS.filter(k=>MONTH_WKC[k]>=4);}
+function custMonthlyAvg(c){const m=custMonthly(c);const comp=completeMonthKeys();if(comp.length)return comp.reduce((s,k)=>s+m[k],0)/comp.length;return (c.wk_mean||0)*4.345;}
 function startDashboard(){
   // התעלמות משבוע 1 בממוצע השבועי (שבוע חלקי) — מחושב מחדש; totals/גרפים לא משתנים
   (function ignoreWeek1(){
@@ -666,6 +686,7 @@ function startDashboard(){
   TOT=D.meta.total_money;
   gAvgPrice=D.meta.total_money/D.meta.total_qty;
   NW=D.meta.weeks.length; NC=D.meta.n_customers; CW=Object.keys(D.coverage||{}).length||NW;
+  buildMonths(); (D.customers||[]).forEach(c=>{ c.month_avg=custMonthlyAvg(c); });
   const rng='1–'+NW;
   setTxt('hdrRange','שבועות '+rng); setTxt('rkRange',rng); setTxt('rkNC',NUM(NC)+' לקוחות');
   setTxt('dsTW',NW); setTxt('dsTW2',NW); setTxt('ckW1',CW);
