@@ -187,7 +187,7 @@ html.locked #gsLock{display:flex!important}
  </div>
 
  <div class="page" id="cu">
-  <div class="ctrl"><span class="lbl">בחרי לקוח:</span><select id="cuSel"></select><span class="lbl">תצוגה:</span><select id="cuMode"><option value="avg">ממוצע שבועי</option><option value="tot">סך התקופה</option></select></div>
+  <div class="ctrl"><span class="lbl">בחרי לקוח:</span><input id="cuSearch" list="cuList" placeholder="🔍 חיפוש בכתיבה…" autocomplete="off"><datalist id="cuList"></datalist><select id="cuSel"></select><span class="lbl">תצוגה:</span><select id="cuMode"><option value="avg">ממוצע שבועי</option><option value="tot">סך התקופה</option></select></div>
   <div class="kpi-row" id="cuKpi"></div>
   <div class="grid2">
    <div class="card fin"><div class="card-t">מחזור לפי שבוע</div><div class="cw"><canvas id="cuWeek"></canvas></div></div>
@@ -334,10 +334,16 @@ function rkTable(){
 }
 
 // ---------- CUSTOMER PROFILE ----------
-function initCustSel(){const s=document.getElementById('cuSel');
- D.customers.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.name;s.appendChild(o);});
+function initCustSel(){const s=document.getElementById('cuSel');const dl=document.getElementById('cuList');
+ D.customers.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.name;s.appendChild(o);
+   const od=document.createElement('option');od.value=c.name;if(dl)dl.appendChild(od);});
  s.addEventListener('change',renderCust);
- document.getElementById('cuMode').addEventListener('change',renderCust);}
+ document.getElementById('cuMode').addEventListener('change',renderCust);
+ const srch=document.getElementById('cuSearch');
+ if(srch)srch.addEventListener('input',()=>{const v=srch.value.trim();if(!v)return;
+   let i=D.customers.findIndex(c=>c.name===v);
+   if(i<0)i=D.customers.findIndex(c=>c.name.indexOf(v)===0);   // התאמת תחילית
+   if(i>=0){s.value=i;renderCust();}});}
 function itemKg(name){return D.item_kg[name];}
 function renderCust(){
  const c=D.customers[document.getElementById('cuSel').value||0];
