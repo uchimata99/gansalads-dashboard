@@ -104,13 +104,25 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 .pg-i{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#475569;padding:1px 0}
 .pg-i .pg-kg{color:#94a3b8;white-space:nowrap}
 @media print{
-  body{background:#fff}
+  @page{ size:A4 landscape; margin:6mm; }
+  *{ -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+  html,body{background:#fff}
   #gsNav,.header,#fcKpis,#fcEmpty,#fcBody,#accSection,.live-notes,#gsLock{display:none!important}
-  .main{padding:0;max-width:none}
-  #planCard{box-shadow:none;border:none}
+  .main{padding:0;max-width:none;margin:0}
+  #planCard{box-shadow:none;border:none;padding:0;margin:0}
   #planCard .mbtn{display:none!important}
-  .plan-grid{grid-template-columns:repeat(5,1fr)!important}
-  .day-card{break-inside:avoid}
+  #planCard>.card-title{font-size:13px;margin-bottom:3px;padding-bottom:2px;border:none}
+  #planCard .ins{font-size:8.5px;line-height:1.4;padding:3px 6px;margin:0 0 4px}
+  .plan-grid{grid-template-columns:repeat(5,1fr)!important;gap:4px;margin-top:0}
+  .day-card{break-inside:avoid;border:1px solid #94a3b8;border-radius:6px}
+  .day-hd{padding:3px 6px}
+  .day-hd .d-name{font-size:11px}
+  .day-hd .d-kg{font-size:8.5px}
+  .day-dev{font-size:7.5px}
+  .day-body{padding:3px 6px}
+  .pg{margin-bottom:3px}
+  .pg-h{font-size:8.5px;padding-bottom:1px;margin-bottom:1px}
+  .pg-i{font-size:8px;padding:0}
 }
 @media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}}
 </style>
@@ -622,6 +634,11 @@ function renderProductionPlan(){
   // לשונית PLAN מהמנוע אם קיימת; אחרת חישוב צד-לקוח: ההתניות של מיכל + חיזוי לשאר המוצרים
   const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
   if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
+  // דגל חריגה/חוסר — ברמה השבועית פר מוצר: תוכנית שבועית מול חיזוי שבועי (מאוחד לבסיס), סף 20 ק"ג
+  const baseFc={}; (PRODUCTS||[]).forEach(p=>{ const b=planBaseOf(p.name); baseFc[b]=(baseFc[b]||0)+num(p.kg); });
+  const flagOf={};
+  MY_PLAN.forEach(p=>{ const wp=PLAN_DAYS.reduce((a,d)=>a+(p.d[d]||0),0); const fcv=Math.round(baseFc[p.b]||0); const dev=Math.round(wp-fcv);
+    if(Math.abs(dev)>20) flagOf[p.n]={dev:dev, plan:wp, fc:fcv}; });
   const COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706'];
   let cards='';
   plan.days.forEach((d,i)=>{
@@ -629,11 +646,17 @@ function renderProductionPlan(){
     let groups='';
     (d.groups||[]).forEach(g=>{
       const items=(g.items||[]).map(it=>{
-        const mark=it.fixed?'<span title="התניה קבועה שלך" style="color:#16a34a">●</span> ':'';
+        let mark='';
+        if(it.fixed){
+          const f=flagOf[it.name];
+          if(f){ const over=f.dev>0; const msg=it.name+': '+(over?'עודף':'חוסר')+' של '+fmt(Math.abs(f.dev))+' ק&quot;ג בשבוע מול החיזוי (תוכנית '+fmt(f.plan)+' · חיזוי '+fmt(f.fc)+')';
+            mark='<span class="dev-flag" data-msg="'+msg+'" onclick="alert(this.getAttribute(\'data-msg\'))" title="'+msg+'" style="cursor:pointer">'+(over?'🟢':'🔴')+'</span> '; }
+          else { mark='<span title="התניה קבועה שלך — בתחום (±20 ק\"ג)" style="color:#16a34a">●</span> '; }
+        }
         const nm=it.fixed?'<b>'+esc(it.name)+'</b>':esc(it.name);
         return '<div class="pg-i"><span>'+mark+nm+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>';
       }).join('');
-      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+(g.fixed?' <span style="color:#16a34a;font-weight:400">●</span>':'')+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
+      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
     });
     cards+='<div class="day-card"><div class="day-hd" style="background:'+COLORS[i%5]+'">'+
       '<span class="d-name">'+esc(d.day)+'</span>'+
@@ -641,8 +664,9 @@ function renderProductionPlan(){
       '<div class="day-body">'+(groups||'<div class="pg-i">—</div>')+'</div></div>';
   });
   const badge=plan.computed?'<span class="card-badge a">ההתניות שלך + חיזוי</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
-  const condTxt=plan.cond_kg!=null?(' · מתוכם <b>'+fmt(plan.cond_kg)+' ק"ג</b> לפי ההתניות שלך ('+plan.cond_n+' מוצרים, מסומנים ב-<span style="color:#16a34a">●</span>), השאר חיזוי מאוזן'):'';
-  const ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b>'+condTxt+' · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) בנפרד.';
+  const condTxt=plan.cond_kg!=null?(' · מתוכם <b>'+fmt(plan.cond_kg)+' ק"ג</b> לפי ההתניות שלך ('+plan.cond_n+' מוצרים, <span style="color:#16a34a">●</span>), השאר חיזוי מאוזן'):'';
+  const legend=plan.cond_kg!=null?' · <b>🔴/🟢</b> = חוסר/עודף שבועי מול החיזוי (מעל 20 ק"ג) — לחיצה מציגה כמה':'';
+  const ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b>'+condTxt+legend+' · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) בנפרד.';
   host.innerHTML='<div class="card" id="planCard"><div class="card-title">תוכנית ייצור יומית — 5 ימים '+badge+
     '<button class="mbtn" onclick="window.print()">🖨️ הדפס</button></div>'+
     '<div class="ins g" style="margin-top:0">'+ins+'</div>'+
