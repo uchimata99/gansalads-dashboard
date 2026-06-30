@@ -583,17 +583,20 @@ function planType(n){ const s=String(n).replace(/\d+.*$/,'').trim().split(/\s+/)
 
 function computePlanFromForecast(){
   const src=((FORECAST||{}).products)||[];
-  if(!src.length) return null;
+  const load={}, bins={}; PLAN_DAYS.forEach(d=>{ load[d]=0; bins[d]=[]; });
+  // 1) ההתניות הקבועות של מיכל — שיבוץ ראשוני לימים ולק"ג שקבעה (גרעין התוכנית)
+  let condKg=0;
+  MY_PLAN.forEach(p=>{ PLAN_DAYS.forEach(d=>{ const kg=p.d[d]; if(kg>0){ bins[d].push({type:planType(p.n), p:{name:p.n,kg:kg,pkg:0}, fixed:true}); load[d]+=kg; condKg+=kg; } }); });
+  // 2) שאר מוצרי החיזוי (ללא חומוס/טחינה וללא מוצרי ההתניות) — חיזוי שמתאזן מעל ההתניות
   const prods=[], excl=[];
   src.forEach(p=>{ const nm=String(p.name!=null?p.name:(p.id||'—'));
-    if(typeof MY_BASES!=='undefined' && MY_BASES.has(planBaseOf(nm))) return;   // מנוהל ידנית בהתניות — לא לשבץ אוטומטית
+    if(MY_BASES.has(planBaseOf(nm))) return;   // מנוהל בהתניות — לא לשבץ אוטומטית
     const o={name:nm, kg:num(p.kg!=null?p.kg:p.total_kg), pkg:num(p.pkg)};
     (isHummusTahina(o.name)?excl:prods).push(o); });
-  if(!prods.length) return null;
   prods.sort((a,b)=>b.kg-a.kg);
+  const autoKg=prods.reduce((a,p)=>a+p.kg,0);
+  const target=(condKg+autoKg)/PLAN_DAYS.length;   // יעד מאוזן לכלל היום (התניות + חיזוי)
   const types={}; prods.forEach(p=>{ const t=planType(p.name); (types[t]=types[t]||[]).push(p); });
-  const total=prods.reduce((a,p)=>a+p.kg,0), target=total/PLAN_DAYS.length;
-  const load={}, bins={}; PLAN_DAYS.forEach(d=>{ load[d]=0; bins[d]=[]; });
   const leastDay=ex=>{ let best=null; PLAN_DAYS.forEach(d=>{ if(d===ex)return; if(best===null||load[d]<load[best])best=d; }); return best; };
   const place=(p,t,d)=>{ load[d]+=p.kg; bins[d].push({type:t,p:p}); };
   const units=Object.keys(types).map(t=>({t,items:types[t],kg:types[t].reduce((a,p)=>a+p.kg,0)})).sort((a,b)=>b.kg-a.kg);
@@ -604,41 +607,42 @@ function computePlanFromForecast(){
   });
   const days=PLAN_DAYS.map(d=>{
     const byType={};
-    bins[d].forEach(o=>{ const g=byType[o.type]=byType[o.type]||{type:o.type,kg:0,pkg:0,items:[]}; g.kg+=o.p.kg; g.pkg+=o.p.pkg; g.items.push(o.p); });
+    bins[d].forEach(o=>{ const g=byType[o.type]=byType[o.type]||{type:o.type,kg:0,pkg:0,items:[],fixed:false}; g.kg+=o.p.kg; g.pkg+=o.p.pkg; g.items.push(Object.assign({fixed:!!o.fixed},o.p)); if(o.fixed)g.fixed=true; });
     const groups=Object.keys(byType).map(k=>byType[k]).sort((x,y)=>y.kg-x.kg);
     return {day:d, kg:load[d], pct:target?((load[d]-target)/target*100):0, n_products:bins[d].length, groups};
   });
-  return {computed:true, n_days:PLAN_DAYS.length, target_kg:target, total_kg:total,
+  if(!days.some(d=>d.kg>0)) return null;
+  return {computed:true, n_days:PLAN_DAYS.length, target_kg:target, total_kg:condKg+autoKg,
+    cond_kg:condKg, cond_n:MY_PLAN.length,
     excluded_label:'חומוס/טחינה', excluded_kg:excl.reduce((a,p)=>a+p.kg,0), excluded_n:excl.length, days};
 }
 
 function renderProductionPlan(){
   const host=document.getElementById('planSection'); if(!host) return;
-  // עדיפות: ההתניות של מיכל ← לשונית PLAN מהמנוע ← חישוב אוטומטי מהתחזית
-  const plan=buildPlanFromConditions() || ((PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast());
+  // לשונית PLAN מהמנוע אם קיימת; אחרת חישוב צד-לקוח: ההתניות של מיכל + חיזוי לשאר המוצרים
+  const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
   if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
   const COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706'];
   let cards='';
   plan.days.forEach((d,i)=>{
-    const dev = plan.fromConditions ? '' : ' <span class="day-dev">('+(d.pct>=0?'+':'')+Math.round(d.pct)+'%)</span>';
+    const dev=' <span class="day-dev">('+(d.pct>=0?'+':'')+Math.round(d.pct)+'%)</span>';
     let groups='';
     (d.groups||[]).forEach(g=>{
-      const items=(g.items||[]).map(it=>'<div class="pg-i"><span>'+esc(it.name)+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>').join('');
-      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
+      const items=(g.items||[]).map(it=>{
+        const mark=it.fixed?'<span title="התניה קבועה שלך" style="color:#16a34a">●</span> ':'';
+        const nm=it.fixed?'<b>'+esc(it.name)+'</b>':esc(it.name);
+        return '<div class="pg-i"><span>'+mark+nm+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>';
+      }).join('');
+      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+(g.fixed?' <span style="color:#16a34a;font-weight:400">●</span>':'')+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
     });
     cards+='<div class="day-card"><div class="day-hd" style="background:'+COLORS[i%5]+'">'+
       '<span class="d-name">'+esc(d.day)+'</span>'+
       '<span class="d-kg">'+fmt(d.kg)+' ק"ג'+dev+'</span></div>'+
       '<div class="day-body">'+(groups||'<div class="pg-i">—</div>')+'</div></div>';
   });
-  let badge, ins;
-  if(plan.fromConditions){
-    badge='<span class="card-badge g">התוכנית שלך</span>';
-    ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> · '+MY_PLAN.length+' מוצרים משובצים לפי הימים שקבעת. חומוס/טחינה ושאר המוצרים שלא הוגדרו — מנוהלים בנפרד.';
-  } else {
-    badge=plan.computed?'<span class="card-badge a">מחושב מהתחזית</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
-    ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> מחולקים ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b> · איזון לפי ק"ג, קיבוץ לפי סוג מוצר · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) מיוצרים בנפרד.';
-  }
+  const badge=plan.computed?'<span class="card-badge a">ההתניות שלך + חיזוי</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
+  const condTxt=plan.cond_kg!=null?(' · מתוכם <b>'+fmt(plan.cond_kg)+' ק"ג</b> לפי ההתניות שלך ('+plan.cond_n+' מוצרים, מסומנים ב-<span style="color:#16a34a">●</span>), השאר חיזוי מאוזן'):'';
+  const ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b>'+condTxt+' · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) בנפרד.';
   host.innerHTML='<div class="card" id="planCard"><div class="card-title">תוכנית ייצור יומית — 5 ימים '+badge+
     '<button class="mbtn" onclick="window.print()">🖨️ הדפס</button></div>'+
     '<div class="ins g" style="margin-top:0">'+ins+'</div>'+
@@ -651,7 +655,6 @@ function renderProductionPlan(){
 //   d = {יום: ק"ג}.
 // *** תהליך מתמשך: כשמיכל נותנת התניה חדשה (מוצר → ימים → ק"ג) — מוסיפים/מעדכנים כאן
 //     שורה ב-MY_PLAN. המוצר משובץ אוטומטית בתוכנית היומית ומוסר מהשיבוץ האוטומטי. ***
-const PLAN_DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const MY_PLAN=[
   {n:"טונה במיונז וירקות", b:"טונה במיונז וירקות", d:{"ראשון":164,"חמישי":164}},
   {n:"טונה סלרי",          b:"טונה סלרי",          d:{"ראשון":130,"חמישי":130}},
@@ -679,20 +682,7 @@ function planBaseOf(name){
   return String(name).replace(/\s*\d+(\.\d+)?\s*(ק"ג|קג|גרם|גר|ג')?\s*$/,'').trim();
 }
 const MY_BASES=new Set(MY_PLAN.map(p=>p.b));
-// בניית התוכנית היומית מההתניות (אותו מבנה ש-renderProductionPlan מצפה לו):
-// כל מוצר משובץ לימים ולק"ג שמיכל קבעה, מקובץ לפי סוג מוצר (planType).
-function buildPlanFromConditions(){
-  if(!MY_PLAN.length) return null;
-  const days=PLAN_DAYS.map(d=>{
-    const items=[];
-    MY_PLAN.forEach(p=>{ const kg=p.d[d]; if(kg>0) items.push({name:p.n, kg:kg, pkg:0}); });
-    const byType={};
-    items.forEach(it=>{ const t=planType(it.name); const g=byType[t]||(byType[t]={type:t,kg:0,pkg:0,items:[]}); g.kg+=it.kg; g.items.push(it); });
-    const groups=Object.keys(byType).map(k=>byType[k]).sort((a,b)=>b.kg-a.kg);
-    return {day:d, kg:items.reduce((a,it)=>a+it.kg,0), pct:0, n_products:items.length, groups};
-  });
-  return {fromConditions:true, n_days:PLAN_DAYS.length, total_kg:days.reduce((a,d)=>a+d.kg,0), days};
-}
+// ההתניות משובצות בתוך computePlanFromForecast (גרעין קבוע + חיזוי מאוזן לשאר).
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
 function renderAccuracy(){
