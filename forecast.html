@@ -88,9 +88,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text
 .tag.dn{background:var(--lgreen);color:#15803d}
 .empty-note{background:var(--lamber);border-right:4px solid var(--amber);padding:16px 18px;border-radius:0 10px 10px 0;font-size:14px;color:#92400e;line-height:1.8;font-weight:600}
 .tbl-scroll{max-height:520px;overflow-y:auto;border-radius:8px}
-.act-inp{width:90px;border:2px solid var(--border);border-radius:7px;padding:5px 8px;font-size:13px;font-family:inherit;text-align:center;outline:none}
-.act-inp:focus{border-color:var(--green)}
-@media(max-width:640px){.act-inp{width:74px}}
 /* ─── תוכנית ייצור יומית ─── */
 .plan-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:10px}
 @media(max-width:1000px){.plan-grid{grid-template-columns:repeat(2,1fr)}}
@@ -253,8 +250,7 @@ function startDashboard(){
       buildDailyChart();
       buildTopProductsChart();
       buildProductsTable();
-      actualLoad();
-      renderActual();
+      renderPlanMine();
     } else {
       renderForecastEmpty();
     }
@@ -345,19 +341,16 @@ window.addEventListener('load', ()=>{
       <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
     </div>
 
-    <div class="card" id="actualCard">
+    <div class="card" id="planMineCard">
       <div class="card-title">
-        ייצור בפועל מול חיזוי — חוסר ועודף <span class="card-badge g">ק"ג</span>
-        <span class="act-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input class="search-input" id="actualSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="renderActual()" style="width:170px">
-          <button class="mbtn" onclick="actualPrefill()">מלא מהחיזוי</button>
-          <button class="mbtn" onclick="actualExportCsv()">ייצוא</button>
-          <button class="mbtn" onclick="actualClear()">ניקוי</button>
-        </span>
+        תוכנית הייצור שלי מול חיזוי <span class="card-badge g">ק"ג שבועי</span>
+        <button class="mbtn" onclick="planMineExport()">ייצוא</button>
       </div>
-      <div class="kpi-grid" id="actualKpis"></div>
-      <div class="ins" id="actualNote">הקלד לכל מוצר כמה ק"ג ייצרת או אתה מתכנן לייצר השבוע. הפער מול החיזוי מחושב אוטומטית ונשמר במכשיר.</div>
-      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="actualTable"></table></div></div>
+      <div class="kpi-grid" id="planMineKpis"></div>
+      <div class="ins" id="planMineNote"></div>
+      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="planMineTable"></table></div></div>
+      <div class="card-title" style="border:none;margin-top:16px">התוכנית שלי לפי ימים</div>
+      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="planMineDaily"></table></div></div>
     </div>
   </div><!-- /fcBody -->
 
@@ -656,44 +649,80 @@ function renderProductionPlan(){
     '<div class="plan-grid">'+cards+'</div></div>';
 }
 
-// ═══════════════════ ייצור בפועל מול חיזוי (חוסר/עודף, ק"ג) ═══════════════════
-// החיזוי = ביקוש צפוי (נתונים אמיתיים). "בפועל" = מה שמיכל מקליד (נשמר במכשיר).
-// משלים את תוכנית הייצור היומית: כאן רואים מי בחוסר/עודף מול הביקוש הצפוי.
-const ACTUAL_KEY='gsActualKg';
-let ACTUAL={};
-function actualLoad(){ try{ ACTUAL=JSON.parse(localStorage.getItem(ACTUAL_KEY)||'{}')||{}; }catch(e){ ACTUAL={}; } }
-function actualSave(){ try{ localStorage.setItem(ACTUAL_KEY, JSON.stringify(ACTUAL)); }catch(e){} }
-function actId(name){ return 'agap_'+String(name).replace(/[^\wא-ת0-9]/g,'_'); }
-function actualSetEl(el){ const name=el.getAttribute('data-name')||''; const v=num(el.value); if(v>0) ACTUAL[name]=v; else delete ACTUAL[name]; actualSave(); actualRecalc(); }
-function actualPrefill(){ (PRODUCTS||[]).forEach(p=>{ ACTUAL[p.name]=Math.round(p.kg); }); actualSave(); renderActual(); }
-function actualClear(){ if(!confirm('לנקות את כל הכמויות שהזנת?')) return; ACTUAL={}; actualSave(); renderActual(); }
-function actGapHtml(fc,pl){ if(pl<=0) return '<span style="color:#cbd5e1">—</span>'; const g=pl-fc; if(Math.abs(g)<0.5) return '<span style="color:#16a34a;font-weight:700">מאוזן</span>'; const col=g<0?'#dc2626':'#d97706', lbl=g<0?'חוסר':'עודף'; return '<span style="color:'+col+';font-weight:700">'+lbl+' '+fmt1(Math.abs(g))+'</span>'; }
-function actualTotals(){ let tf=0,tp=0,short=0,over=0,unp=0; (PRODUCTS||[]).forEach(p=>{ const pl=num(ACTUAL[p.name]); if(pl>0){ tf+=p.kg; tp+=pl; const g=pl-p.kg; if(g<-0.5)short++; else if(g>0.5)over++; } else unp++; }); return {tf,tp,short,over,unp}; }
-function renderActualKpis(){ const el=document.getElementById('actualKpis'); if(!el) return; const t=actualTotals(), gap=t.tp-t.tf; el.innerHTML=
-  kc('t','סה"כ חיזוי (שהוזנו)',fmt(t.tf)+' ק"ג','ביקוש צפוי למוצרים שהוזנו')+
-  kc('g','סה"כ בפועל',fmt(t.tp)+' ק"ג','מה שתייצר')+
-  kc(gap<0?'r':'a','פער כולל',(gap>=0?'+':'')+fmt1(gap)+' ק"ג',gap<0?'חוסר מול החיזוי':'עודף מול החיזוי',gap<0?'r':'a')+
-  kc('n','בחוסר / עודף',t.short+' / '+t.over,t.unp+' לא הוזנו · מתוך '+(PRODUCTS?PRODUCTS.length:0)); }
-function actualRecalc(){ (PRODUCTS||[]).forEach(p=>{ const cell=document.getElementById(actId(p.name)); if(cell) cell.innerHTML=actGapHtml(p.kg,num(ACTUAL[p.name])); }); renderActualKpis(); }
-function renderActual(){
-  const tbl=document.getElementById('actualTable'); if(!tbl) return;
-  const sEl=document.getElementById('actualSearch'); const q=(sEl?sEl.value:'').trim();
-  const rows=(PRODUCTS||[]).map(p=>({name:p.name, fc:p.kg, pl:num(ACTUAL[p.name])})).filter(r=>!q||r.name.indexOf(q)>=0).sort((a,b)=>b.fc-a.fc);
-  let html='<thead><tr><th>#</th><th>מוצר</th><th>חיזוי (ק"ג)</th><th>בפועל (ק"ג)</th><th>פער</th></tr></thead><tbody>';
-  rows.forEach((r,i)=>{ const nm=String(r.name).replace(/"/g,'&quot;');
-    html+='<tr><td>'+(i+1)+'</td><td title="'+nm+'">'+(r.name.length>28?r.name.slice(0,28)+'…':r.name)+'</td>'+
-      '<td>'+fmt1(r.fc)+'</td>'+
-      '<td><input class="act-inp" inputmode="decimal" data-name="'+nm+'" value="'+(r.pl>0?r.pl:'')+'" oninput="actualSetEl(this)"></td>'+
-      '<td id="'+actId(r.name)+'">'+actGapHtml(r.fc,r.pl)+'</td></tr>'; });
-  if(!rows.length) html+='<tr><td colspan="5" style="text-align:center;color:var(--gray)">לא נמצא מוצר</td></tr>';
-  html+='</tbody>'; tbl.innerHTML=html; renderActualKpis();
+// ═══════════════════ תוכנית הייצור שלי מול חיזוי (חוסר/עודף, ק"ג) ═══════════════════
+// MY_PLAN = התוכנית הקבועה של מיכל (מוצרים × ימים, ק"ג), מתוך קובץ האקסל שמילא.
+// b = שם מוצר-הבסיס במערכת (לאיחוד כל הגדלים בעת ההשוואה לחיזוי).
+const PLAN_DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const MY_PLAN=[
+  {n:"טונה במיונז וירקות", b:"טונה במיונז וירקות", d:{"ראשון":164,"חמישי":164}},
+  {n:"טונה סלרי",          b:"טונה סלרי",          d:{"ראשון":130,"חמישי":130}},
+  {n:"סלט אבוקדו",         b:"סלט אבוקדו",         d:{"ראשון":135,"חמישי":135}},
+  {n:'סלט תפו"א',          b:'סלט תפו"א',          d:{"ראשון":128,"חמישי":128}},
+  {n:"סלט ביצים",          b:"סלט ביצים",          d:{"ראשון":200,"חמישי":150}},
+  {n:"טורקי מיוחד",        b:"סלט טורקי מיוחד",    d:{"שני":480,"רביעי":480}},
+  {n:"פלפל קצוץ",          b:"פלפל קצוץ",          d:{"ראשון":140,"שלישי":140,"חמישי":70}},
+  {n:"מטבוחה",             b:"מטבוחה מיוחדת",      d:{"ראשון":600,"שלישי":600,"חמישי":600}},
+  {n:"מרדומה",             b:"מרדומה",             d:{"שני":400}},
+  {n:"שקשוקה",             b:"רוטב שקשוקה",        d:{"שני":300}},
+  {n:"חציל טבעי",          b:"חציל טבעי על האש",   d:{"שני":150,"חמישי":100}},
+  {n:"חציל במיונז",        b:"חציל במיונז",        d:{"שני":1000,"חמישי":350}},
+  {n:"חציל על האש במיונז", b:"חציל במיונז על האש", d:{"שני":100}},
+  {n:"בלקני בצל",          b:"חציל בלקני בצל",     d:{"שני":100}},
+  {n:"גזר מרוקאי",         b:"גזר מרוקאי",         d:{"ראשון":280,"רביעי":280}},
+  {n:"גזר לימון",          b:"גזר לימון",          d:{"ראשון":280,"רביעי":140}},
+  {n:"סלק צ'יפס",          b:"סלק צ'יפס",          d:{"שני":300,"חמישי":300}},
+  {n:"סלק קוביות",         b:"סלק קוביות",         d:{"שני":100,"חמישי":100}},
+  {n:"פלפל רצועות",        b:"פלפל רצועות",        d:{"ראשון":100,"רביעי":150}}
+];
+function planBaseOf(name){
+  const PU=(PRODDATA&&PRODDATA.PROD_UNI)||{};
+  if(PU[name]) return PU[name];
+  return String(name).replace(/\s*\d+(\.\d+)?\s*(ק"ג|קג|גרם|גר|ג')?\s*$/,'').trim();
 }
-function actualExportCsv(){
-  const rows=(PRODUCTS||[]).map(p=>({name:p.name, fc:p.kg, pl:num(ACTUAL[p.name])})).sort((a,b)=>b.fc-a.fc);
-  let csv='﻿מוצר,חיזוי ק"ג,בפועל ק"ג,פער ק"ג,סטטוס\n';
-  rows.forEach(r=>{ const g=r.pl-r.fc, st=r.pl<=0?'':(Math.abs(g)<0.5?'מאוזן':(g<0?'חוסר':'עודף')); csv+='"'+String(r.name).replace(/"/g,'""')+'",'+r.fc.toFixed(1)+','+r.pl.toFixed(1)+','+g.toFixed(1)+','+st+'\n'; });
+// סכימת החיזוי (פר-פריט) לרמת מוצר-בסיס
+function baseForecastMap(){
+  const out={}; (PRODUCTS||[]).forEach(p=>{ const b=planBaseOf(p.name); out[b]=(out[b]||0)+num(p.kg); });
+  return out;
+}
+function planGapHtml(gap){
+  if(Math.abs(gap)<0.5) return '<span style="color:#16a34a;font-weight:700">מאוזן</span>';
+  const col=gap<0?'#dc2626':'#d97706', lbl=gap<0?'חוסר':'עודף';
+  return '<span style="color:'+col+';font-weight:700">'+lbl+' '+fmt1(Math.abs(gap))+'</span>';
+}
+function renderPlanMine(){
+  const cmp=document.getElementById('planMineTable'); if(!cmp) return;
+  const bf=baseForecastMap();
+  const rows=MY_PLAN.map(p=>{ const plan=PLAN_DAYS_HE.reduce((a,d)=>a+(p.d[d]||0),0); const fc=bf[p.b]||0; return {n:p.n,b:p.b,plan,fc,gap:plan-fc}; });
+  let tp=0,tf=0,short=0,over=0;
+  rows.forEach(r=>{ tp+=r.plan; tf+=r.fc; if(r.gap<-0.5)short++; else if(r.gap>0.5)over++; });
+  const gap=tp-tf;
+  document.getElementById('planMineKpis').innerHTML=
+    kc('g','סה"כ בתוכנית',fmt(tp)+' ק"ג',MY_PLAN.length+' מוצרים')+
+    kc('t','חיזוי למוצרים אלה',fmt(tf)+' ק"ג','ביקוש צפוי')+
+    kc(gap<0?'r':'a','פער כולל',(gap>=0?'+':'')+fmt1(gap)+' ק"ג',gap<0?'חוסר מול החיזוי':'עודף מול החיזוי',gap<0?'r':'a')+
+    kc('n','בחוסר / עודף',short+' / '+over,'מתוך '+MY_PLAN.length+' מוצרים');
+  // טבלת השוואה — ממוין לפי גודל הפער
+  const sorted=rows.slice().sort((a,b)=>Math.abs(b.gap)-Math.abs(a.gap));
+  let h='<thead><tr><th>מוצר</th><th>תוכנית (ק"ג)</th><th>חיזוי (ק"ג)</th><th>פער</th></tr></thead><tbody>';
+  sorted.forEach(r=>{ h+='<tr><td title="מוצר-בסיס: '+esc(r.b)+'">'+esc(r.n)+'</td><td>'+fmt1(r.plan)+'</td><td>'+fmt1(r.fc)+'</td><td>'+planGapHtml(r.gap)+'</td></tr>'; });
+  h+='<tr class="total"><td>סה"כ</td><td>'+fmt1(tp)+'</td><td>'+fmt1(tf)+'</td><td>'+(gap>=0?'+':'')+fmt1(gap)+'</td></tr></tbody>';
+  cmp.innerHTML=h;
+  // טבלת התוכנית לפי ימים
+  const dt=PLAN_DAYS_HE.map(x=>MY_PLAN.reduce((a,p)=>a+(p.d[x]||0),0));
+  let d='<thead><tr><th>מוצר</th>'+PLAN_DAYS_HE.map(x=>'<th>'+x+'</th>').join('')+'<th>סה"כ</th></tr></thead><tbody>';
+  MY_PLAN.forEach(p=>{ const tot=PLAN_DAYS_HE.reduce((a,x)=>a+(p.d[x]||0),0);
+    d+='<tr><td>'+esc(p.n)+'</td>'+PLAN_DAYS_HE.map(x=>'<td>'+(p.d[x]?fmt(p.d[x]):'<span style="color:#cbd5e1">—</span>')+'</td>').join('')+'<td><strong>'+fmt(tot)+'</strong></td></tr>'; });
+  d+='<tr class="total"><td>סה"כ ליום</td>'+dt.map(v=>'<td>'+fmt(v)+'</td>').join('')+'<td><strong>'+fmt(dt.reduce((a,b)=>a+b,0))+'</strong></td></tr></tbody>';
+  document.getElementById('planMineDaily').innerHTML=d;
+  document.getElementById('planMineNote').innerHTML='התוכנית הקבועה שלך מושווית לחיזוי (ממוצע 4 השבועות האחרונים, מאוחד לרמת מוצר-בסיס). 🔴 חוסר = התוכנית קטנה מהביקוש הצפוי · 🟠 עודף = גדולה ממנו.';
+}
+function planMineExport(){
+  const bf=baseForecastMap();
+  let csv='﻿מוצר,'+PLAN_DAYS_HE.join(',')+',סה"כ תוכנית,חיזוי,פער\n';
+  MY_PLAN.forEach(p=>{ const tot=PLAN_DAYS_HE.reduce((a,x)=>a+(p.d[x]||0),0), fc=Math.round(bf[p.b]||0);
+    csv+='"'+p.n.replace(/"/g,'""')+'",'+PLAN_DAYS_HE.map(x=>p.d[x]||'').join(',')+','+tot+','+fc+','+(tot-fc)+'\n'; });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}), url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='ייצור_מול_חיזוי.csv'; a.click(); URL.revokeObjectURL(url);
+  const a=document.createElement('a'); a.href=url; a.download='תוכנית_מול_חיזוי.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
