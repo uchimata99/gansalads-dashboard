@@ -193,7 +193,6 @@ html.locked #gsLock{display:flex!important}
    <div class="card fin"><div class="card-t">מחזור לפי שבוע</div><div class="cw"><canvas id="cuWeek"></canvas></div></div>
    <div class="card fin"><div class="card-t">פילוח לפי משפחה</div><div class="cw s"><canvas id="cuFam"></canvas></div></div>
   </div>
-  <div class="card" style="margin-top:18px"><div class="card-t">מחזור חודשי</div><div id="cuMonths"></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t">מוצרים מובילים אצל הלקוח</div><div id="cuProd"></div></div>
  </div>
 
@@ -369,12 +368,6 @@ function renderCust(){
    options:{plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
  const fam=Object.entries(c.by_fam);
  mk('cuFam',{type:'doughnut',data:{labels:fam.map(f=>f[0]),datasets:[{data:fam.map(f=>f[1]),backgroundColor:PAL}]},options:{plugins:{legend:{position:'bottom'}}}});
- // טבלת מחזור חודשי — שורה לכל חודש (מתווספת אוטומטית כשנוסף חודש בנתונים)
- const mm=custMonthly(c);
- let mh='<div class="scroll"><table><thead><tr><th>חודש</th><th class="fin">מחזור</th><th>שבועות</th></tr></thead><tbody>';
- MONTH_KEYS.forEach(k=>{const part=MONTH_WKC[k]<4?' <span style="color:var(--muted);font-size:10px">(חלקי)</span>':'';mh+=`<tr><td>${monthLabel(k)}${part}</td><td class="num fin">${ILS(mm[k])}</td><td class="num">${MONTH_WKC[k]}</td></tr>`;});
- mh+='</tbody></table></div>';
- document.getElementById('cuMonths').innerHTML=mh;
  const mlbl=(mode==='avg')?'ממוצע שבועי':(mode==='mavg')?'ממוצע חודשי':'בתקופה';
  let h=`<table><thead><tr><th>#</th><th>מוצר</th><th class="fin">מחזור ${mlbl}</th><th>אריזות ${mlbl}</th><th class="fin">מחיר לקופסה</th><th class="fin">מחיר לק"ג</th><th class="fin">עלות/ארז</th><th class="fin">רווח/ארז</th><th class="fin">רווח/ק"ג</th></tr></thead><tbody>`;
  c.top_prod.forEach((x,i)=>{
