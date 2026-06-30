@@ -250,7 +250,6 @@ function startDashboard(){
       buildDailyChart();
       buildTopProductsChart();
       buildProductsTable();
-      renderPlanMine();
     } else {
       renderForecastEmpty();
     }
@@ -339,18 +338,6 @@ window.addEventListener('load', ()=>{
         <input class="search-input" id="prodSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="filterProducts()">
       </div>
       <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
-    </div>
-
-    <div class="card" id="planMineCard">
-      <div class="card-title">
-        תוכנית הייצור שלי מול חיזוי <span class="card-badge g">ק"ג שבועי</span>
-        <button class="mbtn" onclick="planMineExport()">ייצוא</button>
-      </div>
-      <div class="kpi-grid" id="planMineKpis"></div>
-      <div class="ins" id="planMineNote"></div>
-      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="planMineTable"></table></div></div>
-      <div class="card-title" style="border:none;margin-top:16px">התוכנית שלי לפי ימים</div>
-      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="planMineDaily"></table></div></div>
     </div>
   </div><!-- /fcBody -->
 
@@ -598,7 +585,9 @@ function computePlanFromForecast(){
   const src=((FORECAST||{}).products)||[];
   if(!src.length) return null;
   const prods=[], excl=[];
-  src.forEach(p=>{ const o={name:String(p.name!=null?p.name:(p.id||'—')), kg:num(p.kg!=null?p.kg:p.total_kg), pkg:num(p.pkg)};
+  src.forEach(p=>{ const nm=String(p.name!=null?p.name:(p.id||'—'));
+    if(typeof MY_BASES!=='undefined' && MY_BASES.has(planBaseOf(nm))) return;   // מנוהל ידנית בהתניות — לא לשבץ אוטומטית
+    const o={name:nm, kg:num(p.kg!=null?p.kg:p.total_kg), pkg:num(p.pkg)};
     (isHummusTahina(o.name)?excl:prods).push(o); });
   if(!prods.length) return null;
   prods.sort((a,b)=>b.kg-a.kg);
@@ -625,12 +614,13 @@ function computePlanFromForecast(){
 
 function renderProductionPlan(){
   const host=document.getElementById('planSection'); if(!host) return;
-  const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
+  // עדיפות: ההתניות של מיכל ← לשונית PLAN מהמנוע ← חישוב אוטומטי מהתחזית
+  const plan=buildPlanFromConditions() || ((PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast());
   if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
   const COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706'];
   let cards='';
   plan.days.forEach((d,i)=>{
-    const dev=(d.pct>=0?'+':'')+Math.round(d.pct)+'%';
+    const dev = plan.fromConditions ? '' : ' <span class="day-dev">('+(d.pct>=0?'+':'')+Math.round(d.pct)+'%)</span>';
     let groups='';
     (d.groups||[]).forEach(g=>{
       const items=(g.items||[]).map(it=>'<div class="pg-i"><span>'+esc(it.name)+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>').join('');
@@ -638,20 +628,29 @@ function renderProductionPlan(){
     });
     cards+='<div class="day-card"><div class="day-hd" style="background:'+COLORS[i%5]+'">'+
       '<span class="d-name">'+esc(d.day)+'</span>'+
-      '<span class="d-kg">'+fmt(d.kg)+' ק"ג <span class="day-dev">('+dev+')</span></span></div>'+
+      '<span class="d-kg">'+fmt(d.kg)+' ק"ג'+dev+'</span></div>'+
       '<div class="day-body">'+(groups||'<div class="pg-i">—</div>')+'</div></div>';
   });
-  const badge=plan.computed?'<span class="card-badge a">מחושב מהתחזית</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
+  let badge, ins;
+  if(plan.fromConditions){
+    badge='<span class="card-badge g">התוכנית שלך</span>';
+    ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> · '+MY_PLAN.length+' מוצרים משובצים לפי הימים שקבעת. חומוס/טחינה ושאר המוצרים שלא הוגדרו — מנוהלים בנפרד.';
+  } else {
+    badge=plan.computed?'<span class="card-badge a">מחושב מהתחזית</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
+    ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> מחולקים ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b> · איזון לפי ק"ג, קיבוץ לפי סוג מוצר · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) מיוצרים בנפרד.';
+  }
   host.innerHTML='<div class="card" id="planCard"><div class="card-title">תוכנית ייצור יומית — 5 ימים '+badge+
     '<button class="mbtn" onclick="window.print()">🖨️ הדפס</button></div>'+
-    '<div class="ins g" style="margin-top:0">📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> מחולקים ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b> · '+
-    'איזון לפי ק"ג, קיבוץ לפי סוג מוצר · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) מיוצרים בנפרד.</div>'+
+    '<div class="ins g" style="margin-top:0">'+ins+'</div>'+
     '<div class="plan-grid">'+cards+'</div></div>';
 }
 
-// ═══════════════════ תוכנית הייצור שלי מול חיזוי (חוסר/עודף, ק"ג) ═══════════════════
-// MY_PLAN = התוכנית הקבועה של מיכל (מוצרים × ימים, ק"ג), מתוך קובץ האקסל שמילא.
-// b = שם מוצר-הבסיס במערכת (לאיחוד כל הגדלים בעת ההשוואה לחיזוי).
+// ═══════════════════ התניות ייצור — תוכנית קבועה לפי ימים (מיכל) ═══════════════════
+// MY_PLAN = ההתניות של מיכל: לכל מוצר הימים והק"ג שבהם הוא מיוצר בפועל (מקובץ האקסל).
+//   n = שם המוצר כפי שמיכל קוראת לו · b = מוצר-הבסיס במערכת (להחרגה מהשיבוץ האוטומטי) ·
+//   d = {יום: ק"ג}.
+// *** תהליך מתמשך: כשמיכל נותנת התניה חדשה (מוצר → ימים → ק"ג) — מוסיפים/מעדכנים כאן
+//     שורה ב-MY_PLAN. המוצר משובץ אוטומטית בתוכנית היומית ומוסר מהשיבוץ האוטומטי. ***
 const PLAN_DAYS_HE=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
 const MY_PLAN=[
   {n:"טונה במיונז וירקות", b:"טונה במיונז וירקות", d:{"ראשון":164,"חמישי":164}},
@@ -679,50 +678,20 @@ function planBaseOf(name){
   if(PU[name]) return PU[name];
   return String(name).replace(/\s*\d+(\.\d+)?\s*(ק"ג|קג|גרם|גר|ג')?\s*$/,'').trim();
 }
-// סכימת החיזוי (פר-פריט) לרמת מוצר-בסיס
-function baseForecastMap(){
-  const out={}; (PRODUCTS||[]).forEach(p=>{ const b=planBaseOf(p.name); out[b]=(out[b]||0)+num(p.kg); });
-  return out;
-}
-function planGapHtml(gap){
-  if(Math.abs(gap)<0.5) return '<span style="color:#16a34a;font-weight:700">מאוזן</span>';
-  const col=gap<0?'#dc2626':'#d97706', lbl=gap<0?'חוסר':'עודף';
-  return '<span style="color:'+col+';font-weight:700">'+lbl+' '+fmt1(Math.abs(gap))+'</span>';
-}
-function renderPlanMine(){
-  const cmp=document.getElementById('planMineTable'); if(!cmp) return;
-  const bf=baseForecastMap();
-  const rows=MY_PLAN.map(p=>{ const plan=PLAN_DAYS_HE.reduce((a,d)=>a+(p.d[d]||0),0); const fc=bf[p.b]||0; return {n:p.n,b:p.b,plan,fc,gap:plan-fc}; });
-  let tp=0,tf=0,short=0,over=0;
-  rows.forEach(r=>{ tp+=r.plan; tf+=r.fc; if(r.gap<-0.5)short++; else if(r.gap>0.5)over++; });
-  const gap=tp-tf;
-  document.getElementById('planMineKpis').innerHTML=
-    kc('g','סה"כ בתוכנית',fmt(tp)+' ק"ג',MY_PLAN.length+' מוצרים')+
-    kc('t','חיזוי למוצרים אלה',fmt(tf)+' ק"ג','ביקוש צפוי')+
-    kc(gap<0?'r':'a','פער כולל',(gap>=0?'+':'')+fmt1(gap)+' ק"ג',gap<0?'חוסר מול החיזוי':'עודף מול החיזוי',gap<0?'r':'a')+
-    kc('n','בחוסר / עודף',short+' / '+over,'מתוך '+MY_PLAN.length+' מוצרים');
-  // טבלת השוואה — ממוין לפי גודל הפער
-  const sorted=rows.slice().sort((a,b)=>Math.abs(b.gap)-Math.abs(a.gap));
-  let h='<thead><tr><th>מוצר</th><th>תוכנית (ק"ג)</th><th>חיזוי (ק"ג)</th><th>פער</th></tr></thead><tbody>';
-  sorted.forEach(r=>{ h+='<tr><td title="מוצר-בסיס: '+esc(r.b)+'">'+esc(r.n)+'</td><td>'+fmt1(r.plan)+'</td><td>'+fmt1(r.fc)+'</td><td>'+planGapHtml(r.gap)+'</td></tr>'; });
-  h+='<tr class="total"><td>סה"כ</td><td>'+fmt1(tp)+'</td><td>'+fmt1(tf)+'</td><td>'+(gap>=0?'+':'')+fmt1(gap)+'</td></tr></tbody>';
-  cmp.innerHTML=h;
-  // טבלת התוכנית לפי ימים
-  const dt=PLAN_DAYS_HE.map(x=>MY_PLAN.reduce((a,p)=>a+(p.d[x]||0),0));
-  let d='<thead><tr><th>מוצר</th>'+PLAN_DAYS_HE.map(x=>'<th>'+x+'</th>').join('')+'<th>סה"כ</th></tr></thead><tbody>';
-  MY_PLAN.forEach(p=>{ const tot=PLAN_DAYS_HE.reduce((a,x)=>a+(p.d[x]||0),0);
-    d+='<tr><td>'+esc(p.n)+'</td>'+PLAN_DAYS_HE.map(x=>'<td>'+(p.d[x]?fmt(p.d[x]):'<span style="color:#cbd5e1">—</span>')+'</td>').join('')+'<td><strong>'+fmt(tot)+'</strong></td></tr>'; });
-  d+='<tr class="total"><td>סה"כ ליום</td>'+dt.map(v=>'<td>'+fmt(v)+'</td>').join('')+'<td><strong>'+fmt(dt.reduce((a,b)=>a+b,0))+'</strong></td></tr></tbody>';
-  document.getElementById('planMineDaily').innerHTML=d;
-  document.getElementById('planMineNote').innerHTML='התוכנית הקבועה שלך מושווית לחיזוי (ממוצע 4 השבועות האחרונים, מאוחד לרמת מוצר-בסיס). 🔴 חוסר = התוכנית קטנה מהביקוש הצפוי · 🟠 עודף = גדולה ממנו.';
-}
-function planMineExport(){
-  const bf=baseForecastMap();
-  let csv='﻿מוצר,'+PLAN_DAYS_HE.join(',')+',סה"כ תוכנית,חיזוי,פער\n';
-  MY_PLAN.forEach(p=>{ const tot=PLAN_DAYS_HE.reduce((a,x)=>a+(p.d[x]||0),0), fc=Math.round(bf[p.b]||0);
-    csv+='"'+p.n.replace(/"/g,'""')+'",'+PLAN_DAYS_HE.map(x=>p.d[x]||'').join(',')+','+tot+','+fc+','+(tot-fc)+'\n'; });
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}), url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='תוכנית_מול_חיזוי.csv'; a.click(); URL.revokeObjectURL(url);
+const MY_BASES=new Set(MY_PLAN.map(p=>p.b));
+// בניית התוכנית היומית מההתניות (אותו מבנה ש-renderProductionPlan מצפה לו):
+// כל מוצר משובץ לימים ולק"ג שמיכל קבעה, מקובץ לפי סוג מוצר (planType).
+function buildPlanFromConditions(){
+  if(!MY_PLAN.length) return null;
+  const days=PLAN_DAYS.map(d=>{
+    const items=[];
+    MY_PLAN.forEach(p=>{ const kg=p.d[d]; if(kg>0) items.push({name:p.n, kg:kg, pkg:0}); });
+    const byType={};
+    items.forEach(it=>{ const t=planType(it.name); const g=byType[t]||(byType[t]={type:t,kg:0,pkg:0,items:[]}); g.kg+=it.kg; g.items.push(it); });
+    const groups=Object.keys(byType).map(k=>byType[k]).sort((a,b)=>b.kg-a.kg);
+    return {day:d, kg:items.reduce((a,it)=>a+it.kg,0), pct:0, n_products:items.length, groups};
+  });
+  return {fromConditions:true, n_days:PLAN_DAYS.length, total_kg:days.reduce((a,d)=>a+d.kg,0), days};
 }
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
