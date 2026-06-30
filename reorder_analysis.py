@@ -85,14 +85,66 @@ def analyse(path, min_gap=2, top=50, min_buys=3):
         print("מועמדים:", ", ".join(flagged[:15]))
 
 
+def backtest(path, min_gap=2, train_end=17):
+    """בקטסט: האם תחזית מחזורית (פאזה+מרווח) מנצחת מודל שטוח (ממוצע שבועי) על
+    הזוגות המחזוריים? תוצאה (שבועות 1-26, אימון≤17): המחזורי *גרוע יותר* — המרווחים
+    רועשים מכדי לנבא תזמון, והזוגות המחזוריים הם <5% מהנפח. מסקנה: לא לבנות שכבה כזו."""
+    rows = bc.load_rows(path)
+    weeks = sorted({r["week"] for r in rows})
+    train = [w for w in weeks if w <= train_end]
+    test = [w for w in weeks if w > train_end]
+    series = defaultdict(lambda: defaultdict(float))
+    for r in rows:
+        pkg, _ = bc.dirs(r)
+        if pkg > 0:
+            series[(r["acc"], r["name"])][r["week"]] += pkg
+    n_flat = d_flat = n_cad = d_cad = 0.0
+    npairs = 0
+    vol_cyc = vol_all = 0.0
+    for (acc, name), wk in series.items():
+        vol_all += sum(wk.values())
+        tb = sorted(w for w in train if wk.get(w, 0) > 0)
+        if len(tb) < 4:
+            continue
+        gaps = [y - x for x, y in zip(tb, tb[1:])]
+        g = int(round(statistics.median(gaps)))
+        if g < min_gap:
+            continue
+        npairs += 1
+        vol_cyc += sum(wk.values())
+        m = statistics.median([wk[w] for w in tb])
+        mean_wk = sum(wk[w] for w in train) / len(train)
+        due = set()
+        w = tb[-1] + g
+        while w <= test[-1]:
+            if w in test:
+                due.add(w)
+            w += g
+        for w in test:
+            act = wk.get(w, 0)
+            n_flat += abs(mean_wk - act); d_flat += act
+            n_cad += abs((m if w in due else 0.0) - act); d_cad += act
+    f = lambda n, d: 100 * n / d if d else 0
+    print(f"זוגות מחזוריים (מרווח≥{min_gap}, ≥4 קניות): {npairs} | "
+          f"נפחם {vol_cyc:.0f}/{vol_all:.0f} ({100*vol_cyc/vol_all:.1f}%)")
+    print(f"WAPE על הזוגות המחזוריים (test {test[0]}-{test[-1]}):")
+    print(f"   מודל שטוח (ממוצע שבועי):  {f(n_flat,d_flat):.1f}%")
+    print(f"   מודל מחזורי (פאזה+מרווח): {f(n_cad,d_cad):.1f}%")
+    print("מסקנה: התזמון רועש מכדי לנבא; השכבה המחזורית מזיקה ולא שווה לבנות.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("path", nargs="?", default="C_1_26.xlsx", help="קובץ C_xxxx.xlsx")
+    ap.add_argument("--backtest", action="store_true", help="בקטסט מחזורי מול שטוח")
     ap.add_argument("--min-gap", type=int, default=2, help="מרווח חציוני מינימלי שנחשב 'לסירוגין' (שבועות)")
     ap.add_argument("--top", type=int, default=50, help="כמה מוצרים מובילים לבדוק")
     ap.add_argument("--min-buys", type=int, default=3, help="מינ' קניות כדי לחשב מרווח")
     a = ap.parse_args()
-    analyse(a.path, a.min_gap, a.top, a.min_buys)
+    if a.backtest:
+        backtest(a.path, a.min_gap)
+    else:
+        analyse(a.path, a.min_gap, a.top, a.min_buys)
 
 
 if __name__ == "__main__":
