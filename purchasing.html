@@ -44,6 +44,17 @@ select:focus,input:focus{border-color:var(--green)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#173f30;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
 .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.vegT th,.vegT td{text-align:center}
+.vegT td:first-child,.vegT th:first-child,.vegT td:nth-child(2),.vegT th:nth-child(2){text-align:right}
+.vcell{min-width:112px}
+.vlast{font-size:10px;color:var(--muted);margin-bottom:3px;white-space:nowrap}
+.voff{width:90px;text-align:center;padding:5px 7px}
+.vpick{display:block;font-size:10px;color:var(--muted);margin-top:4px;cursor:pointer;user-select:none}
+.vcheap{background:var(--green-l)}
+.vcheap .voff{border-color:var(--green);color:var(--green);font-weight:700}
+.vchosen{outline:2px solid var(--gold);outline-offset:-2px;border-radius:6px}
+#vegSels select{flex:1 1 150px;min-width:0}
+@media(max-width:600px){.vcell{min-width:92px}.voff{width:74px}}
 .cartbar{position:sticky;bottom:0;background:var(--surface);border-top:2px solid var(--green);padding:11px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:0 0 11px 11px;z-index:50}
 .cartbar b{color:var(--green)}
 .sup-card{border:1px solid var(--border);border-radius:11px;padding:15px;margin-bottom:15px;background:var(--surface)}
@@ -124,6 +135,7 @@ html.locked #gsLock{display:flex!important}
 
 <div class="tabs">
  <div class="tab active" data-p="build">בניית הזמנה</div>
+ <div class="tab" data-p="veg">🥬 מכרז ירקות</div>
  <div class="tab" data-p="cart">סל ההזמנה</div>
  <div class="tab" data-p="hist">היסטוריית הזמנות</div>
 </div>
@@ -145,6 +157,22 @@ html.locked #gsLock{display:flex!important}
     <span>בהזמנה: <b id="cbCount">0</b> פריטים · <b id="cbSup">0</b> ספקים</span>
     <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
     <button class="btn ghost sm" onclick="clearOrder()">נקה הכול</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- ============ מכרז ירקות יומי ============ -->
+ <div class="page" id="veg">
+  <div class="note">מכרז יומי לירקות: בחרי עד 4 ספקים בטורים, הזיני כמות לכל ירק ואת המחיר שכל ספק הציע היום. <b>הזול ביותר בכל שורה מסומן בירוק.</b> סמני "הזמנתי" אצל הספק שבחרת ולחצי "שמור מכרז" — המחיר יישמר ויהפוך ל"אחרון" של אותו ספק. בחירת הספקים נזכרת למחר.</div>
+  <div class="card">
+   <div class="ctrl" id="vegSels">
+    <span class="lbl">ספקי היום:</span>
+    <select id="vegSup0"></select><select id="vegSup1"></select><select id="vegSup2"></select><select id="vegSup3"></select>
+   </div>
+   <div class="scroll" id="vegTab"><div class="empty">טוען…</div></div>
+   <div class="cartbar">
+    <button class="btn blue" onclick="saveVeg()">💾 שמור מכרז</button>
+    <span class="lbl">הזול בכל שורה מסומן ירוק · סמני "הזמנתי" לפני שמירה</span>
    </div>
   </div>
  </div>
@@ -187,6 +215,11 @@ const PURCH_TOKEN_KEY='gsGoogleToken';      // קריאה — משותף עם fi
 const PURCH_WRITE_KEY='gsPurchWrite';        // כתיבה — נפרד, מבוקש רק בשמירה
 const CAT_TAB='PURCHASING';
 const HIST_TAB='PO_HISTORY';
+const VEG_TAB='VEG_AUCTION';
+const VEG_CAT='206';                     // קטגוריית הירקות למכרז
+const VEG_SEL_KEY='gsVegSuppliers';      // 4 הספקים הנבחרים (נשמר במכשיר, נזכר למחר)
+const PO_HEADER=['תאריך','מזהה הזמנה','מפתח ספק','שם ספק','מפתח פריט','שם פריט','כמות','מחיר אחרון','הערכת עלות'];
+const VEG_HEADER=['תאריך','מפתח ירק','שם ירק','מפתח ספק','שם ספק','מחיר מוצע','כמות','נבחר'];
 
 let CAT=null;            // הקטלוג {cats,suppliers,items,generatedAt}
 let ITEMS=[];            // מערך פריטים
@@ -195,6 +228,9 @@ let ORDER={};            // מפתח פריט -> {qty:Number, sup:supplierKey}
 let HIST=null;           // שורות היסטוריה (מערך אובייקטים)
 let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משותף)
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
+let ITEMS_VEG=[];                              // פריטי ירקות (קטגוריה 206)
+let VEGOFFERS={}, VEGQTY={}, VEGCHOSEN={};     // מצב המכרז: הצעות/כמות/נבחר לכל ירק
+let VEGLAST={}, VEGHIST=null;                  // מחיר אחרון פר (ירק,ספק) מהמכרז
 
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -208,13 +244,16 @@ function tab(p){
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
  if(p==='cart')renderCart();
  if(p==='hist')loadHistory(false);
+ if(p==='veg'){renderVeg();loadVegHist(false).then(renderVeg);}
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 
 /* ---------- אתחול הקטלוג ---------- */
 function startApp(){
- ITEMS=(CAT.items||[]).slice();
- ITEM_BY_K={};ITEMS.forEach(it=>{ITEM_BY_K[it.k]=it;});
+ const ALL=(CAT.items||[]).slice();
+ ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
+ ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT);       // טאב בניית הזמנה — בלי ירקות
+ ITEMS_VEG=ALL.filter(it=>String(it.c)===VEG_CAT);   // טאב מכרז ירקות (קטגוריה 206)
  // בוררי קטגוריה
  const fc=document.getElementById('fCat');
  const codes=[...new Set(ITEMS.map(i=>i.c))].sort((a,b)=>String(a).localeCompare(String(b),'en',{numeric:true}));
@@ -223,11 +262,11 @@ function startApp(){
  const supSet=new Set();ITEMS.forEach(i=>(i.s||[]).forEach(s=>supSet.add(s)));
  const sups=[...supSet].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
  [['fSup'],['hSup']].forEach(([id])=>{const sel=document.getElementById(id);sups.forEach(s=>{const o=document.createElement('option');o.value=s.k;o.textContent=s.n;sel.appendChild(o);});});
- setTxt('hdrRange',ITEMS.length+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
+ setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
  ['fSearch','fCat','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
- renderItems();updateCartBar();
+ renderItems();updateCartBar();initVegSelectors();
 }
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 
@@ -424,13 +463,126 @@ function ensureWriteToken(){
   c.requestAccessToken({prompt:writeToken?'':'consent'});
  });
 }
-async function appendRows(rows){
- const token=await ensureWriteToken();
- const range=encodeURIComponent(HIST_TAB+'!A:I');
+// מוודא שהלשונית קיימת (יוצר עם כותרת אם חסרה) — משתמש באסימון כתיבה
+async function ensureTab(tab,header,token){
+ const meta=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'?fields=sheets.properties.title',{headers:{Authorization:'Bearer '+token}});
+ if(!meta.ok)throw new Error('meta '+meta.status);
+ const titles=(((await meta.json()).sheets)||[]).map(s=>s.properties.title);
+ if(titles.indexOf(tab)<0){
+  const bu=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+':batchUpdate',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({requests:[{addSheet:{properties:{title:tab}}}]})});
+  if(!bu.ok)throw new Error('addSheet '+bu.status);
+  if(header)await appendRaw(tab,[header],token);
+ }
+}
+async function appendRaw(tab,rows,token){
+ const range=encodeURIComponent(tab+'!A1');
  const url='https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({values:rows})});
  if(!r.ok)throw new Error('append '+r.status);
  return r.json();
+}
+async function appendRows(rows){
+ const token=await ensureWriteToken();
+ await ensureTab(HIST_TAB,PO_HEADER,token);
+ return appendRaw(HIST_TAB,rows,token);
+}
+
+/* ================= מכרז ירקות יומי (קטגוריה 206) ================= */
+function getVegCols(){
+ let a=null;try{a=JSON.parse(localStorage.getItem(VEG_SEL_KEY)||'null');}catch(e){}
+ if(!Array.isArray(a))a=['','','',''];
+ while(a.length<4)a.push('');
+ return a.slice(0,4);
+}
+function setVegCols(a){try{localStorage.setItem(VEG_SEL_KEY,JSON.stringify(a));}catch(e){}}
+function initVegSelectors(){
+ const cols=getVegCols();
+ const sups=Object.keys(CAT.suppliers||{}).map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
+ for(let i=0;i<4;i++){
+  const sel=document.getElementById('vegSup'+i);if(!sel)continue;
+  sel.innerHTML='<option value="">— בחרי ספק —</option>'+sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('');
+  sel.onchange=()=>{const c=getVegCols();c[i]=sel.value;setVegCols(c);renderVeg();};
+ }
+}
+async function loadVegHist(force){
+ if(VEGHIST&&!force){buildVegLast();return;}
+ try{
+  const range=encodeURIComponent(VEG_TAB+'!A:H');
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+purchToken}});
+  if(!r.ok){VEGHIST=[];buildVegLast();return;}
+  const vals=((await r.json()).values)||[];
+  VEGHIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[5]))).map(row=>({date:row[0],vk:String(row[1]),vn:row[2],sk:String(row[3]),sn:row[4],price:parseFloat(row[5])}));
+  buildVegLast();
+ }catch(e){VEGHIST=[];buildVegLast();}
+}
+function buildVegLast(){VEGLAST={};(VEGHIST||[]).forEach(r=>{if(r.vk&&r.sk&&!isNaN(r.price))VEGLAST[r.vk+'|'+r.sk]=r.price;});}
+function vegLastPrice(vk,sk){
+ if(sk&&VEGLAST[vk+'|'+sk]!=null)return VEGLAST[vk+'|'+sk];
+ const it=ITEM_BY_K[vk];return (it&&it.p!=null)?it.p:null;   // נפילה למחיר האחרון מהקובץ
+}
+function renderVeg(){
+ const cols=getVegCols();
+ const box=document.getElementById('vegTab');if(!box)return;
+ if(!ITEMS_VEG.length){box.innerHTML='<div class="empty">אין פריטים בקטגוריית ירקות (206).</div>';return;}
+ let h='<table class="vegT"><thead><tr><th>ירק</th><th>כמות להיום</th>';
+ for(let i=0;i<4;i++){h+='<th>'+(cols[i]?esc(supName(cols[i])):'<span class="lbl">ספק '+(i+1)+'</span>')+'</th>';}
+ h+='</tr></thead><tbody>';
+ ITEMS_VEG.slice().sort((a,b)=>a.n.localeCompare(b.n,'he')).forEach(it=>{
+  const vk=it.k;
+  h+='<tr><td>'+esc(it.n)+'</td>'+
+     '<td><input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(VEGQTY[vk]>0?VEGQTY[vk]:'')+'" placeholder="0"></td>';
+  for(let i=0;i<4;i++){
+   const sk=cols[i];
+   if(!sk){h+='<td class="vcell">—</td>';continue;}
+   const last=vegLastPrice(vk,sk);
+   const off=(VEGOFFERS[vk]&&VEGOFFERS[vk][i]!=null)?VEGOFFERS[vk][i]:'';
+   const chosen=VEGCHOSEN[vk]===i;
+   h+='<td class="vcell'+(chosen?' vchosen':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
+      '<div class="vlast">אחרון: '+(last!=null?P2(last):'—')+'</div>'+
+      '<input class="voff" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
+      '<label class="vpick"><input type="radio" name="vch_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> הזמנתי</label>'+
+      '</td>';
+  }
+  h+='</tr>';
+ });
+ box.innerHTML=h+'</tbody></table>';
+ box.querySelectorAll('.vqty').forEach(inp=>inp.oninput=()=>{const v=parseFloat(inp.value);if(v>0)VEGQTY[inp.dataset.vk]=v;else delete VEGQTY[inp.dataset.vk];});
+ box.querySelectorAll('.voff').forEach(inp=>inp.oninput=()=>{
+  const vk=inp.dataset.vk,ci=+inp.dataset.col,v=parseFloat(inp.value);
+  VEGOFFERS[vk]=VEGOFFERS[vk]||{};if(v>0)VEGOFFERS[vk][ci]=v;else delete VEGOFFERS[vk][ci];
+  highlightRow(vk);
+ });
+ box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{VEGCHOSEN[rb.dataset.vk]=+rb.dataset.col;markChosen(rb.dataset.vk);});
+ ITEMS_VEG.forEach(it=>highlightRow(it.k));
+}
+function vegCell(vk,i){return document.querySelector('.vcell[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
+function highlightRow(vk){
+ const offs=VEGOFFERS[vk]||{};
+ const vals=Object.keys(offs).map(k=>offs[k]).filter(v=>v>0);
+ const min=vals.length?Math.min.apply(null,vals):null;
+ for(let i=0;i<4;i++){const cell=vegCell(vk,i);if(cell)cell.classList.toggle('vcheap',min!=null&&offs[i]!=null&&offs[i]===min);}
+}
+function markChosen(vk){for(let i=0;i<4;i++){const cell=vegCell(vk,i);if(cell)cell.classList.toggle('vchosen',VEGCHOSEN[vk]===i);}}
+async function saveVeg(){
+ const cols=getVegCols();
+ const ds=new Date().toLocaleDateString('he-IL');
+ const rows=[];
+ ITEMS_VEG.forEach(it=>{
+  const vk=it.k,offs=VEGOFFERS[vk]||{},qty=(VEGQTY[vk]>0?VEGQTY[vk]:''),chosen=VEGCHOSEN[vk];
+  for(let i=0;i<4;i++){
+   const sk=cols[i];if(!sk)continue;
+   const price=offs[i];if(price==null)continue;   // שומרים רק הצעות שהוזנו
+   rows.push([ds,vk,it.n,sk,supName(sk),price,qty,(chosen===i?'✓':'')]);
+  }
+ });
+ if(!rows.length){toast('אין מה לשמור — הזיני מחירים לספקים');return;}
+ try{
+  const token=await ensureWriteToken();
+  await ensureTab(VEG_TAB,VEG_HEADER,token);
+  await appendRaw(VEG_TAB,rows,token);
+  toast('נשמרו '+rows.length+' שורות מכרז');
+  VEGHIST=null;await loadVegHist(true);renderVeg();
+ }catch(err){console.error(err);toast('לא ניתן לשמור (ייתכן שחסרה הרשאת עריכה)');}
 }
 function downloadBackup(sk,rows,oid){
  const nm=sk==='__none__'?'ללא_ספק':supName(sk);
