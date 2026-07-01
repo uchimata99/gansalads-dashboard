@@ -53,8 +53,9 @@ select:focus,input:focus{border-color:var(--green)}
 .vcheap{background:var(--green-l)}
 .vcheap .voff{border-color:var(--green);color:var(--green);font-weight:700}
 .vchosen{outline:2px solid var(--gold);outline-offset:-2px;border-radius:6px}
-#vegSels select{flex:1 1 150px;min-width:0}
-@media(max-width:600px){.vcell{min-width:92px}.voff{width:74px}}
+.vegT thead th{vertical-align:middle}
+.vegT th select{width:100%;min-width:120px;padding:6px 8px;font-size:12px}
+@media(max-width:600px){.vcell{min-width:92px}.voff{width:74px}.vegT th select{min-width:88px;font-size:11px}}
 .cartbar{position:sticky;bottom:0;background:var(--surface);border-top:2px solid var(--green);padding:11px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-radius:0 0 11px 11px;z-index:50}
 .cartbar b{color:var(--green)}
 .sup-card{border:1px solid var(--border);border-radius:11px;padding:15px;margin-bottom:15px;background:var(--surface)}
@@ -165,10 +166,6 @@ html.locked #gsLock{display:flex!important}
  <div class="page" id="veg">
   <div class="note">מכרז יומי לירקות: בחרי עד 4 ספקים בטורים, הזיני כמות לכל ירק ואת המחיר שכל ספק הציע היום. <b>הזול ביותר בכל שורה מסומן בירוק.</b> סמני "הזמנתי" אצל הספק שבחרת ולחצי "שמור מכרז" — המחיר יישמר ויהפוך ל"אחרון" של אותו ספק. בחירת הספקים נזכרת למחר.</div>
   <div class="card">
-   <div class="ctrl" id="vegSels">
-    <span class="lbl">ספקי היום:</span>
-    <select id="vegSup0"></select><select id="vegSup1"></select><select id="vegSup2"></select><select id="vegSup3"></select>
-   </div>
    <div class="scroll" id="vegTab"><div class="empty">טוען…</div></div>
    <div class="cartbar">
     <button class="btn blue" onclick="saveVeg()">💾 שמור מכרז</button>
@@ -266,7 +263,7 @@ function startApp(){
  ['fSearch','fCat','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
- renderItems();updateCartBar();initVegSelectors();
+ renderItems();updateCartBar();
 }
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 
@@ -495,18 +492,16 @@ function getVegCols(){
  return a.slice(0,4);
 }
 function setVegCols(a){try{localStorage.setItem(VEG_SEL_KEY,JSON.stringify(a));}catch(e){}}
-function initVegSelectors(){
- const cols=getVegCols();
- // רק ספקי ירקות — ספקים המשויכים לפריט כלשהו בקטגוריה 206
+// רשימת ספקי הירקות (משויכים לפריט 206), ממוינת לפי שם
+function vegSupList(){
  const vset=new Set();ITEMS_VEG.forEach(it=>(it.s||[]).forEach(s=>vset.add(s)));
- cols.forEach(c=>{if(c)vset.add(c);});   // לשמור בחירה קיימת גם אם אינה ברשימה
- const sups=[...vset].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
- for(let i=0;i<4;i++){
-  const sel=document.getElementById('vegSup'+i);if(!sel)continue;
-  sel.innerHTML='<option value="">— בחרי ספק —</option>'+sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('');
-  sel.onchange=()=>{const c=getVegCols();c[i]=sel.value;setVegCols(c);renderVeg();};
- }
+ getVegCols().forEach(c=>{if(c)vset.add(c);});   // לשמור בחירה קיימת גם אם אינה ברשימה
+ return [...vset].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
 }
+// סדר תצוגת הירקות לפי העדפת מיכל; השאר אחריהם לפי א"ב
+const VEG_ORDER=['חציל','פלפל אדום','חריף','עגבני','מלפפון','קישוא','פטרוזיל','שמיר','סלרי'];
+function vegRank(name){for(let i=0;i<VEG_ORDER.length;i++){if(String(name).indexOf(VEG_ORDER[i])>=0)return i;}return VEG_ORDER.length;}
+function vegSorted(){return ITEMS_VEG.slice().sort((a,b)=>{const ra=vegRank(a.n),rb=vegRank(b.n);return ra!==rb?ra-rb:a.n.localeCompare(b.n,'he');});}
 async function loadVegHist(force){
  if(VEGHIST&&!force){buildVegLast();return;}
  try{
@@ -527,10 +522,15 @@ function renderVeg(){
  const cols=getVegCols();
  const box=document.getElementById('vegTab');if(!box)return;
  if(!ITEMS_VEG.length){box.innerHTML='<div class="empty">אין פריטים בקטגוריית ירקות (206).</div>';return;}
+ const sups=vegSupList();
  let h='<table class="vegT"><thead><tr><th>ירק</th><th>כמות להיום</th>';
- for(let i=0;i<4;i++){h+='<th>'+(cols[i]?esc(supName(cols[i])):'<span class="lbl">ספק '+(i+1)+'</span>')+'</th>';}
+ for(let i=0;i<4;i++){
+  h+='<th><select class="vegSupSel" data-i="'+i+'"><option value="">— ספק '+(i+1)+' —</option>'+
+     sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+
+     '</select></th>';
+ }
  h+='</tr></thead><tbody>';
- ITEMS_VEG.slice().sort((a,b)=>a.n.localeCompare(b.n,'he')).forEach(it=>{
+ vegSorted().forEach(it=>{
   const vk=it.k;
   h+='<tr><td>'+esc(it.n)+'</td>'+
      '<td><input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(VEGQTY[vk]>0?VEGQTY[vk]:'')+'" placeholder="0"></td>';
@@ -549,6 +549,7 @@ function renderVeg(){
   h+='</tr>';
  });
  box.innerHTML=h+'</tbody></table>';
+ box.querySelectorAll('.vegSupSel').forEach(sel=>sel.onchange=()=>{const c=getVegCols();c[+sel.dataset.i]=sel.value;setVegCols(c);renderVeg();});
  box.querySelectorAll('.vqty').forEach(inp=>inp.oninput=()=>{const v=parseFloat(inp.value);if(v>0)VEGQTY[inp.dataset.vk]=v;else delete VEGQTY[inp.dataset.vk];});
  box.querySelectorAll('.voff').forEach(inp=>inp.oninput=()=>{
   const vk=inp.dataset.vk,ci=+inp.dataset.col,v=parseFloat(inp.value);
