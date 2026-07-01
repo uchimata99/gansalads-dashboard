@@ -53,6 +53,8 @@ select:focus,input:focus{border-color:var(--green)}
 .vcheap{background:var(--green-l)}
 .vcheap .voff{border-color:var(--green);color:var(--green);font-weight:700}
 .vchosen{outline:2px solid var(--gold);outline-offset:-2px;border-radius:6px}
+.vlastbuy{background:var(--gold-l)}
+.vbuy{font-size:9px;font-weight:700;color:var(--gold);white-space:nowrap;margin-bottom:2px}
 .vegT thead th{vertical-align:middle}
 .vegT th select{width:100%;min-width:120px;padding:6px 8px;font-size:12px}
 @media(max-width:600px){.vcell{min-width:92px}.voff{width:74px}.vegT th select{min-width:88px;font-size:11px}}
@@ -227,7 +229,7 @@ let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משו
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
 let ITEMS_VEG=[];                              // פריטי ירקות (קטגוריה 206)
 let VEGOFFERS={}, VEGQTY={}, VEGCHOSEN={};     // מצב המכרז: הצעות/כמות/נבחר לכל ירק
-let VEGLAST={}, VEGHIST=null;                  // מחיר אחרון פר (ירק,ספק) מהמכרז
+let VEGLAST={}, VEGLASTBUY={}, VEGHIST=null;    // מחיר אחרון פר (ירק,ספק) + הספק שממנו נקנה לאחרונה, מהמכרז
 
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -509,11 +511,12 @@ async function loadVegHist(force){
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+purchToken}});
   if(!r.ok){VEGHIST=[];buildVegLast();return;}
   const vals=((await r.json()).values)||[];
-  VEGHIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[5]))).map(row=>({date:row[0],vk:String(row[1]),vn:row[2],sk:String(row[3]),sn:row[4],price:parseFloat(row[5])}));
+  VEGHIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[5]))).map(row=>({date:row[0],vk:String(row[1]),vn:row[2],sk:String(row[3]),sn:row[4],price:parseFloat(row[5]),chosen:String(row[7]||'').indexOf('✓')>=0}));
   buildVegLast();
  }catch(e){VEGHIST=[];buildVegLast();}
 }
-function buildVegLast(){VEGLAST={};(VEGHIST||[]).forEach(r=>{if(r.vk&&r.sk&&!isNaN(r.price))VEGLAST[r.vk+'|'+r.sk]=r.price;});}
+// סדר כרונולוגי (סדר ההוספה) → הערך האחרון גובר: מחיר אחרון פר (ירק,ספק) + הספק שנבחר לאחרונה לכל ירק
+function buildVegLast(){VEGLAST={};VEGLASTBUY={};(VEGHIST||[]).forEach(r=>{if(r.vk&&r.sk&&!isNaN(r.price))VEGLAST[r.vk+'|'+r.sk]=r.price;if(r.vk&&r.sk&&r.chosen)VEGLASTBUY[r.vk]=r.sk;});}
 function vegLastPrice(vk,sk){
  if(sk&&VEGLAST[vk+'|'+sk]!=null)return VEGLAST[vk+'|'+sk];
  const it=ITEM_BY_K[vk];return (it&&it.p!=null)?it.p:null;   // נפילה למחיר האחרון מהקובץ
@@ -540,7 +543,9 @@ function renderVeg(){
    const last=vegLastPrice(vk,sk);
    const off=(VEGOFFERS[vk]&&VEGOFFERS[vk][i]!=null)?VEGOFFERS[vk][i]:'';
    const chosen=VEGCHOSEN[vk]===i;
-   h+='<td class="vcell'+(chosen?' vchosen':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
+   const lastBuy=(VEGLASTBUY[vk]===sk);
+   h+='<td class="vcell'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
+      (lastBuy?'<div class="vbuy">🛒 נקנה לאחרונה</div>':'')+
       '<div class="vlast">אחרון: '+(last!=null?P2(last):'—')+'</div>'+
       '<input class="voff" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
       '<label class="vpick"><input type="radio" name="vch_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> הזמנתי</label>'+
