@@ -497,7 +497,10 @@ function getVegCols(){
 function setVegCols(a){try{localStorage.setItem(VEG_SEL_KEY,JSON.stringify(a));}catch(e){}}
 function initVegSelectors(){
  const cols=getVegCols();
- const sups=Object.keys(CAT.suppliers||{}).map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
+ // רק ספקי ירקות — ספקים המשויכים לפריט כלשהו בקטגוריה 206
+ const vset=new Set();ITEMS_VEG.forEach(it=>(it.s||[]).forEach(s=>vset.add(s)));
+ cols.forEach(c=>{if(c)vset.add(c);});   // לשמור בחירה קיימת גם אם אינה ברשימה
+ const sups=[...vset].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
  for(let i=0;i<4;i++){
   const sel=document.getElementById('vegSup'+i);if(!sel)continue;
   sel.innerHTML='<option value="">— בחרי ספק —</option>'+sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('');
