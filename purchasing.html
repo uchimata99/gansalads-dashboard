@@ -87,7 +87,7 @@ html.locked #gsLock{display:flex!important}
 <div id="gsLock">
   <div class="lock-logo">📦</div>
   <div class="lock-title">סלטי גן — הזמנות רכש</div>
-  <div class="lock-sub" id="gsLockSub">הקטלוג והמחירים פרטיים ונטענים רק לאחר התחברות עם חשבון גוגל מורשה. ההרשאה כוללת שמירת היסטוריית הזמנות בגיליון.</div>
+  <div class="lock-sub" id="gsLockSub">הקטלוג והמחירים פרטיים ונטענים רק לאחר התחברות עם חשבון גוגל מורשה (קריאה). שמירת הזמנה להיסטוריה תבקש הרשאת עריכה בפעם הראשונה.</div>
   <button class="gbtn" id="gsSignin" onclick="gsSignIn()">
     <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
     התחבר עם Google
@@ -178,9 +178,13 @@ html.locked #gsLock{display:flex!important}
    נשמרות (append) ללשונית PO_HISTORY. אין ערכים מודבקים בקוד. */
 const PURCH_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
 const PURCH_SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
-/* הרשאת עריכה נדרשת לשמירת ההיסטוריה. drive.file לעקביות עם שאר הדפים. */
-const PURCH_SCOPE='https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
-const PURCH_TOKEN_KEY='gsPurchToken';
+/* קריאה בלבד בכניסה (הרשאה שכבר קיימת במסך ההסכמה, ומפתח סשן משותף עם
+   שאר הדפים כך שאין כניסה כפולה). הרשאת הכתיבה מבוקשת בנפרד רק בשמירה
+   הראשונה, כדי שהגלישה/עיצוב יעבדו מיד בלי תלות בשינוי מסך ההסכמה. */
+const PURCH_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const PURCH_WRITE_SCOPE='https://www.googleapis.com/auth/spreadsheets';
+const PURCH_TOKEN_KEY='gsGoogleToken';      // קריאה — משותף עם finance/production/customers
+const PURCH_WRITE_KEY='gsPurchWrite';        // כתיבה — נפרד, מבוקש רק בשמירה
 const CAT_TAB='PURCHASING';
 const HIST_TAB='PO_HISTORY';
 
@@ -189,7 +193,8 @@ let ITEMS=[];            // מערך פריטים
 let ITEM_BY_K={};        // מפתח פריט -> פריט
 let ORDER={};            // מפתח פריט -> {qty:Number, sup:supplierKey}
 let HIST=null;           // שורות היסטוריה (מערך אובייקטים)
-let purchToken=null, purchTokenClient=null;
+let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משותף)
+let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
 
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -392,14 +397,38 @@ async function saveSupplier(sk){
   HIST=null; // לאלץ רענון בכניסה הבאה
  }catch(err){
   console.error(err);
-  toast('השמירה נכשלה — מוריד גיבוי מקומי');
+  toast('לא ניתן לשמור בענן (ייתכן שחסרה הרשאת עריכה) — הורדתי גיבוי CSV');
   downloadBackup(sk,rows,oid);
  }
 }
+// מאתחל לקוח אסימון-כתיבה (הרשאת spreadsheets)
+function initWriteClient(){
+ if(writeClient)return writeClient;
+ if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
+ writeClient=google.accounts.oauth2.initTokenClient({client_id:PURCH_CLIENT_ID,scope:PURCH_WRITE_SCOPE,callback:()=>{}});
+ return writeClient;
+}
+// מחזיר Promise עם אסימון כתיבה תקף (מבקש הסכמה בפעם הראשונה — חייב לרוץ מתוך לחיצה)
+function ensureWriteToken(){
+ let tok=null;try{tok=JSON.parse(sessionStorage.getItem(PURCH_WRITE_KEY)||'null');}catch(e){}
+ if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){writeToken=tok.t;return Promise.resolve(writeToken);}
+ return new Promise((resolve,reject)=>{
+  const c=initWriteClient();
+  if(!c){reject(new Error('no-client'));return;}
+  c.callback=(resp)=>{
+   if(resp&&resp.error){reject(new Error(resp.error));return;}
+   writeToken=resp.access_token;
+   try{sessionStorage.setItem(PURCH_WRITE_KEY,JSON.stringify({t:writeToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+   resolve(writeToken);
+  };
+  c.requestAccessToken({prompt:writeToken?'':'consent'});
+ });
+}
 async function appendRows(rows){
+ const token=await ensureWriteToken();
  const range=encodeURIComponent(HIST_TAB+'!A:I');
  const url='https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
- const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+purchToken,'Content-Type':'application/json'},body:JSON.stringify({values:rows})});
+ const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({values:rows})});
  if(!r.ok)throw new Error('append '+r.status);
  return r.json();
 }
