@@ -255,9 +255,10 @@ function startDashboard(){
     }
     if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
       document.getElementById('fcBody').style.display='';
-      const holPre=fcHolidayPreWeek();
-      const holBanner=holPre
-        ? '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>שבוע לפני '+holPre.name+'</b> ('+holPre.date+') — היסטורית המכירות המצרפיות עולות בכ-<b>'+Math.round(holPre.uplift*100)+'%</b> בשבוע שלפני החג. התחזית למטה היא ממוצע רגיל ואינה כוללת את התוספת — שקלי להגדיל בהתאם (למשל סה"כ ~'+fmt(Math.round((FORECAST.total_kg||0)*(1+holPre.uplift)))+' ק"ג).</div>'
+      fcApplyHolidayBoost(FORECAST);
+      const ha=FORECAST.holiday_applied;
+      const holBanner=ha
+        ? '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', והגדלתי את כל התחזית אוטומטית ב-<b>'+Math.round(ha.uplift*100)+'%</b> לפי העלייה ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'
         : '';
       document.getElementById('fcEmpty').innerHTML = holBanner + (FORECAST.computed
         ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
@@ -458,6 +459,23 @@ function fcHolidayPreWeek(){
     if(days>=0 && days<=12){ if(!best || days<best.days) best={name:h.name, date:h.date, uplift:h.uplift, days}; }
   }
   return best;
+}
+// מיישם את תיקון-החג אוטומטית: אם השבוע הקרוב הוא לפני חג, מגדיל את
+// התחזית (סה"כ, פר-מוצר ופר-יום) באחוז ההיסטורי שנמדד. מיכל ביקשה
+// שהתיקון ייעשה אוטומטית — לא צריך אישור; רק נרשמת הערה במסך.
+function fcApplyHolidayBoost(f){
+  if(!f || f.holiday_applied) return f;   // הגנה מפני החלה כפולה
+  const h=fcHolidayPreWeek(); if(!h) return f;
+  const k=1+h.uplift;
+  (f.products||[]).forEach(p=>{
+    ['kg','pkg','total_kg','std_kg','std_pkg'].forEach(x=>{ if(p[x]!=null) p[x]=num(p[x])*k; });
+    ['daily_kg','daily_pkg','daily'].forEach(dk=>{ const d=p[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  });
+  if(f.total_kg!=null)  f.total_kg =num(f.total_kg)*k;
+  if(f.total_pkg!=null) f.total_pkg=num(f.total_pkg)*k;
+  ['daily_kg','daily_pkg'].forEach(dk=>{ const d=f[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  f.holiday_applied={name:h.name, date:h.date, uplift:h.uplift};
+  return f;
 }
 
 function computeForecastFromData(d){
