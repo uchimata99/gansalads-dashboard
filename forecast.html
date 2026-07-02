@@ -410,8 +410,18 @@ function normDaily(d){
 // ── למידה מונחית-מיכל: שבועות חריגים חד-פעמיים שמוצאים מהממוצע ──
 // כל רשומה: {p:"שם מוצר", w:מספר שבוע, why:"סיבה"} — מתווסף כשמיכל מסבירה טעות גדולה
 // ("הזמנה חד-פעמית" וכו') בשגרת יום ראשון. השבוע ההוא לא ייכלל בממוצע החיזוי של המוצר.
-const FC_NOTES=[];
-function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.p===name && +n.w===+w) return true; } return false; }
+const FC_NOTES=[
+  {p:"חציל אמל'ה 4 ק\"ג", type:"one_off", w:26, why:"הזמנה מיוחדת של לקוח ספציפי"},
+  {p:"חמוצים אסיאתים 4ל", type:"one_off", w:26, why:"לקוח נתקע עם מלאי — שבוע נמוך חד-פעמי; צפוי לחזור לרגיל"},
+  {p:"מטבוחה מיוחדת 4 ק\"ג", type:"trend", why:"מגמת עלייה בביקוש — לפי מיכל"},
+  {p:"מטבוחה מיוחדת 2 ק\"ג", type:"trend", why:"מגמת עלייה בביקוש — לפי מיכל"},
+  {p:"חומוס בארכה 4 ק\"ג (מכיל בוטנים)", type:"discontinued", why:"הופסק — כבר לא קיים"},
+  {p:"(חומוס בארכה 4 ק\"ג (מכיל בוטנים", type:"discontinued", why:"הופסק — כבר לא קיים (וריאנט כתיב)"},
+  {p:"לקט ירקות 3 ק\"ג טורשי", type:"trend", why:"מגמתיות ניתנת לניבוי — לפי מיכל"},
+  {p:"צ'ימיצ'ורי שקד תממ 3 קג", type:"trend", why:"מגמתיות ניתנת לניבוי — לפי מיכל"}
+];
+function fcNote(name){ for(const n of FC_NOTES){ if(n.p===name) return n; } return null; }
+function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.type==='one_off' && n.p===name && +n.w===+w) return true; } return false; }
 
 function computeForecastFromData(d){
   if(!d || !d.PROD_DETAIL) return null;
@@ -421,21 +431,25 @@ function computeForecastFromData(d){
   const recentAll=weeks.slice(-Math.min(4,weeks.length));
   const products=[];
   for(const name in PD){
+    const note=fcNote(name);
+    if(note && note.type==='discontinued') continue;          // מוצר שהופסק — לא נכנס לחיזוי
     const wk=PD[name];
-    const recent=recentAll.filter(w=>!fcIsOneOff(name,w));   // דילוג על שבועות חריגים חד-פעמיים
+    const recent=recentAll.filter(w=>!fcIsOneOff(name,w));     // דילוג על שבועות חריגים חד-פעמיים
     const useWeeks=recent.length?recent:recentAll;
-    const denom=useWeeks.length;
+    const trend=!!(note && note.type==='trend');              // מגמה מונחית-מיכל → שבועות אחרונים במשקל גבוה יותר
+    const wts=useWeeks.map((_,i)=> trend?(i+1):1);
+    const wsum=wts.reduce((a,b)=>a+b,0)||1;
     const sumP=DAYS.map(()=>0), sumK=DAYS.map(()=>0);  // 0=אריזות, 1=ק"ג בנתוני המקור
     const wkP=[], wkK=[]; let any=false;
-    useWeeks.forEach(w=>{
+    useWeeks.forEach((w,idx)=>{
       const dd=wk[w]; let tp=0, tk=0;
       if(dd){ for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){
-        const p=num(dd[di][0]), k=num(dd[di][1]); sumP[i]+=p; sumK[i]+=k; tp+=p; tk+=k; if(p||k) any=true; } } }
+        const p=num(dd[di][0]), k=num(dd[di][1]); sumP[i]+=wts[idx]*p; sumK[i]+=wts[idx]*k; tp+=p; tk+=k; if(p||k) any=true; } } }
       wkP.push(tp); wkK.push(tk);
     });
     if(!any) continue;
     const dailyP={}, dailyK={}; let totP=0, totK=0;
-    DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/denom; dailyK[day]=sumK[i]/denom; totP+=dailyP[day]; totK+=dailyK[day]; });
+    DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/wsum; dailyK[day]=sumK[i]/wsum; totP+=dailyP[day]; totK+=dailyK[day]; });
     if(totK<=0 && totP<=0) continue;
     products.push({name:String(name), pkg:totP, kg:totK, daily_pkg:dailyP, daily_kg:dailyK, std_pkg:stdev(wkP), std_kg:stdev(wkK)});
   }
@@ -723,11 +737,15 @@ const MY_BASES=new Set(MY_PLAN.map(p=>p.b));
 // ── בדיקת דיוק חיה: חיזוי (ממוצע 4 שבועות שקדמו, ללא חריגים) מול הביקוש בפועל בשבוע האחרון ──
 function fcWeeklyKgMap(PD){ const m={}; for(const n in PD){ m[n]={}; for(const w in PD[n]){ let k=0; const dd=PD[n][w]; for(const di in dd) k+=num(dd[di][1]); m[n][+w]=k; } } return m; }
 function fcPredWeek(m,name,targetW,weeks){
+  const note=fcNote(name);
+  if(note && note.type==='discontinued') return 0;
   const prior=weeks.filter(w=>w<targetW).slice(-4);
   const use=prior.filter(w=>!fcIsOneOff(name,w));
   const ws=use.length?use:prior;
   if(!ws.length) return null;
-  let s=0; ws.forEach(w=>s+=(m[name][w]||0)); return s/ws.length;
+  const trend=!!(note && note.type==='trend');
+  let s=0,wsum=0; ws.forEach((w,i)=>{ const wt=trend?(i+1):1; s+=wt*(m[name][w]||0); wsum+=wt; });
+  return wsum? s/wsum : null;
 }
 function fcWeekAcc(m,names,weeks,targetW){
   let ta=0,tf=0,sae=0; const rows=[];
