@@ -38,13 +38,16 @@ HIST_HEADER = ["תאריך", "מזהה הזמנה", "מפתח ספק", "שם ס�
 
 
 def main():
+    global SHEET_ID
     ap = argparse.ArgumentParser()
     ap.add_argument("catalog", help="purchasing_catalog.json (פלט build_purchasing.py)")
     ap.add_argument("--key", default=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
                     help="נתיב למפתח חשבון השירות (JSON)")
+    ap.add_argument("--sheet", default=SHEET_ID, help="מזהה גיליון יעד (ברירת מחדל: גיליון הרכש)")
     args = ap.parse_args()
     if not args.key:
         sys.exit("חסר מפתח חשבון שירות: --key או GOOGLE_APPLICATION_CREDENTIALS")
+    SHEET_ID = args.sheet
 
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
