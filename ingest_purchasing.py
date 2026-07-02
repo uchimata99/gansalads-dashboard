@@ -28,8 +28,8 @@ import json
 import os
 import sys
 
-# הגיליון המוגבל — זהה למזהה ב-purchasing.html / dashboard_customers.html
-SHEET_ID = "1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A"
+# גיליון הרכש הייעודי — זהה למזהה ב-purchasing.html (נפרד משאר הדשבורדים)
+SHEET_ID = "1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q"
 CAT_TAB = "PURCHASING"
 HIST_TAB = "PO_HISTORY"
 CHUNK = 40000  # תווי base64 לכל תא (מתחת למגבלת 50,000 של גוגל שיטס)

@@ -201,10 +201,11 @@ html.locked #gsLock{display:flex!important}
 <script>
 /* ================= סלטי גן — הזמנות רכש =================
    הדף פרטי: אין בו קטלוג/מחירים במקור. הקטלוג נטען בזמן ריצה מלשונית
-   PURCHASING בגיליון המוגבל (base64 -> JSON) אחרי כניסת גוגל. הזמנות
-   נשמרות (append) ללשונית PO_HISTORY. אין ערכים מודבקים בקוד. */
+   PURCHASING ב-*גיליון הרכש הייעודי* (נפרד משאר הדשבורדים, כדי לאפשר
+   הרשאות פר-דשבורד) — base64 -> JSON, אחרי כניסת גוגל. הזמנות/מכרזים
+   נשמרים ללשוניות PO_HISTORY / VEG_AUCTION. אין ערכים מודבקים בקוד. */
 const PURCH_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
-const PURCH_SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
+const PURCH_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גיליון "רכש" הייעודי (משותף רק עם צוות הרכש)
 /* קריאה בלבד בכניסה (הרשאה שכבר קיימת במסך ההסכמה, ומפתח סשן משותף עם
    שאר הדפים כך שאין כניסה כפולה). הרשאת הכתיבה מבוקשת בנפרד רק בשמירה
    הראשונה, כדי שהגלישה/עיצוב יעבדו מיד בלי תלות בשינוי מסך ההסכמה. */
