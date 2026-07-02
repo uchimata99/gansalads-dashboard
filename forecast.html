@@ -407,19 +407,27 @@ function normDaily(d){
 
 // ─── תחזית זמנית מנתוני DATA (ממוצע נע של 4 השבועות האחרונים, פר מוצר ופר יום) ───
 // אינה ממציאה מספרים: כל ערך הוא ממוצע של הק"ג בפועל בשבועות האחרונים.
+// ── למידה מונחית-מיכל: שבועות חריגים חד-פעמיים שמוצאים מהממוצע ──
+// כל רשומה: {p:"שם מוצר", w:מספר שבוע, why:"סיבה"} — מתווסף כשמיכל מסבירה טעות גדולה
+// ("הזמנה חד-פעמית" וכו') בשגרת יום ראשון. השבוע ההוא לא ייכלל בממוצע החיזוי של המוצר.
+const FC_NOTES=[];
+function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.p===name && +n.w===+w) return true; } return false; }
+
 function computeForecastFromData(d){
   if(!d || !d.PROD_DETAIL) return null;
   const PD=d.PROD_DETAIL;
   const weeks=(d.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
   if(!weeks.length) return null;
-  const recent=weeks.slice(-Math.min(4,weeks.length));
-  const denom=recent.length;
+  const recentAll=weeks.slice(-Math.min(4,weeks.length));
   const products=[];
   for(const name in PD){
     const wk=PD[name];
+    const recent=recentAll.filter(w=>!fcIsOneOff(name,w));   // דילוג על שבועות חריגים חד-פעמיים
+    const useWeeks=recent.length?recent:recentAll;
+    const denom=useWeeks.length;
     const sumP=DAYS.map(()=>0), sumK=DAYS.map(()=>0);  // 0=אריזות, 1=ק"ג בנתוני המקור
     const wkP=[], wkK=[]; let any=false;
-    recent.forEach(w=>{
+    useWeeks.forEach(w=>{
       const dd=wk[w]; let tp=0, tk=0;
       if(dd){ for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){
         const p=num(dd[di][0]), k=num(dd[di][1]); sumP[i]+=p; sumK[i]+=k; tp+=p; tk+=k; if(p||k) any=true; } } }
@@ -437,7 +445,7 @@ function computeForecastFromData(d){
   products.forEach(p=>DAYS.forEach(day=>{ dtP[day]+=p.daily_pkg[day]; dtK[day]+=p.daily_kg[day]; }));
   return {
     computed:true, metrics:true,
-    based_on:'שבועות '+recent[0]+'–'+recent[recent.length-1],
+    based_on:'שבועות '+recentAll[0]+'–'+recentAll[recentAll.length-1],
     week:'', week_start:'', generated:'',
     total_kg:products.reduce((a,p)=>a+p.kg,0),
     total_pkg:products.reduce((a,p)=>a+p.pkg,0),
@@ -712,12 +720,56 @@ const MY_BASES=new Set(MY_PLAN.map(p=>p.b));
 // ההתניות משובצות בתוך computePlanFromForecast (גרעין קבוע + חיזוי מאוזן לשאר).
 
 // ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
+// ── בדיקת דיוק חיה: חיזוי (ממוצע 4 שבועות שקדמו, ללא חריגים) מול הביקוש בפועל בשבוע האחרון ──
+function fcWeeklyKgMap(PD){ const m={}; for(const n in PD){ m[n]={}; for(const w in PD[n]){ let k=0; const dd=PD[n][w]; for(const di in dd) k+=num(dd[di][1]); m[n][+w]=k; } } return m; }
+function fcPredWeek(m,name,targetW,weeks){
+  const prior=weeks.filter(w=>w<targetW).slice(-4);
+  const use=prior.filter(w=>!fcIsOneOff(name,w));
+  const ws=use.length?use:prior;
+  if(!ws.length) return null;
+  let s=0; ws.forEach(w=>s+=(m[name][w]||0)); return s/ws.length;
+}
+function fcWeekAcc(m,names,weeks,targetW){
+  let ta=0,tf=0,sae=0; const rows=[];
+  names.forEach(nm=>{ const a=(m[nm][targetW]||0); const f=fcPredWeek(m,nm,targetW,weeks); if(f==null)return; ta+=a; tf+=f; sae+=Math.abs(f-a); rows.push({name:nm,f:f,a:a,d:a-f}); });
+  if(ta<=0) return null;
+  const top=rows.slice().sort((x,y)=>y.a-x.a).slice(0,50); let ta50=0,sae50=0; top.forEach(r=>{ta50+=r.a;sae50+=Math.abs(r.f-r.a);});
+  return {wape:sae/ta*100, wape50:ta50?sae50/ta50*100:0, totA:ta, totF:tf, totErr:(tf-ta)/ta*100, rows:rows};
+}
+function renderLiveAccuracy(){
+  const PD=PRODDATA&&PRODDATA.PROD_DETAIL; if(!PD) return '';
+  const weeks=(PRODDATA.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
+  if(weeks.length<5) return '';
+  const m=fcWeeklyKgMap(PD), names=Object.keys(PD);
+  const lastW=weeks[weeks.length-1], acc=fcWeekAcc(m,names,weeks,lastW); if(!acc) return '';
+  const accPrev=fcWeekAcc(m,names,weeks,weeks[weeks.length-2]);
+  const trend=accPrev?(acc.wape<=accPrev.wape?'g':'r'):'';
+  const trendTxt=accPrev?((acc.wape<accPrev.wape?'השתפר מ-':'עלה מ-')+fmt1(accPrev.wape)+'%'):'';
+  const misses=acc.rows.filter(r=>Math.abs(r.d)>=40 && (Math.abs(r.d)/Math.max(1,r.a)>=0.25 || Math.abs(r.d)>=150)).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,12);
+  let html='<div class="card"><div class="card-title">בדיקת דיוק החיזוי — שבוע '+lastW+' <span class="card-badge">מחושב מהנתונים</span></div>';
+  html+='<div class="kpi-grid">'+
+    kc('a','שגיאה שבועית (WAPE)',fmt1(acc.wape)+'%',trendTxt,trend)+
+    kc('g','שגיאה — טופ 50',fmt1(acc.wape50)+'%','רוב הנפח')+
+    kc(acc.totErr<0?'r':'t','חיזוי מול בפועל',(acc.totErr>=0?'+':'')+fmt1(acc.totErr)+'%',fmt(acc.totF)+' מול '+fmt(acc.totA)+' ק"ג')+
+    kc('n','טעויות גדולות',misses.length,'לבירור בשגרת יום ראשון')+'</div>';
+  if(misses.length){
+    html+='<div class="ins a">🔎 המוצרים שהכי חרגו בשבוע '+lastW+' — אלה שאשאל עליהם ביום ראשון (חד-פעמי? לקוח חדש? חג?), וההסבר שלך ייכנס למודל:</div>';
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>מוצר</th><th>חיזוי (ק"ג)</th><th>בפועל (ק"ג)</th><th>פער</th></tr></thead><tbody>';
+    misses.forEach(r=>{ const over=r.d<0, col=over?'#d97706':'#dc2626', lbl=over?'חזינו יותר מדי':'חזינו מעט מדי';
+      html+='<tr><td title="'+esc(r.name)+'">'+esc(r.name)+'</td><td>'+fmt1(r.f)+'</td><td>'+fmt1(r.a)+'</td><td style="color:'+col+';font-weight:700">'+lbl+' · '+fmt1(Math.abs(r.d))+'</td></tr>'; });
+    html+='</tbody></table></div>';
+  } else { html+='<div class="ins g">אין טעויות חריגות השבוע — החיזוי היה קרוב לביקוש.</div>'; }
+  return html+'</div>';
+}
+
 function renderAccuracy(){
   const host=document.getElementById('accSection');
   const a=ACCURACY;
   if(!a || (!a.wape && !a.forecast_total && !(a.products&&a.products.length))){
-    host.innerHTML='<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה <span class="card-badge a">ממתין</span></div>'+
-      '<div class="empty-note">דוח ההצלחה יופיע ביום ראשון, אחרי העלאת הנתונים בפועל.</div></div>';
+    // אין לשונית ACCURACY מהמנוע — מציגים בדיקת דיוק חיה, מחושבת מהנתונים
+    const live=renderLiveAccuracy();
+    host.innerHTML = live || ('<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה <span class="card-badge a">ממתין</span></div>'+
+      '<div class="empty-note">דוח ההצלחה יופיע ביום ראשון, אחרי העלאת הנתונים בפועל.</div></div>');
     return;
   }
   const ft=num(a.forecast_total), at=num(a.actual_total);
