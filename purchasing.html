@@ -247,6 +247,11 @@ function startApp(){
  ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
  ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT);       // טאב בניית הזמנה — בלי ירקות
  ITEMS_VEG=ALL.filter(it=>String(it.c)===VEG_CAT);   // טאב מכרז ירקות (קטגוריה 206)
+ { // איחוד כפילויות שם (הקטלוג מכיל שתי כניסות לאותו שם, למשל "בזיליקום"/"תפוח אדמה")
+  const byN={},sc=x=>((x.s&&x.s.length?2:0)+(x.p!=null?1:0));
+  ITEMS_VEG.forEach(it=>{const c=byN[it.n];if(!c||sc(it)>sc(c))byN[it.n]=it;});
+  ITEMS_VEG=Object.values(byN);
+ }
  // בוררי קטגוריה
  const fc=document.getElementById('fCat');
  const codes=[...new Set(ITEMS.map(i=>i.c))].sort((a,b)=>String(a).localeCompare(String(b),'en',{numeric:true}));
@@ -491,11 +496,19 @@ function setVegCols(a){try{localStorage.setItem(VEG_SEL_KEY,JSON.stringify(a));}
 // רשימת ספקי הירקות (משויכים לפריט 206), ממוינת לפי שם
 function vegSupList(){
  const vset=new Set();ITEMS_VEG.forEach(it=>(it.s||[]).forEach(s=>vset.add(s)));
- return [...vset].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
+ return [...vset].filter(k=>!VEG_SUP_EXCLUDE.has(k)).map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
 }
-// סדר תצוגת הירקות לפי העדפת מיכל; השאר אחריהם לפי א"ב
-const VEG_ORDER=['חציל','פלפל אדום','חריף','עגבני','מלפפון','קישוא','פטרוזיל','שמיר','סלרי'];
-function vegRank(name){for(let i=0;i<VEG_ORDER.length;i++){if(String(name).indexOf(VEG_ORDER[i])>=0)return i;}return VEG_ORDER.length;}
+// ספקים שהוסרו מבורר הירקות (לבקשת מיכל): אחים כהן, לקט ישראל, ירקות קלופים, מחלב הארץ
+const VEG_SUP_EXCLUDE=new Set(['20026','20565','20615','20546']);
+// סדר תצוגת הירקות: קודם לפי העדפה, אחר כך השאר לפי א"ב, ובתחתית מוצרים שהורדו למטה
+const VEG_ORDER=['חציל','פלפל אדום','חריף','עגבני','מלפפון','קישוא','פטרוזיל','כוסבר','שמיר','סלרי'];
+const VEG_LAST=['צילי','עגבניות שרי','מלפפון בייבי','אבוקדו'];
+function vegRank(name){
+ name=String(name);
+ for(let i=0;i<VEG_LAST.length;i++){if(name.indexOf(VEG_LAST[i])>=0)return 100+i;}   // מוצרים למטה
+ for(let i=0;i<VEG_ORDER.length;i++){if(name.indexOf(VEG_ORDER[i])>=0)return i;}
+ return VEG_ORDER.length;
+}
 function vegSorted(){return ITEMS_VEG.slice().sort((a,b)=>{const ra=vegRank(a.n),rb=vegRank(b.n);return ra!==rb?ra-rb:a.n.localeCompare(b.n,'he');});}
 async function loadVegHist(force){
  if(VEGHIST&&!force){buildVegLast();return;}
@@ -504,7 +517,7 @@ async function loadVegHist(force){
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+purchToken}});
   if(!r.ok){VEGHIST=[];buildVegLast();return;}
   const vals=((await r.json()).values)||[];
-  VEGHIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[5]))).map(row=>({date:row[0],vk:String(row[1]),vn:row[2],sk:String(row[3]),sn:row[4],price:parseFloat(row[5]),chosen:String(row[7]||'').indexOf('✓')>=0}));
+  VEGHIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[5]))).map(row=>({date:row[0],vk:String(row[1]),vn:row[2],sk:String(row[3]),sn:row[4],price:parseFloat(row[5]),chosen:(String(row[7]||'').trim()==='1'||String(row[7]||'').indexOf('✓')>=0)}));
   buildVegLast();
  }catch(e){VEGHIST=[];buildVegLast();}
 }
@@ -577,7 +590,7 @@ async function saveVeg(){
   for(let i=0;i<4;i++){
    const sk=cols[i];if(!sk)continue;
    const price=offs[i];if(price==null)continue;   // שומרים רק הצעות שהוזנו
-   rows.push([ds,vk,it.n,sk,supName(sk),price,qty,(chosen===i?'✓':'')]);
+   rows.push([ds,vk,it.n,sk,supName(sk),price,qty,(chosen===i?'1':'0')]);
   }
  });
  if(!rows.length){toast('אין מה לשמור — הזיני מחירים לספקים');return;}
