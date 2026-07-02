@@ -55,6 +55,7 @@ select:focus,input:focus{border-color:var(--green)}
 .vchosen{outline:2px solid var(--gold);outline-offset:-2px;border-radius:6px}
 .vlastbuy{background:var(--gold-l)}
 .vbuy{font-size:9px;font-weight:700;color:var(--gold);white-space:nowrap;margin-bottom:2px}
+.vlast.vcat{opacity:.6;font-style:italic}
 .vegT thead th{vertical-align:middle}
 .vegT th select{width:100%;min-width:120px;padding:6px 8px;font-size:12px}
 @media(max-width:600px){.vcell{min-width:92px}.voff{width:74px}.vegT th select{min-width:88px;font-size:11px}}
@@ -490,7 +491,6 @@ function setVegCols(a){try{localStorage.setItem(VEG_SEL_KEY,JSON.stringify(a));}
 // רשימת ספקי הירקות (משויכים לפריט 206), ממוינת לפי שם
 function vegSupList(){
  const vset=new Set();ITEMS_VEG.forEach(it=>(it.s||[]).forEach(s=>vset.add(s)));
- getVegCols().forEach(c=>{if(c)vset.add(c);});   // לשמור בחירה קיימת גם אם אינה ברשימה
  return [...vset].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
 }
 // סדר תצוגת הירקות לפי העדפת מיכל; השאר אחריהם לפי א"ב
@@ -511,14 +511,16 @@ async function loadVegHist(force){
 // סדר כרונולוגי (סדר ההוספה) → הערך האחרון גובר: מחיר אחרון פר (ירק,ספק) + הספק שנבחר לאחרונה לכל ירק
 function buildVegLast(){VEGLAST={};VEGLASTBUY={};(VEGHIST||[]).forEach(r=>{if(r.vk&&r.sk&&!isNaN(r.price))VEGLAST[r.vk+'|'+r.sk]=r.price;if(r.vk&&r.sk&&r.chosen)VEGLASTBUY[r.vk]=r.sk;});}
 function vegLastPrice(vk,sk){
- if(sk&&VEGLAST[vk+'|'+sk]!=null)return VEGLAST[vk+'|'+sk];
- const it=ITEM_BY_K[vk];return (it&&it.p!=null)?it.p:null;   // נפילה למחיר האחרון מהקובץ
+ if(sk&&VEGLAST[vk+'|'+sk]!=null)return {p:VEGLAST[vk+'|'+sk],src:'offer'};   // הצעה אחרונה של הספק במכרז
+ const it=ITEM_BY_K[vk];return {p:(it&&it.p!=null)?it.p:null,src:'catalog'};   // נפילה למחיר הקנייה מהקובץ
 }
 function renderVeg(){
- const cols=getVegCols();
  const box=document.getElementById('vegTab');if(!box)return;
  if(!ITEMS_VEG.length){box.innerHTML='<div class="empty">אין פריטים בקטגוריית ירקות (206).</div>';return;}
  const sups=vegSupList();
+ const valid=new Set(sups.map(s=>s.k));
+ const cols=getVegCols().map(c=>valid.has(c)?c:'');   // מסנן בחירות ישנות של ספקים שאינם ספקי ירקות
+ setVegCols(cols);
  let h='<table class="vegT"><thead><tr><th>ירק</th><th>כמות להיום</th>';
  for(let i=0;i<4;i++){
   h+='<th><select class="vegSupSel" data-i="'+i+'"><option value="">— ספק '+(i+1)+' —</option>'+
@@ -533,13 +535,14 @@ function renderVeg(){
   for(let i=0;i<4;i++){
    const sk=cols[i];
    if(!sk){h+='<td class="vcell">—</td>';continue;}
-   const last=vegLastPrice(vk,sk);
+   const lp=vegLastPrice(vk,sk);
    const off=(VEGOFFERS[vk]&&VEGOFFERS[vk][i]!=null)?VEGOFFERS[vk][i]:'';
    const chosen=VEGCHOSEN[vk]===i;
    const lastBuy=(VEGLASTBUY[vk]===sk);
+   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה אחרונה: ':'קנייה אחרונה: ')+P2(lp.p));
    h+='<td class="vcell'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       (lastBuy?'<div class="vbuy">🛒 נקנה לאחרונה</div>':'')+
-      '<div class="vlast">אחרון: '+(last!=null?P2(last):'—')+'</div>'+
+      '<div class="vlast'+(lp.src==='catalog'?' vcat':'')+'" title="'+(lp.src==='offer'?'ההצעה האחרונה של הספק הזה במכרז':'מחיר הקנייה האחרון מהקובץ (עד שיישמר מכרז)')+'">'+lastTxt+'</div>'+
       '<input class="voff" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
       '<label class="vpick"><input type="radio" name="vch_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> הזמנתי</label>'+
       '</td>';
