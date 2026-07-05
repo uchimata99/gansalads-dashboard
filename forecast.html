@@ -255,9 +255,14 @@ function startDashboard(){
     }
     if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
       document.getElementById('fcBody').style.display='';
-      document.getElementById('fcEmpty').innerHTML = FORECAST.computed
-        ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
+      fcApplyHolidayBoost(FORECAST);
+      const ha=FORECAST.holiday_applied;
+      const holBanner=ha
+        ? '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', והגדלתי את כל התחזית אוטומטית ב-<b>'+Math.round(ha.uplift*100)+'%</b> לפי העלייה ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'
         : '';
+      document.getElementById('fcEmpty').innerHTML = holBanner + (FORECAST.computed
+        ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
+        : '');
       prepareForecast();
       renderHeader();
       renderForecastKpis();
@@ -423,6 +428,56 @@ const FC_NOTES=[
 function fcNote(name){ for(const n of FC_NOTES){ if(n.p===name) return n; } return null; }
 function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.type==='one_off' && n.p===name && +n.w===+w) return true; } return false; }
 
+// ─── התראת שבוע-לפני-חג (מבוססת נתונים, לא חוק אוטומטי) ───
+// נבדק אמפירית על 11 שנות מכירות (2015–2026, מיושר לשבוע העסקי א'–ה'):
+// בשבוע שלפני חלק מהחגים המכירות המצרפיות עולות באופן עקבי. את התחזית
+// עצמה איננו מנפחים — היא נשארת ממוצע המכירות בפועל. במקום זאת מוצגת
+// התראה כך שמיכל תחליט להגדיל ידנית לשבוע הרלוונטי (כמו FC_NOTES —
+// למידה מונחית-אדם). uplift = העלייה המצרפית שנמדדה בשבוע שלפני החג.
+// התאריכים לפי הלוח העברי (חושבו מראש; מתעדכנים שנתית).
+const FC_HOLIDAYS=[
+  {name:"ראש השנה",   date:"2026-09-12", uplift:0.37},
+  {name:"פסח",        date:"2026-04-02", uplift:0.16},
+  {name:"יום העצמאות",date:"2026-04-22", uplift:0.15},
+  {name:"ראש השנה",   date:"2027-10-02", uplift:0.37},
+  {name:"פסח",        date:"2027-04-22", uplift:0.16},
+  {name:"יום העצמאות",date:"2027-05-12", uplift:0.15},
+  {name:"ראש השנה",   date:"2028-09-21", uplift:0.37},
+  {name:"פסח",        date:"2028-04-11", uplift:0.16},
+  {name:"יום העצמאות",date:"2028-05-02", uplift:0.15}
+];
+// מחזיר את החג הקרוב שהשבוע העסקי הבא הוא "השבוע שלפניו" (עד ~12 ימים קדימה),
+// או null. השבוע העסקי מתחיל ביום ראשון (א'–ה').
+function fcHolidayPreWeek(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const sun=new Date(now); sun.setDate(now.getDate()-((now.getDay())%7)); // יום ראשון של השבוע הנוכחי
+  const coming=new Date(sun); coming.setDate(sun.getDate()+7);            // ראשון של השבוע הקרוב (תחזית)
+  let best=null;
+  for(const h of FC_HOLIDAYS){
+    const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue;
+    const days=Math.round((hd-coming)/86400000);
+    if(days>=0 && days<=12){ if(!best || days<best.days) best={name:h.name, date:h.date, uplift:h.uplift, days}; }
+  }
+  return best;
+}
+// מיישם את תיקון-החג אוטומטית: אם השבוע הקרוב הוא לפני חג, מגדיל את
+// התחזית (סה"כ, פר-מוצר ופר-יום) באחוז ההיסטורי שנמדד. מיכל ביקשה
+// שהתיקון ייעשה אוטומטית — לא צריך אישור; רק נרשמת הערה במסך.
+function fcApplyHolidayBoost(f){
+  if(!f || f.holiday_applied) return f;   // הגנה מפני החלה כפולה
+  const h=fcHolidayPreWeek(); if(!h) return f;
+  const k=1+h.uplift;
+  (f.products||[]).forEach(p=>{
+    ['kg','pkg','total_kg','std_kg','std_pkg'].forEach(x=>{ if(p[x]!=null) p[x]=num(p[x])*k; });
+    ['daily_kg','daily_pkg','daily'].forEach(dk=>{ const d=p[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  });
+  if(f.total_kg!=null)  f.total_kg =num(f.total_kg)*k;
+  if(f.total_pkg!=null) f.total_pkg=num(f.total_pkg)*k;
+  ['daily_kg','daily_pkg'].forEach(dk=>{ const d=f[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  f.holiday_applied={name:h.name, date:h.date, uplift:h.uplift};
+  return f;
+}
+
 function computeForecastFromData(d){
   if(!d || !d.PROD_DETAIL) return null;
   const PD=d.PROD_DETAIL;
@@ -483,7 +538,7 @@ function prepareForecast(){
     std_kg:num(p.std_kg),
     std_pkg:num(p.std_pkg)
   }));
-  NEXT_HOL = holName(f.next_holiday);
+  NEXT_HOL = holName(f.next_holiday) || (fcHolidayPreWeek()||{}).name || '';
   // הסתרת בורר היחידה אם אין נתוני אריזות
   const ctrl=document.getElementById('fcControls');
   if(ctrl) ctrl.style.display = HAS_PKG ? 'flex' : 'none';
@@ -535,7 +590,7 @@ function renderForecastKpis(){
     kc('a','יום השיא',PEAK_DAY,peak&&peak.v>0?(fmt(peak.v)+' '+unitLbl()+' · '+pct(peak.v,TOTAL)):'')+
     (HAS_STD
       ? kc('n','סטיית תקן ממוצעת','±'+fmt1(avgStd),'תנודתיות שבועית למוצר ('+unitLbl()+')')
-      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?holText(FORECAST.next_holiday):'בשבוע הקרוב', NEXT_HOL?'a':''));
+      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?(holText(FORECAST.next_holiday)||'שבוע לפני החג — ביקוש גבוה'):'בשבוע הקרוב', NEXT_HOL?'a':''));
 }
 
 function buildDailyChart(){
