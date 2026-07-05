@@ -174,6 +174,39 @@ select:focus,input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,
  .cartbar{padding:11px 12px calc(11px + env(safe-area-inset-bottom,0px))}
 }
 
+/* ===== רענון: רקע נקי, טאבים מגזריים, רשימת כרטיסים + מד-כמות ===== */
+body{background:#f5f2ec}
+.card{background:#fff}
+/* טאבים כפקד מגזרי (גלולות) */
+.tabs{background:rgba(245,242,236,.96);backdrop-filter:blur(8px);border-bottom:none;box-shadow:none;padding:12px 16px 6px;gap:6px}
+.tab{border-radius:12px;border-bottom:none!important;margin-bottom:0;padding:10px 16px;color:var(--muted);transition:background .15s,color .15s,box-shadow .15s}
+.tab:hover{background:rgba(45,106,63,.08)}
+.tab.active{background:linear-gradient(135deg,#2d6a3f,#245534);color:#fff!important;box-shadow:0 5px 14px rgba(45,106,63,.32)}
+/* רשימת פריטים ככרטיסים */
+.ilist{display:flex;flex-direction:column;gap:10px}
+.icard{display:flex;align-items:center;gap:12px;justify-content:space-between;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;transition:border-color .15s,box-shadow .15s,background .15s}
+.icard:hover{box-shadow:var(--shadow)}
+.icard.on{border-color:var(--green);background:linear-gradient(90deg,rgba(45,106,63,.07),#fff 55%);box-shadow:0 0 0 1.5px var(--green) inset}
+.iinfo{min-width:0;flex:1}
+.iname{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.2px;margin-bottom:6px;line-height:1.25}
+.imeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.iprice{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--green)}
+.ikey{font-size:10.5px;color:var(--muted)}
+.isupline{font-size:12px;color:var(--muted)}.isup{font-weight:600}
+.isupsel{padding:5px 9px;font-size:12px;max-width:210px}
+/* מד-כמות (− מספר +) */
+.stepper{display:flex;align-items:center;flex:0 0 auto;background:var(--surface2);border-radius:12px;padding:3px}
+.stbtn{width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--green);font-size:21px;font-weight:700;line-height:1;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .1s,background .12s;display:flex;align-items:center;justify-content:center}
+.stbtn:hover{background:var(--green-l)}.stbtn:active{transform:scale(.9)}
+.stepper .qty{width:52px;height:34px;border:none;background:transparent;text-align:center;font-weight:800;font-size:15px;font-family:'IBM Plex Mono',monospace;box-shadow:none;padding:0}
+.stepper .qty:focus{box-shadow:none;border:none;outline:none}
+.icard.on .stepper{background:var(--green-l)}
+@media(max-width:600px){
+ .iname{font-size:14.5px}.isupsel{max-width:150px}
+ .stbtn{width:32px;height:32px;font-size:20px}.stepper .qty{width:44px;height:32px;font-size:14px}
+ .icard{padding:11px 12px;gap:9px}
+}
+
 /* הדפסה — צבע דרך טקסט/מסגרת, לא רקע, כדי שיודפס גם בנייד */
 @media print{
   @page{size:portrait;margin:12mm}
@@ -374,36 +407,50 @@ function filteredItems(){
 }
 function renderItems(){
  const arr=filteredItems();
- setTxt('buildCount',arr.length+' פריטים מוצגים');
- if(!arr.length){document.getElementById('itemsTab').innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
- let h='<table><thead><tr><th>קטגוריה</th><th>פריט</th><th>מפתח</th><th>מחיר אחרון</th><th>ספק</th><th>כמות</th></tr></thead><tbody>';
+ setTxt('buildCount',arr.length+' פריטים');
+ const box=document.getElementById('itemsTab');
+ if(!arr.length){box.innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
+ let h='<div class="ilist">';
  arr.forEach(it=>{
   const o=ORDER[it.k]||{};
   const sups=it.s||[];
+  const active=o.qty>0;
   let supCell;
-  if(sups.length<=1){supCell=sups.length?esc(supName(sups[0])):'<span class="pill po">אין ספק</span>';}
-  else{
-   supCell='<select data-sup="'+esc(it.k)+'" class="supSel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';
-  }
-  const pr=(it.p!=null&&it.p>0)?(P2(it.p)+(it.pd?' <span class="lbl" style="font-weight:400">· '+esc(it.pd)+'</span>':'')):'<span class="lbl">—</span>';
-  h+='<tr'+(o.qty>0?' style="background:var(--gold-l)"':'')+'><td><span class="pill pb">'+esc(catName(it.c))+'</span></td>'+
-     '<td>'+esc(it.n)+'</td><td class="num">'+esc(it.k)+'</td>'+
-     '<td class="num">'+pr+'</td><td>'+supCell+'</td>'+
-     '<td><input class="qty" type="number" min="0" step="any" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(o.qty>0?o.qty:'')+'" placeholder="0"></td></tr>';
+  if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):'<span class="pill po">אין ספק</span>';}
+  else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
+  const pr=(it.p!=null&&it.p>0)?('₪'+Number(it.p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
+  h+='<div class="icard'+(active?' on':'')+'">'+
+     '<div class="iinfo">'+
+       '<div class="iname">'+esc(it.n)+'</div>'+
+       '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
+       '<div class="isupline">'+supCell+'</div>'+
+     '</div>'+
+     '<div class="stepper">'+
+       '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
+       '<input class="qty" type="number" min="0" step="any" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
+       '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
+     '</div>'+
+     '</div>';
  });
- document.getElementById('itemsTab').innerHTML=h+'</tbody></table>';
- document.querySelectorAll('#itemsTab .qty').forEach(inp=>inp.addEventListener('input',onQty));
- document.querySelectorAll('#itemsTab .supSel').forEach(sel=>sel.addEventListener('change',onSup));
+ box.innerHTML=h+'</div>';
+ box.querySelectorAll('.qty').forEach(inp=>inp.addEventListener('input',onQty));
+ box.querySelectorAll('.supSel').forEach(sel=>sel.addEventListener('change',onSup));
+ box.querySelectorAll('.stbtn').forEach(b=>b.addEventListener('click',onStep));
+}
+function onStep(e){
+ const t=e.currentTarget;const inp=t.parentNode.querySelector('.qty');
+ let v=(parseFloat(inp.value)||0)+parseFloat(t.dataset.step);if(v<0)v=0;
+ inp.value=v>0?v:'';onQty({target:inp});
 }
 function onQty(e){
  const k=e.target.dataset.qk;const v=parseFloat(e.target.value);
- const it=ITEM_BY_K[k];
- if(!(v>0)){delete ORDER[k];e.target.closest('tr').style.background='';}
+ const it=ITEM_BY_K[k];const card=e.target.closest('.icard');
+ if(!(v>0)){delete ORDER[k];if(card)card.classList.remove('on');}
  else{
   const cur=ORDER[k]||{};
   const sup=cur.sup||((it.s&&it.s.length)?it.s[0]:'');
   ORDER[k]={qty:v,sup};
-  e.target.closest('tr').style.background='var(--gold-l)';
+  if(card)card.classList.add('on');
  }
  updateCartBar();
 }
