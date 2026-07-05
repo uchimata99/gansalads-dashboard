@@ -245,10 +245,20 @@ async function loadForecastData(){
   catch(e){ if(String(e.message).indexOf('auth')===0) throw e; PRODDATA=null; }
 }
 
+// עזרי טריות: מספר השבוע האחרון בנתונים, ומספר שבוע משם/מספר ("W27"→27)
+function fcMaxDataWeek(){ try{ return (PRODDATA&&PRODDATA.WEEKS&&PRODDATA.WEEKS.length)?Math.max.apply(null,PRODDATA.WEEKS.map(w=>+w.w)):null; }catch(e){ return null; } }
+function fcWeekNum(v){ if(v==null) return null; if(typeof v==='number') return v; const m=String(v).match(/\d+/); return m?+m[0]:null; }
+
 function startDashboard(){
   const go=()=>{
     try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
-    // אם אין עדיין תחזית רשמית בלשונית FORECAST — מחשבים תחזית זמנית מנתוני DATA
+    // תחזית רשמית (לשונית FORECAST) שנכתבה לשבוע שכבר הסתיים היא ישנה — הנתונים כבר
+    // כוללים שבוע מאוחר יותר. דורסים אותה ומחשבים תחזית טרייה לשבוע הבא מ-DATA, עד
+    // שהמנוע יכתוב את התחזית הבאה (יום חמישי). כך העלאת נתונים ביום ראשון מרעננת מיד.
+    const _fwn = FORECAST ? fcWeekNum(FORECAST.week_num!=null?FORECAST.week_num:FORECAST.week) : null;
+    const _mdw = fcMaxDataWeek();
+    if(FORECAST && _fwn!=null && _mdw!=null && _fwn<=_mdw) FORECAST=null;   // תחזית ישנה — נחשב מחדש
+    // אם אין תחזית רשמית עדכנית בלשונית FORECAST — מחשבים תחזית זמנית מנתוני DATA
     if(!(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null))){
       const c=computeForecastFromData(PRODDATA);
       if(c) FORECAST=c;
@@ -838,9 +848,12 @@ function renderLiveAccuracy(){
 
 function renderAccuracy(){
   const host=document.getElementById('accSection');
-  const a=ACCURACY;
+  let a=ACCURACY;
+  // דוח דיוק מהמנוע שאינו מכסה את השבוע האחרון בנתונים — ישן. מעדיפים חישוב חי
+  // (renderLiveAccuracy בודק תמיד את השבוע האחרון ב-DATA), כך שהעלאת נתונים מרעננת מיד.
+  try{ const awn=a?fcWeekNum(a.week):null, mdw=fcMaxDataWeek(); if(a && awn!=null && mdw!=null && awn<mdw) a=null; }catch(e){}
   if(!a || (!a.wape && !a.forecast_total && !(a.products&&a.products.length))){
-    // אין לשונית ACCURACY מהמנוע — מציגים בדיקת דיוק חיה, מחושבת מהנתונים
+    // אין לשונית ACCURACY עדכנית מהמנוע — מציגים בדיקת דיוק חיה, מחושבת מהנתונים
     const live=renderLiveAccuracy();
     host.innerHTML = live || ('<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה <span class="card-badge a">ממתין</span></div>'+
       '<div class="empty-note">דוח ההצלחה יופיע ביום ראשון, אחרי העלאת הנתונים בפועל.</div></div>');
