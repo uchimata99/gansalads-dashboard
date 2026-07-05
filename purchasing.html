@@ -94,6 +94,86 @@ html.locked #gsLock{display:flex!important}
 #gsLock .gbtn:hover{background:#f1f5f9}
 #gsLock .gbtn svg{width:18px;height:18px}
 #gsLock .lock-err{color:#ffb4a8;font-size:13px;min-height:18px}
+
+/* ===== שכבת עיצוב משודרגת ===== */
+:root{--radius:15px;--radius-sm:10px;
+ --shadow-sm:0 1px 2px rgba(40,30,10,.05),0 2px 6px rgba(40,30,10,.05);
+ --shadow:0 6px 20px rgba(40,30,10,.09),0 2px 6px rgba(40,30,10,.05);
+ --shadow-lg:0 18px 44px rgba(23,63,48,.20)}
+html{scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:radial-gradient(1100px 480px at 100% -10%,#efe9dc 0%,rgba(239,233,220,0) 60%),var(--bg)}
+::selection{background:var(--green-l)}
+/* פס עליון — מראה אפליקציה + התאמת מסך מלא (PWA) */
+.topbar{background:linear-gradient(135deg,#2d6a3f 0%,#1c4a2c 100%);height:auto;min-height:60px;padding-top:env(safe-area-inset-top,0px);box-shadow:0 4px 20px rgba(23,63,48,.28);border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-i{font-size:27px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+.brand-n{letter-spacing:-.2px}
+.range{backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18)}
+/* טאבים */
+.tabs{top:calc(60px + env(safe-area-inset-top,0px));background:rgba(253,250,244,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);box-shadow:0 4px 14px rgba(40,30,10,.05);gap:2px;padding-top:4px}
+.tab{border-radius:10px 10px 0 0;transition:color .15s,background .15s;padding:12px 18px}
+.tab:hover{background:rgba(45,106,63,.06)}
+.tab.active{background:var(--green-l)}
+/* כרטיסים וטבלאות */
+.main{padding:20px 24px 40px}
+.card{border-radius:var(--radius);border:1px solid rgba(211,204,182,.7);box-shadow:var(--shadow);padding:20px}
+.card-t{font-size:13.5px;letter-spacing:-.1px;border-bottom:1.5px solid var(--border);padding-bottom:12px;margin-bottom:15px}
+th{padding:10px 12px;border-bottom:2px solid var(--border);background:var(--surface)}
+td{padding:10px 12px}
+tbody tr{transition:background .12s}
+tbody tr:nth-child(even)>td{background:rgba(236,231,219,.35)}
+tbody tr:hover>td{background:var(--green-l)}
+.scroll{border-radius:12px;border:1px solid var(--border)}
+.scroll thead th{box-shadow:0 2px 0 var(--border)}
+.pill{padding:3px 11px;font-weight:800;letter-spacing:.2px;line-height:1.5}
+/* שדות וכפתורים */
+select,input{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 13px;transition:border-color .15s,box-shadow .15s}
+select:focus,input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,106,63,.15)}
+.qty{width:88px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.qty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
+.btn{border-radius:var(--radius-sm);padding:10px 18px;box-shadow:var(--shadow-sm);transition:transform .12s,box-shadow .12s,filter .12s;background:linear-gradient(135deg,#2d6a3f,#245534)}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow);filter:brightness(1.05)}
+.btn:active{transform:translateY(0);box-shadow:var(--shadow-sm)}
+.btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green);box-shadow:none}
+.btn.ghost:hover{background:var(--green-l)}
+.btn.gold{background:linear-gradient(135deg,#c2941a,#a87c0c)}
+.btn.blue{background:linear-gradient(135deg,#2f6499,#274f79)}
+/* פס הסל התחתון */
+.cartbar{background:rgba(253,250,244,.9);backdrop-filter:blur(10px);border-top:2px solid var(--green);box-shadow:0 -6px 20px rgba(40,30,10,.08);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));border-radius:0 0 var(--radius) var(--radius);font-weight:600}
+/* כרטיסי ספק */
+.sup-card{border:1px solid var(--border);border-inline-start:5px solid var(--green);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px 18px}
+.sup-head{border-bottom:2px solid var(--green-l)}
+.sup-name{font-size:16px}
+/* מכרז ירקות */
+.vcell{border-radius:10px;padding:8px 6px}
+.voff{border-radius:9px;border:1.5px solid var(--border);transition:border-color .15s,box-shadow .15s}
+.voff:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(45,106,63,.15)}
+.vcheap{background:linear-gradient(180deg,rgba(45,106,63,.13),rgba(45,106,63,.05));border-radius:10px}
+.vcheap .voff{border-color:var(--green)}
+.vchosen{outline:2.5px solid var(--gold);outline-offset:-3px;border-radius:10px}
+.vbuy{background:var(--gold-l);color:#8a6608;border-radius:6px;padding:1px 6px;display:inline-block}
+/* טוסט */
+.toast{border-radius:12px;padding:12px 22px;box-shadow:var(--shadow-lg);transform:translateX(-50%) translateY(12px);transition:opacity .25s,transform .25s;background:linear-gradient(135deg,#1f5030,#173f30)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+/* מסך התחברות */
+#gsLock{background:radial-gradient(900px 500px at 50% -10%,#245c3a 0%,#173f30 55%,#103524 100%);gap:20px}
+#gsLock .lock-logo{font-size:44px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.3))}
+#gsLock .lock-title{font-size:21px}
+#gsLock .gbtn{border-radius:12px;padding:12px 24px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:transform .12s,box-shadow .12s}
+#gsLock .gbtn:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+/* פסי גלילה */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:8px;border:2px solid var(--surface)}
+*::-webkit-scrollbar-thumb:hover{background:#d8cfb8}
+/* צפיפות בנייד (גובר על העיצוב המשודרג) */
+@media(max-width:600px){
+ .main{padding:12px 12px 40px}
+ .card{padding:15px;border-radius:13px}
+ th,td{padding:8px 7px}
+ .btn{padding:9px 14px}
+ .tab{padding:11px 13px}
+ .cartbar{padding:11px 12px calc(11px + env(safe-area-inset-bottom,0px))}
+}
+
 /* הדפסה — צבע דרך טקסט/מסגרת, לא רקע, כדי שיודפס גם בנייד */
 @media print{
   @page{size:portrait;margin:12mm}
