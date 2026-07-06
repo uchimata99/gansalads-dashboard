@@ -206,6 +206,26 @@ body{background:#f5f2ec}
  .stbtn{width:32px;height:32px;font-size:20px}.stepper .qty{width:44px;height:32px;font-size:14px}
  .icard{padding:11px 12px;gap:9px}
 }
+/* מכרז ירקות — כרטיס לכל ירק, תאי ספקים בפנים */
+.vsel{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.vselcol{flex:1 1 130px;min-width:0;display:flex;flex-direction:column;gap:4px}
+.vselcol select{width:100%}
+.vlist{display:flex;flex-direction:column;gap:12px}
+.vcard{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:13px 14px;box-shadow:var(--shadow-sm)}
+.vcard-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.vcname{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.vqwrap{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.voffers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.vo{border:1.5px solid var(--border);border-radius:11px;padding:8px 7px 9px;text-align:center;position:relative;transition:border-color .15s,background .15s}
+.vo-sup{font-size:11px;font-weight:700;color:var(--text);line-height:1.2;margin-bottom:4px;min-height:28px;display:flex;align-items:center;justify-content:center}
+.vo .vlast{font-size:10px;margin-bottom:6px;white-space:normal}
+.vo .voff{width:100%;text-align:center}
+.vo .vpick{margin-top:7px;display:flex;gap:4px;justify-content:center;font-size:10px}
+.vo.vcheap{background:linear-gradient(180deg,rgba(45,106,63,.14),rgba(45,106,63,.04));border-color:var(--green)}
+.vo.vchosen{outline:2.5px solid var(--gold);outline-offset:-2px}
+.vo.vlastbuy{background:var(--gold-l)}
+.vo .vbuy{position:absolute;top:3px;inset-inline-start:4px;font-size:8px;margin:0;background:none;padding:0}
+@media(max-width:600px){.voffers{grid-template-columns:repeat(2,1fr)}.vselcol{flex:1 1 45%}}
 
 /* הדפסה — צבע דרך טקסט/מסגרת, לא רקע, כדי שיודפס גם בנייד */
 @media print{
@@ -671,36 +691,48 @@ function renderVeg(){
  const valid=new Set(sups.map(s=>s.k));
  const cols=getVegCols().map(c=>valid.has(c)?c:'');   // מסנן בחירות ישנות של ספקים שאינם ספקי ירקות
  setVegCols(cols);
- let h='<table class="vegT"><thead><tr><th>ירק</th><th>כמות להיום</th>';
+ // בוררי 4 הספקים בראש
+ let h='<div class="vsel">';
  for(let i=0;i<4;i++){
-  h+='<th><select class="vegSupSel" data-i="'+i+'"><option value="">— ספק '+(i+1)+' —</option>'+
-     sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+
-     '</select></th>';
+  h+='<div class="vselcol"><span class="lbl">ספק '+(i+1)+'</span><select class="vegSupSel" data-i="'+i+'"><option value="">— בחרי —</option>'+
+     sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+'</select></div>';
  }
- h+='</tr></thead><tbody>';
+ h+='</div>';
+ // כרטיס לכל ירק, ובתוכו תאי הספקים
+ h+='<div class="vlist">';
  vegSorted().forEach(it=>{
   const vk=it.k;
-  h+='<tr><td>'+esc(it.n)+'</td>'+
-     '<td><input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(VEGQTY[vk]>0?VEGQTY[vk]:'')+'" placeholder="0"></td>';
+  h+='<div class="vcard">'+
+     '<div class="vcard-h"><div class="vcname">'+esc(it.n)+'</div>'+
+       '<div class="vqwrap"><span class="lbl">כמות</span><div class="stepper vqtystep">'+
+         '<button class="stbtn vqstep" data-vk="'+esc(vk)+'" data-step="-1" type="button">−</button>'+
+         '<input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(VEGQTY[vk]>0?VEGQTY[vk]:'')+'" placeholder="0">'+
+         '<button class="stbtn vqstep" data-vk="'+esc(vk)+'" data-step="1" type="button">+</button>'+
+       '</div></div>'+
+     '</div><div class="voffers">';
+  let anyCol=false;
   for(let i=0;i<4;i++){
-   const sk=cols[i];
-   if(!sk){h+='<td class="vcell">—</td>';continue;}
+   const sk=cols[i];if(!sk)continue;
+   anyCol=true;
    const lp=vegLastPrice(vk,sk);
    const off=(VEGOFFERS[vk]&&VEGOFFERS[vk][i]!=null)?VEGOFFERS[vk][i]:'';
    const chosen=VEGCHOSEN[vk]===i;
    const lastBuy=(VEGLASTBUY[vk]===sk);
-   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה אחרונה: ':'קנייה אחרונה: ')+P2(lp.p));
-   h+='<td class="vcell'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
-      (lastBuy?'<div class="vbuy">🛒 נקנה לאחרונה</div>':'')+
-      '<div class="vlast'+(lp.src==='catalog'?' vcat':'')+'" title="'+(lp.src==='offer'?'ההצעה האחרונה של הספק הזה במכרז':'מחיר הקנייה האחרון מהקובץ (עד שיישמר מכרז)')+'">'+lastTxt+'</div>'+
+   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה: ':'קנייה: ')+P2(lp.p));
+   h+='<div class="vo'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
+      (lastBuy?'<div class="vbuy">🛒 נקנה</div>':'')+
+      '<div class="vo-sup">'+esc(supName(sk))+'</div>'+
+      '<div class="vlast'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</div>'+
       '<input class="voff" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
       '<label class="vpick"><input type="radio" name="vch_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> הזמנתי</label>'+
-      '</td>';
+      '</div>';
   }
-  h+='</tr>';
+  if(!anyCol)h+='<div class="empty" style="grid-column:1/-1;padding:8px">בחרי ספקים למעלה ↑</div>';
+  h+='</div></div>';
  });
- box.innerHTML=h+'</tbody></table>';
+ box.innerHTML=h+'</div>';
  box.querySelectorAll('.vegSupSel').forEach(sel=>sel.onchange=()=>{const c=getVegCols();c[+sel.dataset.i]=sel.value;setVegCols(c);renderVeg();});
+ box.querySelectorAll('.vqstep').forEach(b=>b.onclick=()=>{const inp=b.parentNode.querySelector('.vqty');let v=(parseFloat(inp.value)||0)+parseFloat(b.dataset.step);if(v<0)v=0;inp.value=v>0?v:'';if(v>0)VEGQTY[b.dataset.vk]=v;else delete VEGQTY[b.dataset.vk];});
  box.querySelectorAll('.vqty').forEach(inp=>inp.oninput=()=>{const v=parseFloat(inp.value);if(v>0)VEGQTY[inp.dataset.vk]=v;else delete VEGQTY[inp.dataset.vk];});
  box.querySelectorAll('.voff').forEach(inp=>inp.oninput=()=>{
   const vk=inp.dataset.vk,ci=+inp.dataset.col,v=parseFloat(inp.value);
@@ -710,7 +742,7 @@ function renderVeg(){
  box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{VEGCHOSEN[rb.dataset.vk]=+rb.dataset.col;markChosen(rb.dataset.vk);});
  ITEMS_VEG.forEach(it=>highlightRow(it.k));
 }
-function vegCell(vk,i){return document.querySelector('.vcell[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
+function vegCell(vk,i){return document.querySelector('.vo[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
 function highlightRow(vk){
  const offs=VEGOFFERS[vk]||{};
  const vals=Object.keys(offs).map(k=>offs[k]).filter(v=>v>0);
