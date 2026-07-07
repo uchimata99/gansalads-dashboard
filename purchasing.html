@@ -226,6 +226,26 @@ body{background:#f5f2ec}
 .vo.vlastbuy{background:var(--gold-l)}
 .vo .vbuy{position:absolute;top:3px;inset-inline-start:4px;font-size:8px;margin:0;background:none;padding:0}
 @media(max-width:600px){.voffers{grid-template-columns:repeat(2,1fr)}.vselcol{flex:1 1 45%}}
+/* טאבים של קטגוריות (chips) בבניית הזמנה */
+.chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;margin-bottom:4px;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;border:1.5px solid var(--border);background:#fff;color:var(--muted);border-radius:999px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
+.chip:hover{border-color:var(--green);color:var(--green)}
+.chip.on{background:linear-gradient(135deg,#2d6a3f,#245534);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(45,106,63,.3)}
+/* מכרז מחודש — כמות צמודה לשם; ספקים כשורות נקיות */
+.vcard-h{justify-content:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.vcname{font-size:16px}
+.vrows{display:flex;flex-direction:column;gap:7px}
+.vrow{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1.5px solid var(--border);border-radius:11px;transition:border-color .15s,background .15s}
+.vr-sup{flex:1;min-width:0;font-weight:700;font-size:13px;display:flex;align-items:center;gap:5px}
+.vr-last{font-size:11px;color:var(--muted);white-space:nowrap;min-width:66px;text-align:center}
+.vr-off{width:78px;text-align:center;flex:0 0 auto}
+.vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:4px;align-items:center;font-size:11px;white-space:nowrap}
+.vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
+.vrow.vcheap .vr-last{color:var(--green);font-weight:800}
+.vrow.vchosen{outline:2.5px solid var(--gold);outline-offset:-2px}
+.vrow.vlastbuy .vr-sup{color:var(--gold)}
+.vr-sup .vbuy{background:none;padding:0;font-size:13px}
+@media(max-width:600px){.vr-off{width:60px}.vr-last{min-width:50px;font-size:10px}.vrow{gap:7px;padding:7px 9px}.vrow .vpick{font-size:10px}.vr-sup{font-size:12.5px}}
 
 /* הדפסה — צבע דרך טקסט/מסגרת, לא רקע, כדי שיודפס גם בנייד */
 @media print{
@@ -287,11 +307,11 @@ body{background:#f5f2ec}
   <div class="card">
    <div class="card-t"><span>קטלוג פריטים — הזיני כמות ליד כל פריט שברצונך להזמין</span><span class="lbl" id="buildCount"></span></div>
    <div class="ctrl">
-    <input id="fSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:230px" autocomplete="off">
-    <span class="lbl">קטגוריה:</span><select id="fCat"><option value="">הכל</option></select>
+    <input id="fSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:200px" autocomplete="off">
     <span class="lbl">ספק:</span><select id="fSup"><option value="">הכל</option></select>
     <label class="lbl" style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="fInOrder" style="width:auto"> רק בהזמנה</label>
    </div>
+   <div class="chips" id="catChips"></div>
    <div class="scroll" id="itemsTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b id="cbCount">0</b> פריטים · <b id="cbSup">0</b> ספקים</span>
@@ -415,26 +435,32 @@ function startApp(){
  ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:(b?b.s:[])};});
  AUC.veg.items=ITEMS_VEG; AUC.veg.byK={}; ITEMS_VEG.forEach(it=>AUC.veg.byK[it.k]=it);
  AUC.peel.items=ITEMS_PEEL; AUC.peel.byK={}; ITEMS_PEEL.forEach(it=>AUC.peel.byK[it.k]=it);
- // בוררי קטגוריה
- const fc=document.getElementById('fCat');
- const codes=[...new Set(ITEMS.map(i=>i.c))].sort((a,b)=>String(a).localeCompare(String(b),'en',{numeric:true}));
- codes.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=catName(c)+' ('+c+')';fc.appendChild(o);});
+ renderCatChips();   // קטגוריות כטאבים (chips)
  // בוררי ספק (רק ספקים שמשויכים לפריט כלשהו)
  const supSet=new Set();ITEMS.forEach(i=>(i.s||[]).forEach(s=>supSet.add(s)));
  const sups=[...supSet].map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
  [['fSup'],['hSup']].forEach(([id])=>{const sel=document.getElementById(id);sups.forEach(s=>{const o=document.createElement('option');o.value=s.k;o.textContent=s.n;sel.appendChild(o);});});
  setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
- ['fSearch','fCat','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
+ ['fSearch','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
  renderItems();updateCartBar();
 }
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+let buildCat='';   // הקטגוריה הנבחרת בבניית הזמנה ('' = הכל)
+function renderCatChips(){
+ const el=document.getElementById('catChips');if(!el)return;
+ const codes=[...new Set(ITEMS.map(i=>i.c))].sort((a,b)=>String(a).localeCompare(String(b),'en',{numeric:true}));
+ let h='<button class="chip'+(buildCat===''?' on':'')+'" data-c="">הכל</button>';
+ codes.forEach(c=>{h+='<button class="chip'+(buildCat===c?' on':'')+'" data-c="'+esc(c)+'">'+esc(catName(c))+'</button>';});
+ el.innerHTML=h;
+ el.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{buildCat=b.dataset.c;renderCatChips();renderItems();});
+}
 
 /* ---------- טבלת הקטלוג + הזנת כמות ---------- */
 function filteredItems(){
  const q=document.getElementById('fSearch').value.trim();
- const c=document.getElementById('fCat').value;
+ const c=buildCat;
  const s=document.getElementById('fSup').value;
  const only=document.getElementById('fInOrder').checked;
  return ITEMS.filter(it=>{
@@ -701,12 +727,12 @@ function aucRender(a){
   const vk=it.k;
   h+='<div class="vcard">'+
      '<div class="vcard-h"><div class="vcname">'+esc(it.n)+'</div>'+
-       '<div class="vqwrap"><span class="lbl">כמות</span><div class="stepper vqtystep">'+
+       '<div class="stepper vqtystep">'+
          '<button class="stbtn vqstep" data-vk="'+esc(vk)+'" data-step="-1" type="button">−</button>'+
-         '<input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(a.qty[vk]>0?a.qty[vk]:'')+'" placeholder="0">'+
+         '<input class="qty vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(a.qty[vk]>0?a.qty[vk]:'')+'" placeholder="כמות">'+
          '<button class="stbtn vqstep" data-vk="'+esc(vk)+'" data-step="1" type="button">+</button>'+
-       '</div></div>'+
-     '</div><div class="voffers">';
+       '</div>'+
+     '</div><div class="vrows">';
   let anyCol=false;
   for(let i=0;i<4;i++){
    const sk=cols[i];if(!sk)continue;
@@ -715,16 +741,15 @@ function aucRender(a){
    const off=(a.off[vk]&&a.off[vk][i]!=null)?a.off[vk][i]:'';
    const chosen=a.chosen[vk]===i;
    const lastBuy=(a.lastbuy[vk]===sk);
-   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה: ':'קנייה: ')+P2(lp.p));
-   h+='<div class="vo'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
-      (lastBuy?'<div class="vbuy">🛒 נקנה</div>':'')+
-      '<div class="vo-sup">'+esc(supName(sk))+'</div>'+
-      '<div class="vlast'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</div>'+
-      '<input class="voff" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
-      '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> הזמנתי</label>'+
+   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':'אחרון ')+P2(lp.p));
+   h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
+      '<span class="vr-sup">'+esc(supName(sk))+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
+      '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
+      '<input class="voff vr-off" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
+      '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
   }
-  if(!anyCol)h+='<div class="empty" style="grid-column:1/-1;padding:8px">בחרי ספקים למעלה ↑</div>';
+  if(!anyCol)h+='<div class="empty" style="padding:8px">בחרי ספקים למעלה ↑</div>';
   h+='</div></div>';
  });
  box.innerHTML=h+'</div>';
@@ -739,7 +764,7 @@ function aucRender(a){
  box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{a.chosen[rb.dataset.vk]=+rb.dataset.col;aucMarkChosen(a,rb.dataset.vk);});
  a.items.forEach(it=>aucHighlight(a,it.k));
 }
-function aucCell(a,vk,i){return document.getElementById(a.box).querySelector('.vo[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
+function aucCell(a,vk,i){return document.getElementById(a.box).querySelector('.vrow[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
 function aucHighlight(a,vk){
  const offs=a.off[vk]||{};
  const vals=Object.keys(offs).map(k=>offs[k]).filter(v=>v>0);
