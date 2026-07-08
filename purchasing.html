@@ -488,7 +488,7 @@ function startApp(){
  // מכרז טרי — רשימה נעולה בסדר שנקבע
  ITEMS_VEG=VEG_ITEMS.map(k=>ITEM_BY_K[k]).filter(Boolean);
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
- ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:(b?b.s:[])};});
+ ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:(b?b.s:[]),sp:(b?b.sp:null)};});
  AUC.veg.items=ITEMS_VEG; AUC.veg.byK={}; ITEMS_VEG.forEach(it=>AUC.veg.byK[it.k]=it);
  AUC.peel.items=ITEMS_PEEL; AUC.peel.byK={}; ITEMS_PEEL.forEach(it=>AUC.peel.byK[it.k]=it);
  renderCatChips();   // קטגוריות כטאבים (chips)
@@ -787,7 +787,9 @@ async function aucLoad(a,force){
 function aucBuildLast(a){a.last={};a.lastbuy={};(a.hist||[]).forEach(r=>{if(r.vk&&r.sk&&!isNaN(r.price))a.last[r.vk+'|'+r.sk]=r.price;if(r.vk&&r.sk&&r.chosen)a.lastbuy[r.vk]=r.sk;});}
 function aucLast(a,vk,sk){
  if(sk&&a.last[vk+'|'+sk]!=null)return {p:a.last[vk+'|'+sk],src:'offer'};   // הצעה אחרונה של הספק במכרז
- const it=a.byK[vk];return {p:(it&&it.p!=null)?it.p:null,src:'catalog'};      // נפילה למחיר הקנייה מהקובץ
+ const it=a.byK[vk];
+ if(it&&it.sp&&it.sp[sk]&&it.sp[sk][0]>0)return {p:it.sp[sk][0],src:'catsup'};   // מחיר הקנייה האחרון מהספק הזה (קובץ השיוך)
+ return {p:(it&&it.p!=null)?it.p:null,src:'catalog'};                             // נפילה כללית — מחיר אחרון של הפריט
 }
 function aucRender(a){
  const box=document.getElementById(a.box);if(!box)return;
@@ -814,7 +816,7 @@ function aucRender(a){
    const off=(a.off[vk]&&a.off[vk][i]!=null)?a.off[vk][i]:'';
    const chosen=a.chosen[vk]===i;
    const lastBuy=(a.lastbuy[vk]===sk);
-   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':'אחרון ')+P2(lp.p));
+   const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':(lp.src==='catsup'?'אחרון ':'קנייה '))+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       '<div class="vr-top"><span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
         '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="'+(i===0?'כמות אצל הספק הראשון מועתקת לשאר':'אפשר לשנות כמות לספק זה בנפרד')+'"></div>'+
