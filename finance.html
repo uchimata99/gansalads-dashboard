@@ -339,7 +339,7 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gray);margin-to
 //  כל המספרים הפיננסיים נטענים בזמן ריצה — אין מספרים במקור הדף.
 // ════════════════════════════════════════════════════════════
 const FIN_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
-const FIN_SHEET_ID='1HNBtBpadBW4xPAip8reoDuSZaxcbFC-M874--GNmu9U';
+const FIN_SHEET_ID='1_afs20qhbCT6Plq3twmZlxE7blORws1SG8jsvrlJQQM';
 const FIN_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const FIN_TOKEN_KEY='gsGoogleToken';
 
@@ -927,7 +927,7 @@ window.addEventListener('load', ()=>{
 
     <!-- Gross margin breakdown -->
     <div class="card" style="margin-top:16px">
-      <div class="card-title">📊 ניתוח רווח גולמי — פירוק לפי רכיבי עלות <span class="card-badge">ינואר–מאי 2026</span></div>
+      <div class="card-title">📊 ניתוח רווח גולמי — פירוק לפי רכיבי עלות <span class="card-badge" id="gpmBadge">ינואר–מאי 2026</span></div>
 
       <div class="grid2" style="margin-bottom:16px">
         <div>
@@ -975,7 +975,7 @@ window.addEventListener('load', ()=>{
 
     <!-- Operating Profit Analysis -->
     <div class="card" style="margin-top:16px">
-      <div class="card-title">⚙️ ניתוח רווח תפעולי (EBIT) <span class="card-badge">ינואר–מאי 2026</span></div>
+      <div class="card-title">⚙️ ניתוח רווח תפעולי (EBIT) <span class="card-badge" id="ebitBadge">ינואר–מאי 2026</span></div>
 
       <!-- EBIT KPIs -->
       <div class="kpi-grid" style="margin-bottom:16px" id="ebitKpis"></div>
@@ -1730,19 +1730,24 @@ function buildMonthly(){
   const labels = data.map(r => r.month);
   const latest = data[data.length - 1];
   const prev   = data[data.length - 2];
+  const mName  = s => (s||'').split(' ')[0];
+  const yr     = (latest.month.split(' ')[1]||'');
+  const firstM = mName(data[0].month), lastM = mName(latest.month), prevM = prev?mName(prev.month):'';
+  const period = firstM+'–'+lastM+(yr?' '+yr:'');
 
   // Replace upload area with summary
   document.getElementById('uploadCard').innerHTML = `
     <div style="background:var(--lgreen);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
       <div style="font-size:28px">✅</div>
       <div>
-        <div style="font-weight:700;color:var(--green);font-size:14px">נטענו ${data.length} חודשים — ינואר עד מאי 2026</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px">מקור: דוחות מאזן חודשיים סלטי גן בע"מ · ינואר–מאי 2026</div>
+        <div style="font-weight:700;color:var(--green);font-size:14px">נטענו ${data.length} חודשים — ${firstM} עד ${lastM} ${yr}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px">מקור: דוחות מאזן חודשיים סלטי גן בע"מ · ${period}</div>
       </div>
     </div>`;
 
   document.getElementById('monthlyResults').style.display = 'block';
-  document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — ינואר–מאי 2026';
+  document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — '+period;
+  ['gpmBadge','ebitBadge'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=period; });
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
   const revGrow = prev ? ((latest.rev-prev.rev)/prev.rev*100).toFixed(1) : null;
@@ -1750,14 +1755,14 @@ function buildMonthly(){
   const crLatest = latest.currentRatio||0, crFirst = data[0].currentRatio||0;
   const avgLabor4 = '₪'+fmtK(Math.round(data.slice(0,4).reduce((s,r)=>s+(r.labor||0),0)/4));
   const kpis = [
-    { l:'הכנסות מאי',  v:'₪'+fmtK(latest.rev),   d:revGrow?(revGrow>0?'▲':'▼')+Math.abs(revGrow)+'% מאפריל':'', cls:revGrow>0?'g':'r' },
-    { l:'שולי גולמי*', v:gpmAvg.toFixed(1)+'%',   d:'ממוצע ינואר–מאי', cls:gpmAvg>18?'g':'a', note:'* שכר ייצור מאי נורמל לממוצע' },
-    { l:'שולי EBIT',   v:(data.reduce((s,r)=>s+r.ebitm,0)/data.length).toFixed(1)+'%', d:'ממוצע ינואר–מאי', cls:'g' },
-    { l:'הכנסות YTD',  v:'₪'+fmtK(data.reduce((s,r)=>s+r.rev,0)), d:'ינואר–מאי', cls:'n' },
-    { l:'רווח נקי YTD',v:'₪'+fmtK(data.reduce((s,r)=>s+r.net,0)), d:'ינואר–מאי', cls:'g' },
-    { l:'מזומן נטו מאי',v:'₪'+fmtK(latest.netCash), d:latest.netCash>0?'עודף מזומן':'אשראי בנק', cls:latest.netCash>0?'g':'a' },
-    { l:'יחס שוטף מאי',v:crLatest.toFixed(2), d:'↑ מ-'+crFirst.toFixed(2)+' בינואר', cls:'g' },
-    { l:'שכר ייצור מאי', v:'נורמל', d:'לממוצע '+avgLabor4, cls:'a' },
+    { l:'הכנסות '+lastM,  v:'₪'+fmtK(latest.rev),   d:revGrow?(revGrow>0?'▲':'▼')+Math.abs(revGrow)+'% מ'+prevM:'', cls:revGrow>0?'g':'r' },
+    { l:'שולי גולמי*', v:gpmAvg.toFixed(1)+'%',   d:'ממוצע '+firstM+'–'+lastM, cls:gpmAvg>18?'g':'a', note:'* שכר ייצור מנורמל' },
+    { l:'שולי EBIT',   v:(data.reduce((s,r)=>s+r.ebitm,0)/data.length).toFixed(1)+'%', d:'ממוצע '+firstM+'–'+lastM, cls:'g' },
+    { l:'הכנסות YTD',  v:'₪'+fmtK(data.reduce((s,r)=>s+r.rev,0)), d:firstM+'–'+lastM, cls:'n' },
+    { l:'רווח נקי YTD',v:'₪'+fmtK(data.reduce((s,r)=>s+r.net,0)), d:firstM+'–'+lastM, cls:'g' },
+    { l:'מזומן נטו '+lastM,v:'₪'+fmtK(latest.netCash), d:latest.netCash>0?'עודף מזומן':'אשראי בנק', cls:latest.netCash>0?'g':'a' },
+    { l:'יחס שוטף '+lastM,v:crLatest.toFixed(2), d:'↑ מ-'+crFirst.toFixed(2)+' ב'+firstM, cls:'g' },
+    { l:'שכר ייצור '+lastM, v:'נורמל', d:'לממוצע '+avgLabor4, cls:'a' },
   ];
   document.getElementById('monthlyKpis').innerHTML = kpis.map(k =>
     `<div class="kpi ${k.cls}">
@@ -1846,7 +1851,7 @@ function buildMonthly(){
 
   // ── YTD Table ─────────────────────────────────────────────────────────────
   let ytdRev=0, ytdNet=0;
-  document.getElementById('ytdBadge').textContent = 'ינואר–מאי 2026';
+  document.getElementById('ytdBadge').textContent = period;
   document.getElementById('ytdBody').innerHTML = data.map(r => {
     ytdRev += r.rev; ytdNet += r.net;
     const gCol = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
@@ -1876,22 +1881,26 @@ function buildMonthly(){
     <th>חודש</th><th>הכנסות ₪</th><th>גולמי %</th><th>EBIT %</th>
     <th>לקוחות ₪</th><th>ספקים ₪</th><th>מזומן ₪</th><th>מזומן נטו ₪</th>`;
 
-  // ── Alerts ────────────────────────────────────────────────────────────────
-  const may=latest, feb=data[1]||latest;
+  // ── Alerts (מחושבות דינמית מהנתונים) ──────────────────────────────────────
+  const last=latest;
   const gpmVals=data.map(r=>r.gpm), gpmSpread=(Math.max(...gpmVals)-Math.min(...gpmVals)).toFixed(1);
-  const gpmSeq=data.map(r=>`${r.month.split(' ')[0]} ${r.gpm.toFixed(1)}%`).join(' → ');
-  const crSeq=data.slice(0,4).map(r=>(r.currentRatio||0).toFixed(2)).join(' → ');
+  const gpmSeq=data.map(r=>`${mName(r.month)} ${r.gpm.toFixed(1)}%`).join(' → ');
+  const crSeq=data.map(r=>(r.currentRatio||0).toFixed(2)).join(' → ');
   const ytdRevM=(data.reduce((s,r)=>s+r.rev,0)/1000000);
-  const alerts = [
-    { t:'a', m:`📌 מאי 2026: שכר הייצור בדוח (₪${fmtNum(may.laborReported)}) היה רישום חלקי — נורמל לממוצע ינואר–אפריל (₪${fmtNum(may.labor)}) בהוספת ההפרש לעלות המכר. שולי הגולמי לאחר נרמול: ${may.gpm.toFixed(1)}%.` },
-    { t:'a', m:`📊 תנודתיות גבוהה בשולי גולמי: ${gpmSeq}. הפרש של ${gpmSpread}pp בין חודשים — בדוק עקביות הזנת עלות המכר.` },
-    { t:'g', m:`✅ יחס שוטף עלה בעקביות עד אפריל: ${crSeq}. במאי ${(may.currentRatio||0).toFixed(2)} — עדיין מעל 1.2 (בריא).` },
-    { t:'g', m:'✅ הכנסות YTD: ₪'+ytdRevM.toFixed(2)+'M לינואר–מאי. קצב שנתי משוער ~₪'+(ytdRevM/data.length*12).toFixed(1)+'M.' },
-    { t:'a', m:`📌 חו"ז (חייבים אחרים) מאי: ₪${fmtK(may.arOther)} — פי 5 מהממוצע הרגיל. בדוק מהות הסעיף.` },
-    { t:'g', m:'✅ ינואר ואפריל: לקוחות בעודף זיכוי — לקוחות שילמו מראש. מדיניות תשלום טובה.' },
-    { t:'r', m:`⚠️ מאי: ספקים בזיכוי שלילי (₪${may.ap<0?'-'+fmtK(Math.abs(may.ap)):fmtK(may.ap)}) — שולמה יתרה לספקים. בדוק אם מדובר בתשלום כפול או מקדמה.` },
-    { t:'a', m:`📌 פברואר: שולי גולמי ${feb.gpm.toFixed(1)}% — הנמוכים בסדרה. שיעור הקניות הגבוה (${(feb.purchases/feb.rev*100).toFixed(1)}% מהכנסות) שחק את השוליים. בדוק אם היה אירוע חד-פעמי.` },
-  ];
+  const worst=data.reduce((a,b)=>b.gpm<a.gpm?b:a);
+  const creditMonths=data.filter(r=>r.ar<0).map(r=>mName(r.month));
+  const alerts = [];
+  if(last.labor!==last.laborReported)
+    alerts.push({ t:'a', m:`📌 ${last.month}: שכר הייצור בדוח (₪${fmtNum(last.laborReported)}) היה חלקי/חסר — נורמל לממוצע (₪${fmtNum(last.labor)}) בהוספת ההפרש לעלות המכר. שולי הגולמי לאחר נרמול: ${last.gpm.toFixed(1)}%.` });
+  alerts.push({ t:'a', m:`📊 תנודתיות בשולי גולמי: ${gpmSeq}. הפרש של ${gpmSpread}pp בין חודשים — בדוק עקביות הזנת עלות המכר.` });
+  alerts.push({ t:last.currentRatio>=1.2?'g':'a', m:`יחס שוטף: ${crSeq} — ${last.currentRatio>=1.2?'מעל ':'מתחת ל-'}1.2 (${last.currentRatio>=1.2?'בריא':'לבדיקה'}).` });
+  alerts.push({ t:'g', m:`✅ הכנסות YTD: ₪${ytdRevM.toFixed(2)}M ל${period}. קצב שנתי משוער ~₪${(ytdRevM/data.length*12).toFixed(1)}M.` });
+  alerts.push({ t:'a', m:`📌 חו"ז (חייבים אחרים) ${lastM}: ₪${fmtK(last.arOther)} — אם היתרה חריגה, בדוק את מהות הסעיף.` });
+  if(creditMonths.length)
+    alerts.push({ t:'g', m:`✅ ${creditMonths.join(', ')}: לקוחות בעודף זיכוי — שילמו מראש. מדיניות תשלום טובה.` });
+  if(last.ap<0)
+    alerts.push({ t:'r', m:`⚠️ ${lastM}: ספקים בזיכוי שלילי (₪-${fmtK(Math.abs(last.ap))}) — שולמה יתרה לספקים. בדוק אם תשלום כפול או מקדמה.` });
+  alerts.push({ t:'a', m:`📌 ${mName(worst.month)}: שולי גולמי ${worst.gpm.toFixed(1)}% — הנמוכים בסדרה. שיעור הקניות (${(worst.purchases/worst.rev*100).toFixed(1)}% מהכנסות) שחק את השוליים.` });
   document.getElementById('alertsBox').innerHTML = alerts.map(a=>
     `<div class="ins ${a.t}" style="margin-bottom:6px">${a.m}</div>`).join('');
 
@@ -1914,7 +1923,7 @@ function buildMonthly(){
           <div style="font-size:11px;color:var(--gray);line-height:1.5">${d}</div>
         </div>`).join('')}
     </div>
-    <div class="ins a" style="margin-top:12px">* שכר הייצור של מאי נורמל לממוצע ינואר–אפריל (₪${fmtNum(latest.labor)}) — בדוח הופיע רישום חלקי (₪${fmtNum(latest.laborReported)}). הממוצעים כוללים את מאי המנורמל.</div>`;
+    ${latest.labor!==latest.laborReported ? `<div class="ins a" style="margin-top:12px">* שכר הייצור של ${latest.month} נורמל לממוצע (₪${fmtNum(latest.labor)}) — בדוח הופיע רישום חלקי/חסר (₪${fmtNum(latest.laborReported)}). הממוצעים כוללים את החודש המנורמל.</div>` : ''}`;
 
   // ── Gross Margin Breakdown ────────────────────────────────────────────────
   const GPM = data.map(r=>({ m:r.month, rev:r.rev, purchases:r.purchases, labor:r.labor, factory:r.factory, totalCogs:r.cogsBreak }));
@@ -2011,13 +2020,13 @@ function buildMonthly(){
   const worstMonth = PL.reduce((a,b)=>b.ebit<a.ebit?b:a);
   document.getElementById('ebitKpis').innerHTML = [
     { l:'EBIT ממוצע', v:'₪'+fmtK(Math.round(PL.reduce((s,r)=>s+r.ebit,0)/PL.length)), d:avgEbitm.toFixed(1)+'% מהכנסות', cls:'n' },
-    { l:'EBIT גבוה — מרץ', v:'₪'+fmtK(bestMonth.ebit|0), d:bestMonth.ebitm.toFixed(1)+'%', cls:'g' },
-    { l:'EBIT נמוך — פבר׳', v:'₪'+fmtK(worstMonth.ebit|0), d:worstMonth.ebitm.toFixed(1)+'%', cls:'a' },
+    { l:'EBIT גבוה — '+mName(bestMonth.m), v:'₪'+fmtK(bestMonth.ebit|0), d:bestMonth.ebitm.toFixed(1)+'%', cls:'g' },
+    { l:'EBIT נמוך — '+mName(worstMonth.m), v:'₪'+fmtK(worstMonth.ebit|0), d:worstMonth.ebitm.toFixed(1)+'%', cls:'a' },
     { l:'טווח EBIT', v:(bestMonth.ebitm-worstMonth.ebitm).toFixed(1)+'pp', d:'בין חודשים', cls:'a' },
-    { l:'EBIT YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.ebit,0)), d:'ינואר–מאי', cls:'g' },
+    { l:'EBIT YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.ebit,0)), d:firstM+'–'+lastM, cls:'g' },
     { l:'הנהלה ממוצע', v:avgGna.toFixed(1)+'%', d:'מהכנסות', cls:'n' },
     { l:'מימון ממוצע', v:(PL.reduce((s,r)=>s+r.finm,0)/PL.length).toFixed(2)+'%', d:'נמוך מאוד', cls:'g' },
-    { l:'רווח נקי YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.net,0)), d:'ינ–מאי', cls:'g' },
+    { l:'רווח נקי YTD', v:'₪'+fmtK(PL.reduce((s,r)=>s+r.net,0)), d:firstM+'–'+lastM, cls:'g' },
   ].map(k=>`<div class="kpi ${k.cls}">
     <div class="kpi-lbl">${k.l}</div>
     <div class="kpi-val sm">${k.v}</div>
@@ -2077,7 +2086,9 @@ function buildMonthly(){
     }}
   });
 
-  // Full P&L table
+  // Full P&L table — כותרת דינמית לפי החודשים שנטענו
+  const plHead=document.querySelector('#plTable thead tr');
+  if(plHead) plHead.innerHTML = '<th>שורה</th>'+PL.map(m=>`<th>${m.m}</th><th>% מהכנסות</th>`).join('')+'<th>ממוצע %</th>';
   const plRows = [
     { lbl:'הכנסות ממכירות', key:'rev',  style:'background:var(--lgray);font-weight:700', bold:true },
     { lbl:'עלות המכר (COGS)', key:'cogs', style:'color:var(--red)', neg:true },
@@ -2100,14 +2111,14 @@ function buildMonthly(){
 
   // insight texts
   document.getElementById('ebitAbsIns').textContent =
-    `ממוצע EBIT: ₪${fmtNum(Math.round(PL.reduce((s,r)=>s+r.ebit,0)/PL.length))} | מרץ =${fmtK(PL[2].ebit|0)} vs. פברואר =${fmtK(PL[1].ebit|0)} — הפרש פי ${(PL[2].ebit/PL[1].ebit).toFixed(1)}`;
+    `ממוצע EBIT: ₪${fmtNum(Math.round(PL.reduce((s,r)=>s+r.ebit,0)/PL.length))} | ${mName(bestMonth.m)} =${fmtK(bestMonth.ebit|0)} vs. ${mName(worstMonth.m)} =${fmtK(worstMonth.ebit|0)} — הפרש פי ${(bestMonth.ebit/worstMonth.ebit).toFixed(1)}`;
   document.getElementById('ebitMarginIns').textContent =
-    `מרץ גבוה (${PL[2].ebitm.toFixed(1)}%) ← שולי גולמי ${PL[2].gpm.toFixed(1)}% + הנהלה נמוכה (${PL[2].gnam.toFixed(0)}%). פברואר נמוך (${PL[1].ebitm.toFixed(1)}%) ← שולי גולמי ${PL[1].gpm.toFixed(1)}%.`;
+    `${mName(bestMonth.m)} גבוה (${bestMonth.ebitm.toFixed(1)}%) ← שולי גולמי ${bestMonth.gpm.toFixed(1)}% + הנהלה ${bestMonth.gnam.toFixed(1)}%. ${mName(worstMonth.m)} נמוך (${worstMonth.ebitm.toFixed(1)}%) ← שולי גולמי ${worstMonth.gpm.toFixed(1)}%.`;
   document.getElementById('gnaIns').textContent =
     `ממוצע הנהלה: ₪${fmtNum(Math.round(PL.reduce((s,r)=>s+r.gna,0)/PL.length))} (${avgGna.toFixed(1)}%). טווח: ${Math.min(...PL.map(r=>r.gna))|0}–${Math.max(...PL.map(r=>r.gna))|0} ₪`;
 
   // insight texts
-  document.getElementById('revBadge').textContent = 'ינואר–מאי 2026';
+  document.getElementById('revBadge').textContent = period;
   document.getElementById('revIns').textContent = `ממוצע חודשי: ₪${fmtNum(Math.round(data.reduce((s,r)=>s+r.rev,0)/data.length))} | טווח: ₪${fmtNum(Math.min(...data.map(r=>r.rev)))} – ₪${fmtNum(Math.max(...data.map(r=>r.rev)))}`;
   document.getElementById('marginIns').textContent = `ממוצע גולמי (ינ-מאי): ${(data.reduce((s,r)=>s+r.gpm,0)/data.length).toFixed(1)}% | תנודתיות גבוהה — בדוק עקביות COGS`;
   document.getElementById('wcIns').textContent = 'לקוחות ומלאי נמוכים — חברה עובדת עם מקדמות ותשלום מהיר';
