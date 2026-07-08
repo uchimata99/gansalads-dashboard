@@ -233,11 +233,14 @@ body{background:#f5f2ec}
 .chip.on{background:linear-gradient(135deg,#2d6a3f,#245534);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(45,106,63,.3)}
 /* מכרז — רובריקות ספקים: מחשב 4 לצד זו, טלפון זו מתחת לזו */
 .auc-tools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.scols{display:grid;gap:12px;align-items:start}
-.scols.n1{grid-template-columns:1fr}.scols.n2{grid-template-columns:repeat(2,1fr)}
-.scols.n3{grid-template-columns:repeat(3,1fr)}.scols.n4{grid-template-columns:repeat(4,1fr)}
-@media(max-width:1100px){.scols.n3,.scols.n4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.scols.n2,.scols.n3,.scols.n4{grid-template-columns:1fr}}
+.scols{display:grid;gap:12px;align-items:start;justify-content:start}
+/* רוחב רובריקה קבוע (~330px) — גם עם ספק אחד היא לא נמתחת */
+.scols.n1{grid-template-columns:repeat(1,minmax(0,330px))}
+.scols.n2{grid-template-columns:repeat(2,minmax(0,330px))}
+.scols.n3{grid-template-columns:repeat(3,minmax(0,330px))}
+.scols.n4{grid-template-columns:repeat(4,minmax(0,330px))}
+@media(max-width:1100px){.scols.n3,.scols.n4{grid-template-columns:repeat(2,minmax(0,330px))}}
+@media(max-width:640px){.scols.n1,.scols.n2,.scols.n3,.scols.n4{grid-template-columns:1fr}}
 .scol{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:10px;box-shadow:var(--shadow-sm)}
 .scol-empty{background:var(--surface);border-style:dashed}
 .scol-h{margin-bottom:10px;display:flex;gap:6px;align-items:center}
@@ -309,6 +312,7 @@ body{background:#f5f2ec}
  <div class="tab active" data-p="build">בניית הזמנה</div>
  <div class="tab" data-p="veg">🥬 מכרז ירקות</div>
  <div class="tab" data-p="peel">🥔 ירקות קלופים</div>
+ <div class="tab" data-p="pack">📦 אריזות</div>
  <div class="tab" data-p="cart">סל ההזמנה</div>
  <div class="tab" data-p="hist">היסטוריית הזמנות</div>
 </div>
@@ -354,6 +358,19 @@ body{background:#f5f2ec}
    <div class="cartbar">
     <button class="btn blue" onclick="savePeel()">💾 שמור מכרז</button>
     <span class="lbl">הזול בכל פריט מסומן ירוק · סמני "הזמנתי" לפני שמירה</span>
+   </div>
+  </div>
+ </div>
+
+ <!-- ============ אריזות ============ -->
+ <div class="page" id="pack">
+  <div class="card">
+   <div class="card-t"><span>אריזות — הזיני כמות ליד כל פריט</span><span class="lbl" id="packCount"></span></div>
+   <div class="ctrl"><input id="pkSearch" placeholder="🔍 חיפוש אריזה (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="scroll" id="packTab"></div>
+   <div class="cartbar">
+    <span>בהזמנה: <b id="cbCount2">0</b> פריטים · <b id="cbSup2">0</b> ספקים</span>
+    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
    </div>
   </div>
  </div>
@@ -410,12 +427,14 @@ let ORDER={};            // מפתח פריט -> {qty:Number, sup:supplierKey}
 let HIST=null;           // שורות היסטוריה (מערך אובייקטים)
 let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משותף)
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
-let ITEMS_VEG=[], ITEMS_PEEL=[];
+let ITEMS_VEG=[], ITEMS_PEEL=[], ITEMS_PACK=[];
 // שני מכרזים (טרי + קלופים) — אותו מנגנון, קונפיג נפרד לכל אחד
 const AUC={
- veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
- peel:{box:'peelTab', selKey:'gsPeelSuppliers', tab:'PEEL_AUCTION', empty:'אין פריטים במכרז הקלופים.', exclude:null, items:[], byK:{}, off:{}, qty:{}, chosen:{}, last:{}, lastbuy:{}, hist:null}
+ veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
+ peel:{box:'peelTab', selKey:'gsPeelSuppliers', tab:'PEEL_AUCTION', empty:'אין פריטים במכרז הקלופים.', exclude:null, items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null}
 };
+/* כמות במכרז: a.qty[פריט]={עמודה:כמות} — הקלדה אצל הספק הראשון מועתקת
+   לשאר; שינוי ידני אצל ספק אחר (a.qov) מקבע אותו ולא נדרס יותר. */
 // רשימות המכרז — נעולות, בסדר שמיכל ביקשה
 const VEG_ITEMS=['70526','70520','70523','70527','70528','70538','70541','70542','70532','70533','70545','70539','70521','70522','70535'];
 const PEELED_ITEMS=[{k:'70574',n:"גזר ג'וליאן"},{k:'70621',n:'גזר פרוס'},{k:'PEEL_CHIPS',n:"גזר צ'יפס",p:null},{k:'70572',n:'תפוח אדמה קוביות'},{k:'70569',n:'בטטה קוביות'},{k:'70719',n:'קולורבי'},{k:'70564',n:'כרוב לבן'},{k:'70566',n:'כרוב אדום'},{k:'70581',n:'כרוב לבן גס'},{k:'70562',n:'בצל מקולף'}];
@@ -434,6 +453,7 @@ function tab(p){
  if(p==='hist')loadHistory(false);
  if(p==='veg'){renderVeg();loadVegHist(false).then(renderVeg);}
  if(p==='peel'){renderPeel();loadPeelHist(false).then(renderPeel);}
+ if(p==='pack')renderPack();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 
@@ -441,7 +461,8 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(
 function startApp(){
  const ALL=(CAT.items||[]).slice();
  ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
- ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT);       // טאב בניית הזמנה — בלי ירקות
+ ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT&&String(it.c)!=='201');   // בניית הזמנה — בלי ירקות ובלי אריזות
+ ITEMS_PACK=ALL.filter(it=>String(it.c)==='201');                       // טאב אריזות נפרד
  // מכרז טרי — רשימה נעולה בסדר שנקבע
  ITEMS_VEG=VEG_ITEMS.map(k=>ITEM_BY_K[k]).filter(Boolean);
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
@@ -455,6 +476,7 @@ function startApp(){
  [['fSup'],['hSup']].forEach(([id])=>{const sel=document.getElementById(id);sups.forEach(s=>{const o=document.createElement('option');o.value=s.k;o.textContent=s.n;sel.appendChild(o);});});
  setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
  ['fSearch','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
+ document.getElementById('pkSearch').addEventListener('input',renderPack);
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
  renderItems();updateCartBar();
@@ -485,9 +507,17 @@ function filteredItems(){
  });
 }
 function renderItems(){
- const arr=filteredItems();
- setTxt('buildCount',arr.length+' פריטים');
- const box=document.getElementById('itemsTab');
+ renderItemCards(filteredItems(),'itemsTab','buildCount');
+}
+// טאב אריזות — אותם כרטיסים, מסונן לחיפוש בלבד
+function renderPack(){
+ const q=(document.getElementById('pkSearch').value||'').trim();
+ const arr=ITEMS_PACK.filter(it=>!q||((it.n+' '+it.k).indexOf(q)>=0));
+ renderItemCards(arr,'packTab','packCount');
+}
+function renderItemCards(arr,boxId,countId){
+ setTxt(countId,arr.length+' פריטים');
+ const box=document.getElementById(boxId);
  if(!arr.length){box.innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
  let h='<div class="ilist">';
  arr.forEach(it=>{
@@ -542,6 +572,7 @@ function updateCartBar(){
  const lines=Object.keys(ORDER).filter(k=>ORDER[k].qty>0);
  const sups=new Set(lines.map(k=>ORDER[k].sup||''));
  setTxt('cbCount',lines.length);setTxt('cbSup',sups.size);
+ setTxt('cbCount2',lines.length);setTxt('cbSup2',sups.size);
 }
 function clearOrder(){
  if(Object.keys(ORDER).length && !confirm('לנקות את כל ההזמנה הנוכחית?'))return;
@@ -707,8 +738,11 @@ function aucCols(a){let x=null;try{x=JSON.parse(localStorage.getItem(a.selKey)||
 function aucAddCol(a){const c=aucCols(a);if(c.length>=4)return;c.push('');aucSetCols(a,c);aucRender(a);}
 function aucRemoveCol(a,j){
  const c=aucCols(a);c.splice(j,1);if(!c.length)c.push('');aucSetCols(a,c);
- // מיפוי מחדש של הצעות/נבחר אחרי הסרת עמודה
- Object.keys(a.off).forEach(vk=>{const o=a.off[vk]||{},n={};Object.keys(o).forEach(k=>{k=+k;if(k<j)n[k]=o[k];else if(k>j)n[k-1]=o[k];});a.off[vk]=n;});
+ // מיפוי מחדש של הצעות/כמויות/נבחר אחרי הסרת עמודה
+ const shift=m=>{const n={};Object.keys(m||{}).forEach(k=>{k=+k;if(k<j)n[k]=m[k];else if(k>j)n[k-1]=m[k];});return n;};
+ Object.keys(a.off).forEach(vk=>{a.off[vk]=shift(a.off[vk]);});
+ Object.keys(a.qty).forEach(vk=>{a.qty[vk]=shift(a.qty[vk]);});
+ Object.keys(a.qov).forEach(vk=>{a.qov[vk]=shift(a.qov[vk]);});
  Object.keys(a.chosen).forEach(vk=>{const ch=a.chosen[vk];if(ch===j)delete a.chosen[vk];else if(ch>j)a.chosen[vk]=ch-1;});
  aucRender(a);
 }
@@ -741,7 +775,7 @@ function aucRender(a){
  aucSetCols(a,cols);
  // פריסה הפוכה: רובריקה לכל ספק שנבחר (1–4), ומתחת לכל ספק רשימת הפריטים
  let h='<div class="auc-tools noprint">'+(cols.length<4?'<button class="btn ghost sm aucAdd" type="button">➕ הוסף ספק</button>':'')+
-       '<span class="lbl">'+cols.length+' רובריקות · הכמות משותפת לכל הספקים</span></div>';
+       '<span class="lbl">'+cols.length+' רובריקות · כמות אצל הספק הראשון מועתקת לשאר</span></div>';
  h+='<div class="scols n'+cols.length+'">';
  for(let i=0;i<cols.length;i++){
   const sk=cols[i];
@@ -760,7 +794,7 @@ function aucRender(a){
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':'אחרון ')+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       '<div class="vr-top"><span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
-        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(a.qty[vk]>0?a.qty[vk]:'')+'" placeholder="כמות" title="כמות להיום (משותפת לכל הספקים)"></div>'+
+        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="'+(i===0?'כמות אצל הספק הראשון מועתקת לשאר':'אפשר לשנות כמות לספק זה בנפרד')+'"></div>'+
       '<div class="vr-bot"><span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
         '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
         '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר"></div>'+
@@ -772,11 +806,19 @@ function aucRender(a){
  const addBtn=box.querySelector('.aucAdd');if(addBtn)addBtn.onclick=()=>aucAddCol(a);
  box.querySelectorAll('.aucDel').forEach(b=>b.onclick=()=>aucRemoveCol(a,+b.dataset.i));
  box.querySelectorAll('.vegSupSel').forEach(sel=>sel.onchange=()=>{const c=aucCols(a);c[+sel.dataset.i]=sel.value;aucSetCols(a,c);aucRender(a);});
- // כמות משותפת פר-פריט: עדכון מסנכרן את כל העותקים בעמודות האחרות
+ // כמות פר-(פריט,ספק): הספק הראשון מעתיק לשאר; שינוי אצל ספק אחר מקבע אותו
  box.querySelectorAll('.vqty').forEach(inp=>inp.oninput=()=>{
-  const vk=inp.dataset.vk,v=parseFloat(inp.value);
-  if(v>0)a.qty[vk]=v;else delete a.qty[vk];
-  box.querySelectorAll('.vqty[data-vk="'+vk.replace(/["\\]/g,'\\$&')+'"]').forEach(o=>{if(o!==inp)o.value=inp.value;});
+  const vk=inp.dataset.vk,ci=+inp.dataset.col,v=parseFloat(inp.value);
+  a.qty[vk]=a.qty[vk]||{};a.qov[vk]=a.qov[vk]||{};
+  if(v>0)a.qty[vk][ci]=v;else delete a.qty[vk][ci];
+  if(ci>0){a.qov[vk][ci]=true;return;}   // שינוי ידני בספק לא-ראשון — מקובע
+  // הספק הראשון: העתקה לכל העמודות שלא קובעו ידנית
+  const vsel='.vqty[data-vk="'+vk.replace(/["\\]/g,'\\$&')+'"]';
+  box.querySelectorAll(vsel).forEach(o=>{
+   const oc=+o.dataset.col;if(oc===0||a.qov[vk][oc])return;
+   o.value=inp.value;
+   if(v>0)a.qty[vk][oc]=v;else delete a.qty[vk][oc];
+  });
  });
  box.querySelectorAll('.voff').forEach(inp=>inp.oninput=()=>{
   const vk=inp.dataset.vk,ci=+inp.dataset.col,v=parseFloat(inp.value);
@@ -799,11 +841,11 @@ async function aucSave(a){
  const ds=new Date().toLocaleDateString('he-IL');
  const rows=[];
  a.items.forEach(it=>{
-  const vk=it.k,offs=a.off[vk]||{},qty=(a.qty[vk]>0?a.qty[vk]:''),chosen=a.chosen[vk];
+  const vk=it.k,offs=a.off[vk]||{},qtys=a.qty[vk]||{},chosen=a.chosen[vk];
   for(let i=0;i<cols.length;i++){
    const sk=cols[i];if(!sk)continue;
    const price=offs[i];if(price==null)continue;   // שומרים רק הצעות שהוזנו
-   rows.push([ds,vk,it.n,sk,supName(sk),price,qty,(chosen===i?'1':'0')]);
+   rows.push([ds,vk,it.n,sk,supName(sk),price,(qtys[i]>0?qtys[i]:''),(chosen===i?'1':'0')]);
   }
  });
  if(!rows.length){toast('אין מה לשמור — הזיני מחירים לספקים');return;}
