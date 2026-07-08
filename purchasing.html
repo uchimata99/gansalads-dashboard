@@ -232,22 +232,27 @@ body{background:#f5f2ec}
 .chip:hover{border-color:var(--green);color:var(--green)}
 .chip.on{background:linear-gradient(135deg,#2d6a3f,#245534);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(45,106,63,.3)}
 /* מכרז — רובריקות ספקים: מחשב 4 לצד זו, טלפון זו מתחת לזו */
-.scols{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
-@media(max-width:1100px){.scols{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.scols{grid-template-columns:1fr}}
+.auc-tools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.scols{display:grid;gap:12px;align-items:start}
+.scols.n1{grid-template-columns:1fr}.scols.n2{grid-template-columns:repeat(2,1fr)}
+.scols.n3{grid-template-columns:repeat(3,1fr)}.scols.n4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1100px){.scols.n3,.scols.n4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.scols.n2,.scols.n3,.scols.n4{grid-template-columns:1fr}}
 .scol{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:10px;box-shadow:var(--shadow-sm)}
 .scol-empty{background:var(--surface);border-style:dashed}
-.scol-h{margin-bottom:10px}
-.scol-h select{width:100%;font-weight:700;background:var(--green-l);border-color:var(--green);color:var(--green)}
+.scol-h{margin-bottom:10px;display:flex;gap:6px;align-items:center}
+.scol-h select{flex:1;min-width:0;font-weight:700;background:var(--green-l);border-color:var(--green);color:var(--green)}
+.scol-x{flex:0 0 auto;width:30px;height:30px;border:1.5px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;cursor:pointer;font-size:13px;line-height:1}
+.scol-x:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
 .srows{display:flex;flex-direction:column;gap:7px}
 .vrow{border:1.5px solid var(--border);border-radius:11px;padding:7px 9px;transition:border-color .15s,background .15s}
 .vr-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .vr-name{flex:1;min-width:0;font-weight:800;font-size:13px;display:flex;align-items:center;gap:4px}
-.vqty{width:64px;text-align:center;padding:5px 6px;font-weight:700;font-family:'IBM Plex Mono',monospace;border-radius:8px}
+.vqty{width:72px;text-align:center;padding:5px 6px;font-weight:700;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
 .vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
 .vr-bot{display:flex;align-items:center;gap:8px}
 .vr-last{font-size:10.5px;color:var(--muted);white-space:nowrap;flex:1;text-align:right}
-.vr-off{width:72px;text-align:center;flex:0 0 auto;padding:5px 6px}
+.vr-off{width:72px;text-align:center;flex:0 0 auto;padding:5px 6px}   /* רוחב זהה ל-vqty ובקצה השורה — הכמות מיושרת בדיוק מעל המחיר */
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
@@ -501,7 +506,7 @@ function renderItems(){
      '</div>'+
      '<div class="stepper">'+
        '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
-       '<input class="qty" type="number" min="0" step="any" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
+       '<input class="qty" type="text" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
        '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
      '</div>'+
      '</div>';
@@ -697,7 +702,16 @@ async function appendRows(rows){
 }
 
 /* ================= מכרז ירקות יומי (קטגוריה 206) ================= */
-function aucCols(a){let x=null;try{x=JSON.parse(localStorage.getItem(a.selKey)||'null');}catch(e){}if(!Array.isArray(x))x=['','','',''];while(x.length<4)x.push('');return x.slice(0,4);}
+// רשימת הרובריקות — אורך משתנה (1–4): רק כמה ספקים שמיכל בחרה
+function aucCols(a){let x=null;try{x=JSON.parse(localStorage.getItem(a.selKey)||'null');}catch(e){}if(!Array.isArray(x))x=['',''];x=x.slice(0,4);if(!x.length)x=[''];return x;}
+function aucAddCol(a){const c=aucCols(a);if(c.length>=4)return;c.push('');aucSetCols(a,c);aucRender(a);}
+function aucRemoveCol(a,j){
+ const c=aucCols(a);c.splice(j,1);if(!c.length)c.push('');aucSetCols(a,c);
+ // מיפוי מחדש של הצעות/נבחר אחרי הסרת עמודה
+ Object.keys(a.off).forEach(vk=>{const o=a.off[vk]||{},n={};Object.keys(o).forEach(k=>{k=+k;if(k<j)n[k]=o[k];else if(k>j)n[k-1]=o[k];});a.off[vk]=n;});
+ Object.keys(a.chosen).forEach(vk=>{const ch=a.chosen[vk];if(ch===j)delete a.chosen[vk];else if(ch>j)a.chosen[vk]=ch-1;});
+ aucRender(a);
+}
 function aucSetCols(a,c){try{localStorage.setItem(a.selKey,JSON.stringify(c));}catch(e){}}
 // רשימת הספקים לבורר (משויכים לפריטי המכרז), פחות ספקים שהוחרגו, ממוינת לפי שם
 function aucSupList(a){const v=new Set();a.items.forEach(it=>(it.s||[]).forEach(s=>v.add(s)));return [...v].filter(k=>!(a.exclude&&a.exclude.has(k))).map(k=>({k,n:supName(k)})).sort((x,y)=>x.n.localeCompare(y.n,'he'));}
@@ -725,13 +739,16 @@ function aucRender(a){
  const valid=new Set(sups.map(s=>s.k));
  const cols=aucCols(a).map(c=>valid.has(c)?c:'');
  aucSetCols(a,cols);
- // פריסה הפוכה: 4 רובריקות ספק, ומתחת לכל ספק רשימת הפריטים
- let h='<div class="scols">';
- for(let i=0;i<4;i++){
+ // פריסה הפוכה: רובריקה לכל ספק שנבחר (1–4), ומתחת לכל ספק רשימת הפריטים
+ let h='<div class="auc-tools noprint">'+(cols.length<4?'<button class="btn ghost sm aucAdd" type="button">➕ הוסף ספק</button>':'')+
+       '<span class="lbl">'+cols.length+' רובריקות · הכמות משותפת לכל הספקים</span></div>';
+ h+='<div class="scols n'+cols.length+'">';
+ for(let i=0;i<cols.length;i++){
   const sk=cols[i];
   h+='<div class="scol'+(sk?'':' scol-empty')+'">'+
      '<div class="scol-h"><select class="vegSupSel" data-i="'+i+'"><option value="">— ספק '+(i+1)+' —</option>'+
-       sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+'</select></div>';
+       sups.map(s=>'<option value="'+esc(s.k)+'"'+(cols[i]===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+'</select>'+
+     '<button class="scol-x aucDel" data-i="'+i+'" type="button" title="הסר ספק">✕</button></div>';
   if(!sk){h+='<div class="empty" style="padding:16px">בחרי ספק ↑</div></div>';continue;}
   h+='<div class="srows">';
   a.items.forEach(it=>{
@@ -743,15 +760,17 @@ function aucRender(a){
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':'אחרון ')+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       '<div class="vr-top"><span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
-        '<input class="vqty" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(a.qty[vk]>0?a.qty[vk]:'')+'" placeholder="כמות" title="כמות להיום (משותפת לכל הספקים)"></div>'+
+        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" value="'+(a.qty[vk]>0?a.qty[vk]:'')+'" placeholder="כמות" title="כמות להיום (משותפת לכל הספקים)"></div>'+
       '<div class="vr-bot"><span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
-        '<input class="voff vr-off" type="number" min="0" step="any" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
-        '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label></div>'+
+        '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
+        '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר"></div>'+
       '</div>';
   });
   h+='</div></div>';
  }
  box.innerHTML=h+'</div>';
+ const addBtn=box.querySelector('.aucAdd');if(addBtn)addBtn.onclick=()=>aucAddCol(a);
+ box.querySelectorAll('.aucDel').forEach(b=>b.onclick=()=>aucRemoveCol(a,+b.dataset.i));
  box.querySelectorAll('.vegSupSel').forEach(sel=>sel.onchange=()=>{const c=aucCols(a);c[+sel.dataset.i]=sel.value;aucSetCols(a,c);aucRender(a);});
  // כמות משותפת פר-פריט: עדכון מסנכרן את כל העותקים בעמודות האחרות
  box.querySelectorAll('.vqty').forEach(inp=>inp.oninput=()=>{
@@ -781,7 +800,7 @@ async function aucSave(a){
  const rows=[];
  a.items.forEach(it=>{
   const vk=it.k,offs=a.off[vk]||{},qty=(a.qty[vk]>0?a.qty[vk]:''),chosen=a.chosen[vk];
-  for(let i=0;i<4;i++){
+  for(let i=0;i<cols.length;i++){
    const sk=cols[i];if(!sk)continue;
    const price=offs[i];if(price==null)continue;   // שומרים רק הצעות שהוזנו
    rows.push([ds,vk,it.n,sk,supName(sk),price,qty,(chosen===i?'1':'0')]);
