@@ -201,6 +201,13 @@ body{background:#f5f2ec}
 .stepper .qty{width:52px;height:34px;border:none;background:transparent;text-align:center;font-weight:800;font-size:15px;font-family:'IBM Plex Mono',monospace;box-shadow:none;padding:0}
 .stepper .qty:focus{box-shadow:none;border:none;outline:none}
 .icard.on .stepper{background:var(--green-l)}
+/* טאב אריזות — המד-כמות צמוד לפריט (כמו במכרז) */
+#packTab .icard{justify-content:flex-start;gap:18px}
+#packTab .iinfo{flex:0 1 auto}
+/* טאב שיוך ספק↔פריט */
+.mchips{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.mdel{border:none;background:none;color:inherit;cursor:pointer;font-size:12px;padding:0 2px;line-height:1}
+.mdel:hover{color:var(--red)}
 @media(max-width:600px){
  .iname{font-size:14.5px}.isupsel{max-width:150px}
  .stbtn{width:32px;height:32px;font-size:20px}.stepper .qty{width:44px;height:32px;font-size:14px}
@@ -313,6 +320,7 @@ body{background:#f5f2ec}
  <div class="tab" data-p="veg">🥬 מכרז ירקות</div>
  <div class="tab" data-p="peel">🥔 ירקות קלופים</div>
  <div class="tab" data-p="pack">📦 אריזות</div>
+ <div class="tab" data-p="map">🔗 שיוך ספקים</div>
  <div class="tab" data-p="cart">סל ההזמנה</div>
  <div class="tab" data-p="hist">היסטוריית הזמנות</div>
 </div>
@@ -372,6 +380,15 @@ body{background:#f5f2ec}
     <span>בהזמנה: <b id="cbCount2">0</b> פריטים · <b id="cbSup2">0</b> ספקים</span>
     <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
    </div>
+  </div>
+ </div>
+
+ <!-- ============ שיוך ספק לפריט ============ -->
+ <div class="page" id="map">
+  <div class="note">כאן משייכים ספקים לפריטים: חפשי פריט, הוסיפי או הסירי ספקים, ולחצי "שמור שיוך". השינוי נשמר בגיליון (לשונית SUP_MAP) וחל על כל האפליקציה — בניית הזמנה, אריזות והמכרזים — גם בפתיחות הבאות.</div>
+  <div class="card">
+   <div class="ctrl"><input id="mSearch" list="mDL" placeholder="🔍 הקלידי שם פריט…" style="min-width:260px" autocomplete="off"><datalist id="mDL"></datalist></div>
+   <div id="mapEd"><div class="empty">חפשי פריט למעלה כדי לערוך את הספקים שלו</div></div>
   </div>
  </div>
 
@@ -454,6 +471,7 @@ function tab(p){
  if(p==='veg'){renderVeg();loadVegHist(false).then(renderVeg);}
  if(p==='peel'){renderPeel();loadPeelHist(false).then(renderPeel);}
  if(p==='pack')renderPack();
+ if(p==='map')renderMap();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 
@@ -477,6 +495,7 @@ function startApp(){
  setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
  ['fSearch','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('pkSearch').addEventListener('input',renderPack);
+ initMapSel();
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
  renderItems();updateCartBar();
@@ -857,6 +876,66 @@ async function aucSave(a){
   a.hist=null;await aucLoad(a,true);aucRender(a);
  }catch(err){console.error(err);toast('לא ניתן לשמור (ייתכן שחסרה הרשאת עריכה)');}
 }
+/* ================= שיוך ספק לפריט (לשונית SUP_MAP) =================
+   כל שמירה מוסיפה שורה [תאריך, מפתח פריט, שם, מפתחות ספקים בפסיק];
+   בטעינה — השורה האחרונה לכל פריט גוברת ומוחלת על הקטלוג. */
+const MAP_TAB='SUP_MAP';
+const MAP_HEADER=['תאריך','מפתח פריט','שם פריט','מפתחות ספקים (מופרדים בפסיק)'];
+let MAPOVR={}, mapCur=null;
+async function loadSupMap(){
+ try{
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+encodeURIComponent(MAP_TAB+'!A:D'),{headers:{Authorization:'Bearer '+purchToken}});
+  if(!r.ok)return;
+  const vals=((await r.json()).values)||[];
+  MAPOVR={};
+  vals.forEach(row=>{
+   if(!row||row.length<4)return;
+   const vk=String(row[1]||'').trim();if(!/^\d+$/.test(vk))return;
+   MAPOVR[vk]=String(row[3]||'').split(',').map(s=>s.trim()).filter(s=>/^\d+$/.test(s));
+  });
+  Object.keys(MAPOVR).forEach(vk=>{const it=ITEM_BY_K[vk];if(it)it.s=MAPOVR[vk].slice();});
+ }catch(e){console.error(e);}
+}
+function initMapSel(){
+ const dl=document.getElementById('mDL');if(!dl)return;
+ dl.innerHTML=(CAT.items||[]).map(it=>'<option value="'+esc(it.n+' #'+it.k)+'">').join('');
+ const inp=document.getElementById('mSearch');
+ inp.addEventListener('input',()=>{
+  const m=inp.value.match(/#(\d+)\s*$/);
+  const it=m?ITEM_BY_K[m[1]]:(CAT.items||[]).find(x=>x.n===inp.value.trim());
+  if(it){mapCur=it.k;renderMap();}
+ });
+}
+function renderMap(){
+ const box=document.getElementById('mapEd');if(!box)return;
+ const it=mapCur?ITEM_BY_K[mapCur]:null;
+ if(!it){box.innerHTML='<div class="empty">חפשי פריט למעלה כדי לערוך את הספקים שלו</div>';return;}
+ const cur=it.s||[];
+ const rest=Object.keys(CAT.suppliers||{}).filter(k=>cur.indexOf(k)<0).map(k=>({k,n:supName(k)})).sort((a,b)=>a.n.localeCompare(b.n,'he'));
+ let h='<div class="iname" style="margin-bottom:3px">'+esc(it.n)+' <span class="ikey num">#'+esc(it.k)+'</span></div>'+
+   '<div class="lbl" style="margin-bottom:10px">'+esc(catName(it.c))+((it.p!=null&&it.p>0)?' · אחרון '+P2(it.p):'')+'</div>'+
+   '<div class="mchips">'+(cur.length?cur.map(k=>'<span class="chip on" style="cursor:default">'+esc(supName(k))+' <button class="mdel" data-k="'+esc(k)+'" type="button" title="הסר">✕</button></span>').join(''):'<span class="lbl">אין ספקים משויכים לפריט</span>')+'</div>'+
+   '<div class="ctrl" style="margin-top:14px"><select id="mAdd" style="max-width:280px">'+rest.map(s=>'<option value="'+esc(s.k)+'">'+esc(s.n)+'</option>').join('')+'</select>'+
+   '<button class="btn ghost sm" id="mAddBtn" type="button">➕ הוסף ספק</button>'+
+   '<button class="btn blue sm" id="mSave" type="button">💾 שמור שיוך</button></div>';
+ box.innerHTML=h;
+ box.querySelectorAll('.mdel').forEach(b=>b.onclick=()=>{it.s=(it.s||[]).filter(k=>k!==b.dataset.k);renderMap();});
+ box.querySelector('#mAddBtn').onclick=()=>{const v=box.querySelector('#mAdd').value;if(v){it.s=(it.s||[]).concat([v]);renderMap();}};
+ box.querySelector('#mSave').onclick=()=>saveMap(it);
+}
+async function saveMap(it){
+ const now=new Date();
+ const ds=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+ try{
+  const token=await ensureWriteToken();
+  await ensureTab(MAP_TAB,MAP_HEADER,token);
+  await appendRaw(MAP_TAB,[[ds,it.k,it.n,(it.s||[]).join(',')]],token);
+  MAPOVR[it.k]=(it.s||[]).slice();
+  toast('השיוך של "'+it.n+'" נשמר ('+(it.s||[]).length+' ספקים)');
+  renderItems();renderPack();
+ }catch(e){console.error(e);toast('לא ניתן לשמור (ייתכן שחסרה הרשאת עריכה)');}
+}
+
 /* עטיפות תאימות — מכרז טרי (veg) ומכרז קלופים (peel) */
 function renderVeg(){aucRender(AUC.veg);}
 function loadVegHist(f){return aucLoad(AUC.veg,f);}
@@ -932,6 +1011,7 @@ function gsAfterToken(){
   document.documentElement.classList.remove('locked');
   const l=document.getElementById('gsLock');if(l)l.style.display='none';
   startApp();
+  loadSupMap().then(()=>{renderItems();renderPack();});   // החלת שיוכי SUP_MAP על הקטלוג
  }).catch(err=>{
   console.error(err);
   purchToken=null;
