@@ -1819,13 +1819,11 @@ function buildMonthly(){
     type:'line',
     data:{ labels, datasets:[
       { label:'שולי גולמי %', data:gpmData, borderColor:C.blue, backgroundColor:C.sky+'55', fill:true, tension:.4, pointRadius:5,
-        pointBackgroundColor: gpmData.map((_,i)=>i===4?C.amber:C.blue) },
+        pointBackgroundColor: data.map(r=> r.labor!==r.laborReported ? C.amber : C.blue) },
       { label:'שולי EBIT %',  data:ebitData, borderColor:C.green, backgroundColor:C.lgreen+'33', fill:true, tension:.4, pointRadius:5 },
-      { label:'ממוצע גולמי תעשייה (22.9%)', data:data.map(()=>22.9), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
+      { label:`ממוצע גולמי תעשייה (${S1('indGrossPct').toFixed(1)}%)`, data:data.map(()=>S1('indGrossPct')), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
     ]},
-    options:{...base(true), plugins:{...base().plugins, annotation:{
-      annotations:{ maylabel:{ type:'label', xValue:4, yValue:30, content:'מאי: נורמל', color:C.amber }}
-    }}}
+    options:{...base(true)}
   });
 
   destroyChart('mc_cf');
