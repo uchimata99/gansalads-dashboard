@@ -1876,7 +1876,7 @@ function buildMonthly(){
   document.getElementById('ytdBody').innerHTML = data.map(r => {
     ytdRev += r.rev; ytdNet += r.net;
     const gCol = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
-    const flag = r.month.includes('מאי') ? ' ⚠️' : '';
+    const flag = (r.labor!==r.laborReported) ? ' ⚠️' : '';
     return `<tr>
       <td><strong>${r.month}</strong>${flag}</td>
       <td>₪${fmtNum(r.rev)}</td>
@@ -1947,7 +1947,7 @@ function buildMonthly(){
     ${latest.labor!==latest.laborReported ? `<div class="ins a" style="margin-top:12px">* שכר הייצור של ${latest.month} נורמל לממוצע (₪${fmtNum(latest.labor)}) — בדוח הופיע רישום חלקי/חסר (₪${fmtNum(latest.laborReported)}). הממוצעים כוללים את החודש המנורמל.</div>` : ''}`;
 
   // ── Gross Margin Breakdown ────────────────────────────────────────────────
-  const GPM = data.map(r=>({ m:r.month, rev:r.rev, purchases:r.purchases, labor:r.labor, factory:r.factory, totalCogs:r.cogsBreak }));
+  const GPM = data.map(r=>({ m:r.month, rev:r.rev, purchases:r.purchases, labor:r.labor, laborReported:r.laborReported, factory:r.factory, totalCogs:r.cogsBreak }));
   GPM.forEach(r => {
     r.gpm_full      = r.rev ? (r.rev-r.totalCogs)/r.rev*100 : 0;
     r.gpm_purchases = r.rev ? (r.rev-r.purchases)/r.rev*100 : 0;
@@ -1993,7 +1993,7 @@ function buildMonthly(){
   const colors = { full:'', purch:'#dbeafe', labor:'#dcfce7', factory:'#fef3c7' };
   const gBody = document.getElementById('gpmBreakBody');
   if (gBody) gBody.innerHTML = GPM.map(r => {
-    const mayFlag = r.m.includes('מאי') ? ' ⚠️' : '';
+    const mayFlag = (r.labor!==r.laborReported) ? ' ⚠️' : '';
     const laborCell = r.labor > 0
       ? `₪${fmtNum(r.labor|0)} (${r.pct_labor.toFixed(1)}%)`
       : `<span style="color:var(--red);font-weight:700">לא הוזן ⚠️</span>`;
