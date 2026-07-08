@@ -1,0 +1,70 @@
+name: סקירת הערות ותיקון אוטומטי
+
+# רץ פעמיים ביום, סורק את ה-Issues של ההערות (מודול live-notes),
+# מיישם את התיקונים הברורים, ופותח Pull Request אחד לאישור.
+# התזמון ב-UTC. שעון ישראל בקיץ = UTC+3, בחורף = UTC+2,
+# ולכן ההרצות נופלות בערך ב-08:50 וב-20:50 שעון ישראל.
+
+on:
+  schedule:
+    - cron: '50 5 * * *'    # ~08:50 שעון ישראל (קיץ)
+    - cron: '50 17 * * *'   # ~20:50 שעון ישראל (קיץ)
+  workflow_dispatch: {}      # אפשר גם להריץ ידנית מלשונית Actions
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: notes-autofix
+  cancel-in-progress: false
+
+jobs:
+  notes-autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # בדיקה שהוגדר מפתח ה-API — אם לא, מדלגים בשקט (בלי כשל רועש פעמיים ביום)
+      - name: בדיקת מפתח
+        id: check
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT";
+          else echo "ANTHROPIC_API_KEY לא הוגדר — מדלג."; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Claude — סקירת הערות ותיקון
+        if: steps.check.outputs.ok == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: >-
+            --allowedTools "Bash,Edit,Read,Write,Glob,Grep"
+          prompt: |
+            אתה עוזר תחזוקה למאגר דשבורדים של "סלטי גן" — דפי HTML/CSS/JS בעברית (RTL)
+            שמתארחים ב-GitHub Pages: production.html, forecast.html,
+            dashboard_customers.html, dashboard_gansalads.html, finance.html.
+            עבוד לפי ההנחיות שב-CLAUDE.md שבמאגר.
+
+            המשימה: לסרוק את ה-Issues הפתוחים שהם הערות משוב מהמשתמשת (כותרת
+            שמתחילה ב"הערות", או תווית note), ולטפל בהערות הברורות.
+
+            כללים:
+            1. טפל רק בהערות שלא טופלו עדיין — דלג על Issue שכבר יש בו תגובה שלך
+               עם קישור ל-PR, או שמקושר אליו PR פתוח.
+            2. לכל הערה חד-משמעית: יישם את התיקון בקובץ הרלוונטי, שמור על
+               רספונסיביות מובייל, וודא תקינות JavaScript (node --check על בלוקי סקריפט).
+            3. הערה שמצורף לה סימון/צילום מסך שאינו זמין, או שאינה חד-משמעית —
+               אל תנחש. כתוב תגובה ב-Issue שמבקשת הבהרה או צילום מסך, ודלג עליה.
+            4. אסור לגעת במנגנוני משיכת הנתונים, במזהי הגיליונות, או בלוגיקת
+               ההתחברות. אסור להמציא מספרים.
+            5. רכז את כל התיקונים בענף אחד (claude/notes-autofix) ופתח Pull Request
+               אחד עם תיאור ברור: לכל תיקון — איזו הערה, איזה Issue, ומה שונה.
+               אל תדחוף ישירות ל-main.
+            6. בכל Issue שטופל ב-PR — הוסף תגובה קצרה עם קישור ל-PR.
+            7. אם אין הערות חדשות לטיפול — אל תפתח PR ואל תכתוב כלום.

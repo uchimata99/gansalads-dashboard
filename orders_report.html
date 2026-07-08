@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>סלטי גן — דוח הזמנות</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>:root{--bg:#f4f0e8;--surface:#fdfaf4;--surface2:#ece7db;--border:#d3ccb6;
+--green:#2d6a3f;--green-l:#e8f5ec;--gold:#b8890e;--gold-l:#fdf5d8;--red:#b03030;--red-l:#fdeaea;
+--blue:#2a5a88;--blue-l:#e8eef8;--purple:#6b3fa0;--purple-l:#f2ecfb;--text:#1a1a12;--muted:#7a7460;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--green);padding:0 26px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.brand{display:flex;align-items:center;gap:12px}.brand-i{font-size:26px}.brand-n{font-size:17px;font-weight:900;color:#fff}.brand-s{font-size:10px;color:rgba(255,255,255,.6);letter-spacing:2px}
+.range{color:rgba(255,255,255,.85);font-size:12px;font-family:'IBM Plex Mono',monospace;background:rgba(255,255,255,.13);padding:5px 12px;border-radius:20px}
+.tabs{background:var(--surface);border-bottom:2px solid var(--border);display:flex;padding:0 22px;gap:3px;overflow-x:auto;position:sticky;top:60px;z-index:99}
+.tab{padding:13px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab:hover{color:var(--green)}.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.main{max-width:1380px;margin:0 auto;padding:22px 26px;display:grid;gap:18px}
+.page{display:none}.page.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:15px 16px;position:relative;overflow:hidden;min-width:0}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.kpi.g::after{background:var(--green)}.kpi.y::after{background:var(--gold)}.kpi.b::after{background:var(--blue)}.kpi.p::after{background:var(--purple)}
+.kpi-l{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;line-height:1.2;margin-bottom:5px;white-space:nowrap;letter-spacing:-.3px}
+.kpi.g .kpi-n{color:var(--green)}.kpi.y .kpi-n{color:var(--gold)}.kpi.b .kpi-n{color:var(--blue)}.kpi.p .kpi-n{color:var(--purple)}
+.kpi-s{font-size:11px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
+.card-t{font-size:13px;font-weight:800;padding-bottom:11px;margin-bottom:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cw{position:relative;height:300px}.cw.s{height:240px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+th.sortable{cursor:pointer;user-select:none}th.sortable:hover{color:var(--green)}
+tbody tr:hover{background:var(--green-l)}
+.num{font-family:'IBM Plex Mono',monospace}
+.pill{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;display:inline-block}
+.pg{background:var(--green-l);color:var(--green)}.po{background:var(--gold-l);color:var(--gold)}.pb{background:var(--blue-l);color:var(--blue)}
+.ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+select,input{border:2px solid var(--border);border-radius:8px;padding:7px 12px;font-family:inherit;font-size:13px;background:#fff;color:var(--text);outline:none}
+select:focus,input:focus{border-color:var(--green)}
+.lbl{font-size:12px;font-weight:700;color:var(--muted)}
+.rank{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;background:var(--surface2);font-size:11px;font-weight:700;color:var(--muted)}.rank.top{background:var(--green);color:#fff}
+.scroll{max-height:560px;overflow:auto}.scroll thead th{position:sticky;top:0;background:var(--surface);z-index:2}
+.note{background:var(--blue-l);border:1px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:12.5px;line-height:1.7;color:#1f3f5c;margin-bottom:18px}.note b{color:var(--blue)}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.cheap{color:var(--green);font-weight:700}.star{color:var(--gold)}
+@media(max-width:780px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.main{padding:14px}.topbar{padding:0 14px}.tabs{padding:0 10px}table{font-size:11.5px}th,td{padding:6px 7px}}
+html.locked #gsLock{display:flex!important}
+#gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
+#gsLock .lock-logo{font-size:38px}#gsLock .lock-title{color:#a7d7c2;font-size:19px;font-weight:800}
+#gsLock .lock-sub{color:#cfe8db;font-size:13px;max-width:320px;text-align:center;line-height:1.7}
+#gsLock .gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#3c4043;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+#gsLock .gbtn:hover{background:#f1f5f9}#gsLock .gbtn svg{width:18px;height:18px}#gsLock .lock-err{color:#ffb4a8;font-size:13px;min-height:18px}
+</style>
+<script>document.documentElement.classList.add('locked')</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script></head><body>
+
+<div id="gsLock">
+  <div class="lock-logo">📊</div>
+  <div class="lock-title">סלטי גן — דוח הזמנות</div>
+  <div class="lock-sub">הדוח פרטי ונטען רק לאחר התחברות עם חשבון גוגל מורשה (קריאה בלבד).</div>
+  <button class="gbtn" onclick="gsSignIn()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    התחבר עם Google
+  </button>
+  <div class="lock-err" id="gsLockErr"></div>
+</div>
+
+<div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0">
+  <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
+  <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <a href="forecast.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">חיזוי ייצור</a>
+  <a href="dashboard_customers.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">לקוחות</a>
+  <a href="finance.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">דוח הזמנות</span>
+</div>
+
+<div class="topbar"><div class="brand"><span class="brand-i">📊</span><div><div class="brand-n">סלטי גן</div><div class="brand-s">דוח הזמנות</div></div></div><div class="range" id="hdrRange">טוען…</div></div>
+
+<div class="tabs">
+ <div class="tab active" data-p="ov">סקירה וניתוח</div>
+ <div class="tab" data-p="hist">היסטוריית הזמנות</div>
+ <div class="tab" data-p="veg">מכרזי ירקות</div>
+</div>
+
+<div class="main">
+ <div class="page active" id="ov">
+  <div class="kpi-row" id="ovKpi"></div>
+  <div class="grid2">
+   <div class="card"><div class="card-t">הוצאה מוערכת לפי ספק (טופ 12)</div><div class="cw"><canvas id="ovSup"></canvas></div></div>
+   <div class="card"><div class="card-t">פריטים מובילים לפי הוצאה (טופ 12)</div><div class="cw"><canvas id="ovItem"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>הזמנות אחרונות</span><span class="lbl" id="ovRecentN"></span></div><div class="scroll" id="ovRecent"></div></div>
+ </div>
+
+ <div class="page" id="hist">
+  <div class="note">הזמנות שנשמרו מאפליקציית הרכש (לשונית PO_HISTORY). הערכת העלות מבוססת על המחיר האחרון בקטלוג בעת ההזמנה.</div>
+  <div class="card">
+   <div class="ctrl">
+    <input id="hSearch" placeholder="🔍 חיפוש פריט…" style="min-width:200px" autocomplete="off">
+    <span class="lbl">ספק:</span><select id="hSup"><option value="">הכל</option></select>
+    <button class="lbl" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 11px" onclick="loadAll(true)">🔄 רענן</button>
+   </div>
+   <div class="scroll" id="histTab"><div class="empty">טוען…</div></div>
+  </div>
+ </div>
+
+ <div class="page" id="veg">
+  <div class="note">מכרזי הירקות שנשמרו (לשונית VEG_AUCTION). לכל ירק — המחיר האחרון שכל ספק הציע, הזול מסומן בירוק (★ = הספק שנבחר במכרז האחרון).</div>
+  <div class="kpi-row" id="vegKpi"></div>
+  <div class="card"><div class="card-t"><span>מחיר אחרון פר ירק וספק</span></div><div class="scroll" id="vegTab"><div class="empty">טוען…</div></div></div>
+ </div>
+</div>
+
+<script>
+/* ================= סלטי גן — דוח הזמנות (קריאה בלבד) =================
+   קורא מגיליון הרכש הייעודי את PO_HISTORY ו-VEG_AUCTION אחרי כניסת גוגל.
+   אותו מנגנון כניסה כמו שאר הדשבורדים (מפתח סשן משותף, קריאה בלבד). */
+const RPT_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const RPT_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גיליון הרכש
+const RPT_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const RPT_TOKEN_KEY='gsGoogleToken';
+let rptToken=null, rptClient=null;
+let PO=[], VEG=[];
+const ILS=n=>'₪'+Math.round(n||0).toLocaleString('en-US');
+const P2=n=>(n==null||n===''||isNaN(n))?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const NUM=n=>Math.round(n||0).toLocaleString('en-US');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const COL={green:'#2d6a3f',gold:'#b8890e',blue:'#2a5a88',purple:'#6b3fa0',red:'#b03030'};
+Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.color='#7a7460';Chart.defaults.maintainAspectRatio=false;
+const charts={};function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg);}
+function kpi(cls,l,n,s){return '<div class="kpi '+cls+'"><div class="kpi-l">'+l+'</div><div class="kpi-n">'+n+'</div><div class="kpi-s">'+s+'</div></div>';}
+function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+
+function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
+ document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
+ if(p==='ov')renderOverview();if(p==='hist')renderHist();if(p==='veg')renderVeg();}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
+
+// ---------- טעינה ----------
+async function readRange(range){
+ const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+RPT_SHEET_ID+'/values/'+encodeURIComponent(range),{headers:{Authorization:'Bearer '+rptToken}});
+ if(!r.ok){if(r.status===400)return [];throw new Error(range+' '+r.status);}
+ return ((await r.json()).values)||[];
+}
+async function loadAll(force){
+ try{
+  const [po,veg]=await Promise.all([readRange('PO_HISTORY!A:I'),readRange('VEG_AUCTION!A:H')]);
+  // PO: תאריך,מזהה,מפתח ספק,שם ספק,מפתח פריט,שם פריט,כמות,מחיר אחרון,הערכת עלות
+  PO=po.filter(r=>r&&r.length>=7&&!isNaN(parseFloat(r[6]))).map(r=>({date:r[0]||'',oid:r[1]||'',supK:r[2]||'',sup:r[3]||'',itemK:r[4]||'',item:r[5]||'',qty:parseFloat(r[6])||0,price:(r[7]===''||r[7]==null)?null:parseFloat(r[7]),cost:(r[8]===''||r[8]==null)?0:parseFloat(r[8])||0}));
+  // VEG: תאריך,מפתח ירק,שם ירק,מפתח ספק,שם ספק,מחיר,כמות,נבחר
+  VEG=veg.filter(r=>r&&r.length>=6&&!isNaN(parseFloat(r[5]))).map(r=>({date:r[0]||'',vk:String(r[1]||''),veg:r[2]||'',supK:String(r[3]||''),sup:r[4]||'',price:parseFloat(r[5]),chosen:(String(r[7]||'').trim()==='1'||String(r[7]||'').indexOf('✓')>=0)}));
+  const sup=[...new Set(PO.map(r=>r.sup).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he'));
+  const sel=document.getElementById('hSup');sel.innerHTML='<option value="">הכל</option>'+sup.map(s=>'<option>'+esc(s)+'</option>').join('');
+  setTxt('hdrRange',(new Set(PO.map(r=>r.oid))).size+' הזמנות · '+VEG.length+' רשומות מכרז');
+  renderOverview();renderHist();renderVeg();
+ }catch(e){console.error(e);document.getElementById('histTab').innerHTML='<div class="empty">שגיאה בטעינה: '+esc(e.message)+'</div>';}
+}
+
+// ---------- סקירה ----------
+function renderOverview(){
+ const spend=PO.reduce((a,r)=>a+r.cost,0);
+ const orders=new Set(PO.map(r=>r.oid)).size;
+ const sups=new Set(PO.map(r=>r.supK||r.sup)).size;
+ const items=new Set(PO.map(r=>r.itemK)).size;
+ document.getElementById('ovKpi').innerHTML=
+  kpi('g','הזמנות',NUM(orders),PO.length+' שורות')+
+  kpi('y','הוצאה מוערכת',ILS(spend),'לפי מחיר אחרון')+
+  kpi('b','ספקים',NUM(sups),'הוזמן מהם')+
+  kpi('p','פריטים',NUM(items),'שונים');
+ // לפי ספק
+ const bySup={};PO.forEach(r=>{bySup[r.sup||'—']=(bySup[r.sup||'—']||0)+r.cost;});
+ const supTop=Object.entries(bySup).sort((a,b)=>b[1]-a[1]).slice(0,12);
+ mk('ovSup',{type:'bar',data:{labels:supTop.map(x=>x[0].length>18?x[0].slice(0,18)+'…':x[0]),datasets:[{data:supTop.map(x=>Math.round(x[1])),backgroundColor:COL.green,borderRadius:5}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+ // לפי פריט
+ const byItem={};PO.forEach(r=>{byItem[r.item||'—']=(byItem[r.item||'—']||0)+r.cost;});
+ const itemTop=Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,12);
+ mk('ovItem',{type:'bar',data:{labels:itemTop.map(x=>x[0].length>18?x[0].slice(0,18)+'…':x[0]),datasets:[{data:itemTop.map(x=>Math.round(x[1])),backgroundColor:COL.gold,borderRadius:5}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+ // הזמנות אחרונות (קיבוץ לפי מזהה)
+ const ord={};PO.forEach(r=>{const o=ord[r.oid]=ord[r.oid]||{oid:r.oid,date:r.date,sups:new Set(),lines:0,cost:0};o.sups.add(r.sup);o.lines++;o.cost+=r.cost;});
+ const recent=Object.values(ord).sort((a,b)=>b.oid.localeCompare(a.oid)).slice(0,25);
+ setTxt('ovRecentN',recent.length+' אחרונות');
+ let h='<table><thead><tr><th>תאריך</th><th>מזהה</th><th>ספקים</th><th>פריטים</th><th>הוצאה מוערכת</th></tr></thead><tbody>';
+ recent.forEach(o=>{h+='<tr><td>'+esc(o.date)+'</td><td class="num">'+esc(o.oid)+'</td><td>'+esc([...o.sups].join(', '))+'</td><td class="num">'+o.lines+'</td><td class="num">'+ILS(o.cost)+'</td></tr>';});
+ document.getElementById('ovRecent').innerHTML=PO.length?h+'</tbody></table>':'<div class="empty">עדיין אין הזמנות שמורות</div>';
+}
+
+// ---------- היסטוריה ----------
+function renderHist(){
+ const q=document.getElementById('hSearch').value.trim();
+ const sup=document.getElementById('hSup').value;
+ let rows=PO.slice().reverse();
+ if(q)rows=rows.filter(r=>(r.item+' '+r.itemK).indexOf(q)>=0);
+ if(sup)rows=rows.filter(r=>r.sup===sup);
+ if(!rows.length){document.getElementById('histTab').innerHTML='<div class="empty">'+(PO.length?'אין תוצאות לסינון':'עדיין אין הזמנות שמורות')+'</div>';return;}
+ let h='<table><thead><tr><th>תאריך</th><th>מזהה</th><th>ספק</th><th>פריט</th><th>מפתח</th><th>כמות</th><th>מחיר אחרון</th><th>הערכת עלות</th></tr></thead><tbody>';
+ rows.forEach(r=>{h+='<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.oid)+'</td><td>'+esc(r.sup)+'</td><td>'+esc(r.item)+'</td><td class="num">'+esc(r.itemK)+'</td><td class="num">'+NUM(r.qty)+'</td><td class="num">'+(r.price!=null?P2(r.price):'—')+'</td><td class="num">'+(r.cost?P2(r.cost):'—')+'</td></tr>';});
+ document.getElementById('histTab').innerHTML=h+'</tbody></table>';
+}
+
+// ---------- מכרזי ירקות ----------
+function renderVeg(){
+ if(!VEG.length){document.getElementById('vegTab').innerHTML='<div class="empty">עדיין לא נשמרו מכרזי ירקות</div>';document.getElementById('vegKpi').innerHTML='';return;}
+ // קיבוץ לפי ירק -> ספק -> {price,date,chosen} (האחרון גובר, סדר כרונולוגי)
+ const byVeg={};
+ VEG.forEach(r=>{const v=byVeg[r.veg]=byVeg[r.veg]||{sups:{},last:''};v.sups[r.sup]={price:r.price,date:r.date,chosen:r.chosen};if(r.date>v.last)v.last=r.date;});
+ const nVeg=Object.keys(byVeg).length, nSup=new Set(VEG.map(r=>r.sup)).size;
+ const auctions=new Set(VEG.map(r=>r.date)).size;
+ document.getElementById('vegKpi').innerHTML=
+  kpi('g','ירקות במעקב',NUM(nVeg),'עם הצעות')+
+  kpi('y','ספקי ירקות',NUM(nSup),'השתתפו')+
+  kpi('b','ימי מכרז',NUM(auctions),'נשמרו')+
+  kpi('p','רשומות',NUM(VEG.length),'סה"כ הצעות');
+ let h='<table><thead><tr><th>ירק</th><th>עדכון אחרון</th><th>הצעות אחרונות (ספק · מחיר)</th></tr></thead><tbody>';
+ Object.keys(byVeg).sort((a,b)=>a.localeCompare(b,'he')).forEach(veg=>{
+  const v=byVeg[veg];
+  const entries=Object.entries(v.sups);
+  const min=Math.min.apply(null,entries.map(e=>e[1].price));
+  const offers=entries.sort((a,b)=>a[1].price-b[1].price).map(([sup,d])=>{
+   const cheap=d.price===min?' cheap':'';const star=d.chosen?' <span class="star">★</span>':'';
+   return '<span class="pill '+(d.price===min?'pg':'pb')+'" style="margin:2px">'+esc(sup)+': <b class="'+(cheap?'cheap':'')+'">'+P2(d.price)+'</b>'+star+'</span>';
+  }).join(' ');
+  h+='<tr><td><b>'+esc(veg)+'</b></td><td class="num">'+esc(v.last)+'</td><td>'+offers+'</td></tr>';
+ });
+ document.getElementById('vegTab').innerHTML=h+'</tbody></table>';
+}
+
+// ================= התחברות גוגל (קריאה בלבד) =================
+function gsShowErr(m){const e=document.getElementById('gsLockErr');if(e)e.textContent=m||'';}
+function gsInit(){if(rptClient)return rptClient;if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
+ rptClient=google.accounts.oauth2.initTokenClient({client_id:RPT_CLIENT_ID,scope:RPT_SCOPE,callback:(resp)=>{
+  if(resp&&resp.error){gsShowErr('ההתחברות נכשלה — נסה שוב');return;}
+  rptToken=resp.access_token;try{sessionStorage.setItem(RPT_TOKEN_KEY,JSON.stringify({t:rptToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+  gsAfter();}});return rptClient;}
+function gsSignIn(){gsShowErr('');const c=gsInit();if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב');return;}c.requestAccessToken({prompt:rptToken?'':'consent'});}
+function gsAfter(){document.documentElement.classList.remove('locked');const l=document.getElementById('gsLock');if(l)l.style.display='none';loadAll(false);}
+window.addEventListener('load',()=>{let tok=null;try{tok=JSON.parse(sessionStorage.getItem(RPT_TOKEN_KEY)||'null');}catch(e){}
+ if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){rptToken=tok.t;gsAfter();return;}
+ let n=0;const iv=setInterval(()=>{if(gsInit()||++n>40)clearInterval(iv);},150);});
+</script>
+</body></html>

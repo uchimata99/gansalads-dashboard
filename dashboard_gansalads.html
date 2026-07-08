@@ -8,7 +8,8 @@
 <meta name="theme-color" content="#173f30">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%D7%A0%D7%99%D7%94%D7%95%D7%9C%20%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%20%E2%80%94%20%D7%A1%D7%9C%D7%98%D7%99%20%D7%92%D7%9F%22%2C%22short_name%22%3A%22%D7%A8%D7%A6%D7%A4%D7%AA%20%D7%99%D7%99%D7%A6%D7%95%D7%A8%22%2C%22display%22%3A%22standalone%22%2C%22theme_color%22%3A%22%23173f30%22%2C%22background_color%22%3A%22%23f4f0e8%22%7D">
 <title>ניהול רצפת ייצור | סלטי גן</title>
-<script>try{if(localStorage.getItem('gsAuth')!=='05e56c25e4e36671c7bb4ff853d37218b3304c8048db6a7c4447b5226b649edb')document.documentElement.classList.add('locked')}catch(e){document.documentElement.classList.add('locked')}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>document.documentElement.classList.add('locked')</script>
 <style>
 html.locked{overflow:hidden}
 html.locked body>*{display:none!important}
@@ -16,6 +17,10 @@ html.locked #gsLock{display:flex!important}
 #gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
 #gsLock .lock-logo{font-size:38px}
 #gsLock .lock-title{color:#a7d7c2;font-size:19px;font-weight:800}
+#gsLock .lock-sub{color:#cfe8db;font-size:13px;max-width:300px;text-align:center;line-height:1.7}
+#gsLock .gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#3c4043;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+#gsLock .gbtn:hover{background:#f1f5f9}
+#gsLock .gbtn svg{width:18px;height:18px}
 #gsLock input{border:2px solid #2e6b52;background:#0f2b21;color:#fff;border-radius:10px;padding:11px 16px;font-size:17px;width:230px;text-align:center;outline:none;letter-spacing:2px}
 #gsLock input:focus{border-color:#52b788}
 #gsLock button{background:#52b788;color:#fff;border:none;border-radius:10px;padding:11px 34px;font-size:15px;font-weight:700;cursor:pointer}
@@ -212,6 +217,42 @@ html.nofin .fin{display:none!important}
   .mat-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--surface2);font-size:12px;}
   .mat-row:last-child{border-bottom:none;}
 
+  /* WEEK NAVIGATION (פס דפדוף שבועות לכל לשונית) */
+  .week-nav{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .week-nav .wk-arrow{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0;transition:all .15s;}
+  .week-nav .wk-arrow:hover{background:var(--green);color:#fff;border-color:var(--green);}
+  .week-nav .wk-label{font-weight:800;font-size:14px;color:var(--text);white-space:nowrap;}
+  .week-nav .wk-range{font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;margin-right:6px;}
+  .week-nav .wk-spacer{flex:1;}
+  .week-nav .wk-btn{font-size:11px;font-weight:700;padding:6px 12px;border-radius:18px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all .15s;}
+  .week-nav .wk-date{font-size:11px;font-weight:700;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:inherit;}
+  .week-nav .wk-datelbl{font-size:11px;font-weight:700;color:var(--text-muted);}
+  .week-nav .wk-btn:hover{background:var(--green-light);color:var(--green);border-color:var(--green);}
+  .week-nav .wk-btn.on{background:var(--green);color:#fff;border-color:var(--green);}
+  .week-nav .wk-today{background:var(--yellow-light);color:var(--yellow);border-color:rgba(184,137,14,0.4);}
+  .week-nav .wk-today:hover{background:var(--yellow);color:#fff;border-color:var(--yellow);}
+
+  /* COMPARE PANEL (חלונית השוואה בין שבועות) */
+  .wk-cmp{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .wk-cmp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .wk-cmp-col{font-weight:800;font-size:13px;}
+  .wk-cmp-mini{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0;}
+  .wk-cmp-mini:hover{background:var(--green);color:#fff;border-color:var(--green);}
+  .wk-cmp-table{width:100%;border-collapse:collapse;}
+  .wk-cmp-table th{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:0 8px 8px;}
+  .wk-cmp-table td{padding:8px;font-size:13px;border-top:1px solid var(--surface2);}
+  .wk-cmp-table .num{font-family:'IBM Plex Mono',monospace;font-weight:700;}
+  .wk-diff-up{color:var(--green);font-weight:700;}
+  .wk-diff-down{color:var(--red);font-weight:700;}
+
+  /* PACKAGING SEARCH (חיפוש מוצר) */
+  .pkg-search-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;}
+  .pkg-search-ico{font-size:15px;flex-shrink:0;opacity:.7;}
+  .pkg-search-wrap input{flex:1;border:none;outline:none;background:transparent;font-family:'Heebo',sans-serif;font-size:14px;color:var(--text);min-width:0;}
+  .pkg-search-wrap input::placeholder{color:var(--text-muted);}
+  .pkg-search-clear{font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;flex-shrink:0;}
+  .pkg-search-clear:hover{background:var(--green-light);color:var(--green);border-color:var(--green);}
+
   @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
   /* פריטי רשת חייבים היתר מפורש להתכווץ מתחת לרוחב התוכן — אחרת תוכן רחב (כמו גרף המשקלים) דוחף את כל העמוד */
   .main > *, .grid-2 > *, .split-view > *, .kpi-row > * { min-width:0; }
@@ -230,40 +271,83 @@ html.nofin .fin{display:none!important}
     .topbar{padding:0 12px;}
     .topbar-left{gap:10px;}
     .shift-pill{display:none;}
+    .week-nav{padding:8px 10px;gap:8px;}
+    .week-nav .wk-label{font-size:13px;}
+    .week-nav .wk-range{width:100%;margin-right:0;}
+    .wk-cmp-table td,.wk-cmp-table th{padding:7px 5px;font-size:12px;}
   }
 </style>
 </head>
 <body>
 <div id="gsLock">
   <div class="lock-logo">🌿</div>
-  <div class="lock-title">סלטי גן — דשבורדים</div>
-  <input type="password" id="gsLockInput" placeholder="קוד כניסה" autocomplete="current-password" onkeydown="if(event.key==='Enter')gsUnlock()">
-  <button onclick="gsUnlock()">כניסה</button>
+  <div class="lock-title">סלטי גן — ניהול רצפת ייצור</div>
+  <div class="lock-sub" id="gsLockSub">גישה לאחר התחברות עם חשבון גוגל מורשה.</div>
+  <button class="gbtn" id="gsSignin" onclick="gsSignIn()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    התחבר עם Google
+  </button>
   <div class="lock-err" id="gsLockErr"></div>
 </div>
 <script>
-const GS_AUTH_HASH='05e56c25e4e36671c7bb4ff853d37218b3304c8048db6a7c4447b5226b649edb';
-async function gsUnlock(){
-  const code=document.getElementById('gsLockInput').value;
-  if(!code)return;
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gansalads:v1:'+code));
-  const hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(hex===GS_AUTH_HASH){
-    try{localStorage.setItem('gsAuth',hex);}catch(e){}
-    document.documentElement.classList.remove('locked');
-    document.getElementById('gsLock').style.display='none';
-  }else{
-    document.getElementById('gsLockErr').textContent='קוד שגוי — נסה שוב';
-    document.getElementById('gsLockInput').value='';
-  }
+// כניסת גוגל — גישה לדשבורד רצפת הייצור (מפתח סשן משותף עם שאר הדפים)
+const GANS_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const GANS_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
+const GANS_TOKEN_KEY='gsGoogleToken';
+let gansTokenClient=null, gansToken=null, gansStarted=false;
+function gsShowErr(m){const e=document.getElementById('gsLockErr');if(e)e.textContent=m||'';}
+function gsInitClient(){
+  if(gansTokenClient)return gansTokenClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
+  gansTokenClient=google.accounts.oauth2.initTokenClient({client_id:GANS_CLIENT_ID,scope:GANS_SCOPE,
+    callback:(resp)=>{if(resp&&resp.error){gsShowErr('ההתחברות נכשלה — נסה שוב');return;}
+      gansToken=resp.access_token;
+      try{sessionStorage.setItem(GANS_TOKEN_KEY,JSON.stringify({t:gansToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+      gsAfterToken();}});
+  return gansTokenClient;
 }
-if(document.documentElement.classList.contains('locked'))setTimeout(()=>document.getElementById('gsLockInput').focus(),100);
+function gsSignIn(){gsShowErr('');const c=gsInitClient();if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע');return;}c.requestAccessToken({prompt:gansToken?'':'consent'});}
+function gsAfterToken(){
+  document.documentElement.classList.remove('locked');
+  const l=document.getElementById('gsLock');if(l)l.style.display='none';
+  if(!gansStarted){gansStarted=true;startDashboard();}
+}
+function startDashboard(){
+  try{loadLiveData();setInterval(loadLiveData,2*60*1000);}catch(e){console.error(e);}
+  try{loadPackagingData();setInterval(loadPackagingData,5*60*1000);}catch(e){console.error(e);}
+}
+window.addEventListener('load',()=>{
+  let tok=null;try{tok=JSON.parse(sessionStorage.getItem(GANS_TOKEN_KEY)||'null');}catch(e){}
+  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){gansToken=tok.t;gsAfterToken();return;}
+  let tries=0;const iv=setInterval(()=>{if(gsInitClient()||++tries>40)clearInterval(iv);},150);
+});
 </script>
 <div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0 0 14px 0">
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <style>
+  #gsNav{position:relative}
+  #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer}
+  #gsNotesBtn{background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:15px;line-height:1;padding:3px 10px;cursor:pointer;position:relative}
+  #gsNotesBtn[data-ln-count]:not([data-ln-count=""])::after{content:attr(data-ln-count);position:absolute;top:-6px;inset-inline-end:-6px;background:#ff7a8a;color:#fff;font:600 10px sans-serif;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  @media(max-width:680px){
+    #gsNav{flex-wrap:nowrap;gap:8px}
+    #gsNav>span{flex:1;text-align:center}
+    #gsNavToggle{display:inline-block;order:-1}#gsNotesBtn{order:-1}
+    #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline-start:8px;width:max-content;min-width:150px;max-width:72vw;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+    #gsNav.gsopen #gsNavLinks{display:flex!important}
+    #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
+  }
+  </style>
+  <button id="gsNavToggle" type="button" aria-label="תפריט ניווט" onclick="this.closest('#gsNav').classList.toggle('gsopen')">☰</button>
+  <button id="gsNotesBtn" data-ln-trigger type="button" aria-label="הערות" title="הערות">📝</button>
+  <div id="gsNavLinks" style="display:contents">
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">רצפת ייצור</span>
   <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <a href="forecast.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">חיזוי ייצור</a>
+  <a href="dashboard_customers.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">לקוחות</a>
   <a href="finance.html" class="fin" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <a href="orders_report.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">דוח הזמנות</a>
+  </div>
   <button id="finToggle" onclick="toggleFin()">🙂</button>
 </div>
 
@@ -295,10 +379,26 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 <div class="page active" id="page-processing">
 <div class="main">
 
+  <!-- פס דפדוף שבועות -->
+  <div class="week-nav" id="wknav-proc">
+    <button class="wk-arrow" onclick="shiftWeek('proc',-1)" title="שבוע קודם">&#x25C4;</button>
+    <div>
+      <span class="wk-label" id="wklabel-proc">שבוע —</span>
+      <span class="wk-range" id="wkrange-proc"></span>
+    </div>
+    <button class="wk-arrow" onclick="shiftWeek('proc',1)" title="שבוע הבא">&#x25BA;</button>
+    <button class="wk-btn wk-today" id="wktoday-proc" onclick="goToCurrentWeek('proc')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-proc" onchange="goToDate('proc',this.value)" title="בחר תאריך לקפיצה ליום">
+    <div class="wk-spacer"></div>
+    <button class="wk-btn" id="wkcmpbtn-proc" onclick="toggleCompare('proc')">⇄ השוואה</button>
+  </div>
+  <div class="wk-cmp" id="wkcmp-proc" style="display:none;"></div>
+
   <!-- KPI -->
   <div class="kpi-row">
-    <div class="kpi g"><div class="kpi-label">בוצע היום</div><div class="kpi-num" id="kpi-done">7</div><div class="kpi-sub">פריטים הושלמו</div></div>
-    <div class="kpi y"><div class="kpi-label">ממתין היום</div><div class="kpi-num" id="kpi-pending">2</div><div class="kpi-sub">פלפל רצועות · מטבוחה</div></div>
+    <div class="kpi g"><div class="kpi-label">בוצע</div><div class="kpi-num" id="kpi-done">7</div><div class="kpi-sub">פריטים הושלמו</div></div>
+    <div class="kpi y"><div class="kpi-label">ממתין</div><div class="kpi-num" id="kpi-pending">2</div><div class="kpi-sub">פריטים ממתינים</div></div>
     <div class="kpi b"><div class="kpi-label">סה"כ השבוע</div><div class="kpi-num" id="kpi-week-total">0</div><div class="kpi-sub">פריטי יצור שבוצעו</div></div>
     <div class="kpi g"><div class="kpi-label">ימי יצור</div><div class="kpi-num" id="kpi-week-days">—</div><div class="kpi-sub">ראשון–שישי השבוע</div></div>
   </div>
@@ -386,24 +486,47 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 <div class="page" id="page-packaging">
 <div class="main">
 
+  <!-- פס דפדוף שבועות -->
+  <div class="week-nav" id="wknav-pkg">
+    <button class="wk-arrow" onclick="shiftWeek('pkg',-1)" title="שבוע קודם">&#x25C4;</button>
+    <div>
+      <span class="wk-label" id="wklabel-pkg">שבוע —</span>
+      <span class="wk-range" id="wkrange-pkg"></span>
+    </div>
+    <button class="wk-arrow" onclick="shiftWeek('pkg',1)" title="שבוע הבא">&#x25BA;</button>
+    <button class="wk-btn wk-today" id="wktoday-pkg" onclick="goToCurrentWeek('pkg')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-pkg" onchange="goToDate('pkg',this.value)" title="בחר תאריך לתצוגת יום בודד">
+    <div class="wk-spacer"></div>
+    <button class="wk-btn" id="wkcmpbtn-pkg" onclick="toggleCompare('pkg')">⇄ השוואה</button>
+  </div>
+  <div class="wk-cmp" id="wkcmp-pkg" style="display:none;"></div>
+
   <!-- KPI – שורה עליונה -->
   <div class="kpi-row">
     <div class="kpi p"><div class="kpi-label">אצוות פתוחות</div><div class="kpi-num" id="pkg-kpi-batches">—</div><div class="kpi-sub">ממתינות לאריזה</div></div>
-    <div class="kpi g"><div class="kpi-label">אצוות שנפתחו היום</div><div class="kpi-num" id="pkg-kpi-batches-today">—</div><div class="kpi-sub">אצוות חדשות</div></div>
+    <div class="kpi g"><div class="kpi-label" id="pkg-lbl-batches-today">אצוות שנפתחו היום</div><div class="kpi-num" id="pkg-kpi-batches-today">—</div><div class="kpi-sub">אצוות חדשות</div></div>
     <div class="kpi b">
-      <div class="kpi-label">סה"כ ק"ג היום</div>
+      <div class="kpi-label" id="pkg-lbl-kg">סה"כ ק"ג היום</div>
       <div class="kpi-num" id="pkg-kpi-kg">—</div>
-      <div class="kpi-sub">אתמול: <span id="pkg-kpi-kg-yesterday">—</span> ק"ג
+      <div class="kpi-sub" id="pkg-sub-kg">אתמול: <span id="pkg-kpi-kg-yesterday">—</span> ק"ג
         <span id="pkg-kpi-kg-diff" style="font-weight:700;margin-right:4px;"></span>
       </div>
     </div>
     <div class="kpi g">
-      <div class="kpi-label">אריזות היום</div>
+      <div class="kpi-label" id="pkg-lbl-reports">אריזות היום</div>
       <div class="kpi-num" id="pkg-kpi-reports">—</div>
-      <div class="kpi-sub">אתמול: <span id="pkg-kpi-reports-yesterday">—</span>
+      <div class="kpi-sub" id="pkg-sub-reports">אתמול: <span id="pkg-kpi-reports-yesterday">—</span>
         <span id="pkg-kpi-reports-diff" style="font-weight:700;margin-right:4px;"></span>
       </div>
     </div>
+  </div>
+
+  <!-- חיפוש מוצר בטבלאות -->
+  <div class="pkg-search-wrap">
+    <span class="pkg-search-ico">🔍</span>
+    <input id="pkg-search" type="search" placeholder="חיפוש מוצר בטבלאות…" oninput="pkgSearch()" autocomplete="off">
+    <button type="button" class="pkg-search-clear" onclick="document.getElementById('pkg-search').value='';pkgSearch();">נקה</button>
   </div>
 
   <!-- שתי טבלאות זה לצד זה – דיווחים משמאל, אצוות מימין -->
@@ -455,7 +578,7 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 
     <!-- גרף אורזות יומי -->
     <div class="card">
-      <div class="card-title">אריזה יומית לפי אורזת</div>
+      <div class="card-title" id="pkg-daily-chart-title">אריזה יומית לפי אורזת</div>
       <canvas id="pkg-chart-daily" height="160"></canvas>
     </div>
 
@@ -501,17 +624,33 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 <div class="page" id="page-hummus">
 <div class="main">
 
+  <!-- פס דפדוף שבועות -->
+  <div class="week-nav" id="wknav-ht">
+    <button class="wk-arrow" onclick="shiftWeek('ht',-1)" title="שבוע קודם">&#x25C4;</button>
+    <div>
+      <span class="wk-label" id="wklabel-ht">שבוע —</span>
+      <span class="wk-range" id="wkrange-ht"></span>
+    </div>
+    <button class="wk-arrow" onclick="shiftWeek('ht',1)" title="שבוע הבא">&#x25BA;</button>
+    <button class="wk-btn wk-today" id="wktoday-ht" onclick="goToCurrentWeek('ht')" style="display:none;">השבוע הנוכחי</button>
+    <span class="wk-datelbl">📅 קפיצה ליום:</span>
+    <input type="date" class="wk-date" id="wkdate-ht" onchange="goToDate('ht',this.value)" title="בחר תאריך לתצוגת יום בודד">
+    <div class="wk-spacer"></div>
+    <button class="wk-btn" id="wkcmpbtn-ht" onclick="toggleCompare('ht')">⇄ השוואה</button>
+  </div>
+  <div class="wk-cmp" id="wkcmp-ht" style="display:none;"></div>
+
   <!-- KPI -->
   <div class="kpi-row">
-    <div class="kpi b"><div class="kpi-label">סה"כ ק"ג היום</div><div class="kpi-num" id="ht-kpi-kg">—</div><div class="kpi-sub">חומוס וטחינה</div></div>
-    <div class="kpi g"><div class="kpi-label">אריזות היום</div><div class="kpi-num" id="ht-kpi-qty">—</div><div class="kpi-sub">כמות אריזות</div></div>
+    <div class="kpi b"><div class="kpi-label" id="ht-lbl-kg">סה"כ ק"ג היום</div><div class="kpi-num" id="ht-kpi-kg">—</div><div class="kpi-sub">חומוס וטחינה</div></div>
+    <div class="kpi g"><div class="kpi-label" id="ht-lbl-qty">אריזות היום</div><div class="kpi-num" id="ht-kpi-qty">—</div><div class="kpi-sub">כמות אריזות</div></div>
     <div class="kpi p"><div class="kpi-label">אצוות פתוחות</div><div class="kpi-num" id="ht-kpi-batches">—</div><div class="kpi-sub">חומוס וטחינה</div></div>
   </div>
 
   <!-- טבלאות יומיות -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
     <div class="card">
-      <div class="card-title">חומוס – יומי 🫘</div>
+      <div class="card-title" id="ht-title-hummus">חומוס – יומי 🫘</div>
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr style="border-bottom:2px solid var(--border);">
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
@@ -523,7 +662,7 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
       </table>
     </div>
     <div class="card">
-      <div class="card-title">טחינה – יומי 🫙</div>
+      <div class="card-title" id="ht-title-tahini">טחינה – יומי 🫙</div>
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr style="border-bottom:2px solid var(--border);">
           <th style="padding:6px 8px 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:right;">מוצר</th>
@@ -584,6 +723,203 @@ if(document.documentElement.classList.contains('locked'))setTimeout(()=>document
 const DAYS = [];
 
 let currentDayIdx = 0;
+let gotoDateProc = null;   // יעד קפיצה לתאריך (בורר התאריך), בפורמט D/M/YYYY כמו DAYS[].date
+let pkgSelectedDay = null; // יום נבחר בלשונית אריזה (Date) — תצוגת יום בודד; null = שבוע/היום
+let htSelectedDay = null;  // יום נבחר בלשונית חומוס/טחינה (Date)
+
+// ===== מצב שבוע נפרד לכל לשונית (0 = השבוע הנוכחי, מספר שלילי = אחורה) =====
+let weekOffsetProcessing = 0, weekOffsetPackaging = 0, weekOffsetHummus = 0;
+let cmpOffsetProcessing = -1, cmpOffsetPackaging = -1, cmpOffsetHummus = -1;
+let cmpOpenProcessing = false, cmpOpenPackaging = false, cmpOpenHummus = false;
+
+// מטמון שורות גולמיות לחישוב השוואה בלי משיכה חוזרת
+const _wkCache = {};
+
+// גישה למצב לפי מפתח לשונית
+function wkGetOff(t){ return t==='proc'?weekOffsetProcessing:t==='pkg'?weekOffsetPackaging:weekOffsetHummus; }
+function wkSetOff(t,v){ if(t==='proc')weekOffsetProcessing=v; else if(t==='pkg')weekOffsetPackaging=v; else weekOffsetHummus=v; }
+function wkGetCmp(t){ return t==='proc'?cmpOffsetProcessing:t==='pkg'?cmpOffsetPackaging:cmpOffsetHummus; }
+function wkSetCmp(t,v){ if(t==='proc')cmpOffsetProcessing=v; else if(t==='pkg')cmpOffsetPackaging=v; else cmpOffsetHummus=v; }
+function wkGetOpen(t){ return t==='proc'?cmpOpenProcessing:t==='pkg'?cmpOpenPackaging:cmpOpenHummus; }
+function wkSetOpen(t,v){ if(t==='proc')cmpOpenProcessing=v; else if(t==='pkg')cmpOpenPackaging=v; else cmpOpenHummus=v; }
+function wkReload(t){ if(t==='proc')loadLiveData(); else if(t==='pkg')loadPackagingData(); else loadHummusTahiniTab(); }
+
+// טווח שבוע לפי offset — השבוע מתחיל ביום ראשון
+function getWeekRange(offset){
+  offset = offset || 0;
+  const ref = new Date(); ref.setHours(0,0,0,0);
+  const dow = ref.getDay();                       // 0=ראשון
+  const wkStart = new Date(ref); wkStart.setDate(ref.getDate() - dow + offset*7);
+  const wkEnd   = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6); // שבת
+  const fmt = d => `${d.getDate()}/${d.getMonth()+1}`;
+  return { ref, wkStart, wkEnd, dow, weekNum: getWeekNumber(wkStart), sunStr: fmt(wkStart), satStr: fmt(wkEnd) };
+}
+
+// פעולות פס הניווט
+function shiftWeek(t,dir){
+  let off = wkGetOff(t) + dir;
+  if(off > 0) off = 0;            // לא מדפדפים לעתיד
+  wkSetOff(t, off);
+  wkSetCmp(t, off - 1);           // שבוע ההשוואה = השבוע שלפני הנבחר
+  if(t==='pkg') pkgSelectedDay = null;   // דפדוף חיצים חוזר לתצוגת שבוע
+  if(t==='ht') htSelectedDay = null;
+  wkReload(t);
+}
+function goToCurrentWeek(t){ wkSetOff(t,0); wkSetCmp(t,-1); if(t==='pkg') pkgSelectedDay=null; if(t==='ht') htSelectedDay=null; wkReload(t); }
+// קפיצה לתאריך מדויק (בורר התאריך). מחשב את שבוע התאריך, ובעיבוד ירקות בוחר את היום עצמו.
+function goToDate(t, value){
+  if(!value) return;
+  const p = String(value).split('-');     // YYYY-MM-DD מ-input type=date
+  if(p.length!==3) return;
+  const y=+p[0], mo=+p[1], d=+p[2];
+  const target = new Date(y, mo-1, d); target.setHours(0,0,0,0);
+  const curSun = getWeekRange(0).wkStart;
+  const tgtSun = new Date(target); tgtSun.setDate(target.getDate()-target.getDay());
+  let off = Math.round((tgtSun - curSun)/(7*86400000));
+  if(off>0) off=0;                          // אין דפדוף לעתיד
+  wkSetOff(t, off); wkSetCmp(t, off-1);
+  if(t==='proc') gotoDateProc = `${d}/${mo}/${y}`;   // תואם לפורמט DAYS[].date
+  else if(t==='pkg') pkgSelectedDay = target;         // תצוגת יום בודד באריזה
+  else if(t==='ht') htSelectedDay = target;           // תצוגת יום בודד בחומוס/טחינה
+  wkReload(t);
+}
+function toggleCompare(t){ wkSetOpen(t, !wkGetOpen(t)); updateWeekNav(t); renderCompare(t); }
+function shiftCompare(t,dir){ let c = wkGetCmp(t) + dir; if(c > 0) c = 0; wkSetCmp(t,c); renderCompare(t); }
+
+// עדכון תווית/כפתורי הפס
+function updateWeekNav(t){
+  const R = getWeekRange(wkGetOff(t));
+  const lbl = document.getElementById('wklabel-'+t);
+  const rng = document.getElementById('wkrange-'+t);
+  if(lbl) lbl.textContent = 'שבוע ' + R.weekNum;
+  if(rng) rng.textContent = '· ראשון ' + R.sunStr + ' – שבת ' + R.satStr;
+  const tb = document.getElementById('wktoday-'+t);
+  if(tb) tb.style.display = wkGetOff(t)===0 ? 'none' : 'inline-block';
+  const cb = document.getElementById('wkcmpbtn-'+t);
+  if(cb) cb.classList.toggle('on', wkGetOpen(t));
+}
+
+// פורמט מספרים
+function wkFmt(n){ return n%1===0 ? String(n) : n.toFixed(2); }
+function wkFmt1(n){ return n%1===0 ? String(n) : n.toFixed(1); }
+
+// שורת השוואה אחת
+function cmpRow(label, a, b, fmt){
+  fmt = fmt || (x => String(x));
+  if(a==null && b==null) return `<tr><td>${label}</td><td colspan="3" style="color:var(--text-muted)">אין נתונים</td></tr>`;
+  const aStr = a==null ? '<span style="color:var(--text-muted)">אין נתונים</span>' : fmt(a);
+  const bStr = b==null ? '<span style="color:var(--text-muted)">אין נתונים</span>' : fmt(b);
+  let diffCell = '—';
+  if(a!=null && b!=null){
+    const d = a - b;
+    if(d!==0){
+      const cls = d>0 ? 'wk-diff-up' : 'wk-diff-down';
+      const arr = d>0 ? '▲' : '▼';
+      diffCell = `<span class="${cls}">${arr} ${fmt(Math.abs(d))}</span>`;
+    }
+  }
+  return `<tr><td>${label}</td><td class="num">${aStr}</td><td class="num">${bStr}</td><td>${diffCell}</td></tr>`;
+}
+
+// חישוב מדדים לשבוע נתון מתוך המטמון
+function procMetrics(off){
+  const c = _wkCache.proc; if(!c) return null;
+  const R = getWeekRange(off);
+  let done=0, pending=0; const days=new Set(); const mats={};
+  Object.values(c.byDate).forEach(d=>{
+    if(d.date < R.wkStart || d.date > R.wkEnd) return;
+    if(d.done.length || d.pending.length) days.add(d.date.getTime());
+    done += d.done.length; pending += d.pending.length;
+    d.done.forEach(p => p.ingredients.forEach(ing=>{
+      const k = ing.name + '|' + ing.unit;
+      if(!mats[k]) mats[k] = {name: ing.name, unit: ing.unit, total: 0};
+      mats[k].total += ing.total * p.qty;
+    }));
+  });
+  return { done, pending, days: days.size, mats, has: (done+pending)>0 };
+}
+function pkgMetrics(off){
+  const c = _wkCache.pkg; if(!c) return null;
+  const R = getWeekRange(off);
+  let kg=0, qty=0; const batches=new Set();
+  c.reportRows.forEach(r=>{
+    const d = parseDate(r[2]); if(!d || d < R.wkStart || d > R.wkEnd) return;
+    const b = c.batchMap[r[1]] || {}; const code = b.productCode || r[5];
+    if(c.htProducts.includes(code)) return;
+    kg += parseFloat(r[8]) || 0; qty += parseInt(r[7]) || 0;
+    if(r[1]) batches.add(r[1]);
+  });
+  return { kg, qty, batches: batches.size, has: (kg>0 || qty>0) };
+}
+function htMetrics(off){
+  const c = _wkCache.ht; if(!c) return null;
+  const R = getWeekRange(off);
+  const g = { h:{kg:0,qty:0,batches:new Set()}, t:{kg:0,qty:0,batches:new Set()} };
+  c.reportRows.forEach(r=>{
+    const d = parseDate(r[2]); if(!d || d < R.wkStart || d > R.wkEnd) return;
+    const b = c.batchMap[r[1]] || {}; const code = b.productCode || r[5];
+    const which = c.hummus.includes(code) ? 'h' : c.tahini.includes(code) ? 't' : null;
+    if(!which) return;
+    g[which].kg += parseFloat(r[8]) || 0; g[which].qty += parseInt(r[7]) || 0;
+    if(r[1]) g[which].batches.add(r[1]);
+  });
+  return {
+    h:{kg:g.h.kg, qty:g.h.qty, batches:g.h.batches.size},
+    t:{kg:g.t.kg, qty:g.t.qty, batches:g.t.batches.size},
+    has: (g.h.kg+g.t.kg+g.h.qty+g.t.qty)>0
+  };
+}
+
+// בניית חלונית ההשוואה
+function renderCompare(t){
+  const panel = document.getElementById('wkcmp-'+t);
+  if(!panel) return;
+  if(!wkGetOpen(t)){ panel.style.display='none'; panel.innerHTML=''; return; }
+  panel.style.display='block';
+  const selOff = wkGetOff(t), cmpOff = wkGetCmp(t);
+  const selR = getWeekRange(selOff), cmpR = getWeekRange(cmpOff);
+  const head = `<div class="wk-cmp-head">
+    <span class="wk-cmp-col">שבוע ${selR.weekNum} <span class="wk-range">(${selR.sunStr}–${selR.satStr})</span></span>
+    <span style="color:var(--text-muted)">מול</span>
+    <button class="wk-cmp-mini" onclick="shiftCompare('${t}',-1)" title="שבוע השוואה קודם">&#x25C4;</button>
+    <span class="wk-cmp-col">שבוע ${cmpR.weekNum} <span class="wk-range">(${cmpR.sunStr}–${cmpR.satStr})</span></span>
+    <button class="wk-cmp-mini" onclick="shiftCompare('${t}',1)" title="שבוע השוואה הבא">&#x25BA;</button>
+  </div>`;
+  const thead = `<thead><tr><th>מדד</th><th>שבוע ${selR.weekNum}</th><th>שבוע ${cmpR.weekNum}</th><th>הפרש</th></tr></thead>`;
+  let rows = '';
+  if(t==='proc'){
+    const A = procMetrics(selOff), B = procMetrics(cmpOff);
+    const av = A&&A.has?A:null, bv = B&&B.has?B:null;
+    rows += cmpRow('בוצע',      av?av.done:null,    bv?bv.done:null);
+    rows += cmpRow('ממתין',     av?av.pending:null, bv?bv.pending:null);
+    rows += cmpRow('ימי ייצור', av?av.days:null,    bv?bv.days:null);
+    const keys = new Set([...(av?Object.keys(av.mats):[]), ...(bv?Object.keys(bv.mats):[])]);
+    const arr = [...keys].map(k=>{
+      const meta = (av&&av.mats[k]) || (bv&&bv.mats[k]);
+      return { name: meta.name, unit: meta.unit,
+        a: av&&av.mats[k] ? av.mats[k].total : null,
+        b: bv&&bv.mats[k] ? bv.mats[k].total : null };
+    });
+    arr.sort((x,y)=>(y.a||0)-(x.a||0));
+    arr.slice(0,6).forEach(m => { rows += cmpRow(m.name + (m.unit?` (${m.unit})`:''), m.a, m.b, wkFmt); });
+  } else if(t==='pkg'){
+    const A = pkgMetrics(selOff), B = pkgMetrics(cmpOff);
+    const av = A&&A.has?A:null, bv = B&&B.has?B:null;
+    rows += cmpRow('סה"כ ק"ג',    av?av.kg:null,      bv?bv.kg:null, wkFmt1);
+    rows += cmpRow('סה"כ אריזות', av?av.qty:null,     bv?bv.qty:null);
+    rows += cmpRow('מספר אצוות',  av?av.batches:null, bv?bv.batches:null);
+  } else {
+    const A = htMetrics(selOff), B = htMetrics(cmpOff);
+    const av = A&&A.has?A:null, bv = B&&B.has?B:null;
+    rows += cmpRow('חומוס — ק"ג',     av?av.h.kg:null,      bv?bv.h.kg:null, wkFmt1);
+    rows += cmpRow('חומוס — אריזות',  av?av.h.qty:null,     bv?bv.h.qty:null);
+    rows += cmpRow('חומוס — אצוות',   av?av.h.batches:null, bv?bv.h.batches:null);
+    rows += cmpRow('טחינה — ק"ג',     av?av.t.kg:null,      bv?bv.t.kg:null, wkFmt1);
+    rows += cmpRow('טחינה — אריזות',  av?av.t.qty:null,     bv?bv.t.qty:null);
+    rows += cmpRow('טחינה — אצוות',   av?av.t.batches:null, bv?bv.t.batches:null);
+  }
+  panel.innerHTML = head + `<table class="wk-cmp-table">${thead}<tbody>${rows}</tbody></table>`;
+}
 
 function renderDay() {
   const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -605,6 +941,15 @@ function renderDay() {
     return;
   }
   const day = DAYS[currentDayIdx];
+
+  // סנכרון בורר התאריך ליום הנבחר + תקרת היום
+  const di = document.getElementById('wkdate-proc');
+  if (di) {
+    const td = new Date();
+    di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+    const pr = String(day.date).split('/');
+    if (pr.length === 3) di.value = `${pr[2]}-${String(pr[1]).padStart(2,'0')}-${String(pr[0]).padStart(2,'0')}`;
+  }
 
   // Nav info
   document.getElementById('nav-dayname').innerHTML = day.name +
@@ -742,11 +1087,16 @@ async function loadHummusTahiniTab() {
       if (r[0]) batchMap[r[0]] = { product: prodMap[r[2]] || r[2] || '—', productCode: r[2] || '' };
     });
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dow = today.getDay();
-    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
+    const actualToday = new Date(); actualToday.setHours(0,0,0,0);
+    const R = getWeekRange(weekOffsetHummus);
+    const wkStart = R.wkStart, wkEnd = R.wkEnd;
+    const isCur = weekOffsetHummus === 0;
+    // היקף "יומי": יום נבחר (בורר תאריך) > היום בשבוע הנוכחי > כל השבוע הנבחר
+    const dayMode = !!htSelectedDay;
+    const scopeStart = dayMode ? htSelectedDay : (isCur ? actualToday : wkStart);
+    const scopeEnd   = dayMode ? htSelectedDay : (isCur ? actualToday : wkEnd);
 
-    const todayRows = reportRows.filter(r => { const d = parseDate(r[2]); return d && d.getTime() === today.getTime(); });
+    const todayRows = reportRows.filter(r => { const d = parseDate(r[2]); return d && d >= scopeStart && d <= scopeEnd; });
 
     // פילטור חומוס וטחינה
     const htTodayRows = todayRows.filter(r => { const b = batchMap[r[1]] || {}; return htProducts.includes(b.productCode || r[5]); });
@@ -769,6 +1119,23 @@ async function loadHummusTahiniTab() {
     document.getElementById('ht-kpi-kg').textContent = htKg.toFixed(1);
     document.getElementById('ht-kpi-qty').textContent = htQty;
     document.getElementById('ht-kpi-batches').textContent = htOpenBatches;
+
+    // תוויות לפי המצב: יום נבחר / היום / שבוע נבחר
+    const htDayStr = dayMode ? fmtD(htSelectedDay) : '';
+    const htDayWord = dayMode ? 'ביום' : (isCur ? 'היום' : 'בשבוע');
+    document.getElementById('ht-lbl-kg').textContent = `סה"כ ק"ג ${htDayWord}`;
+    document.getElementById('ht-lbl-qty').textContent = `אריזות ${htDayWord}`;
+    const htTitleSuffix = dayMode ? htDayStr : (isCur ? 'יומי' : 'שבוע נבחר');
+    document.getElementById('ht-title-hummus').textContent = `חומוס – ${htTitleSuffix} 🫘`;
+    document.getElementById('ht-title-tahini').textContent = `טחינה – ${htTitleSuffix} 🫙`;
+    // סנכרון בורר התאריך של חומוס/טחינה
+    { const di = document.getElementById('wkdate-ht');
+      if (di) {
+        const td = new Date();
+        di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+        const dd = dayMode ? htSelectedDay : (isCur ? actualToday : null);
+        if (dd) di.value = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+      } }
 
     // טבלאות יומיות
     function buildTable(bodyId, rows) {
@@ -817,7 +1184,7 @@ async function loadHummusTahiniTab() {
     });
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > wkEnd) return;
       const b = batchMap[r[1]] || {};
       if (!htProducts.includes(b.productCode || r[5])) return;
       const n = b.product || prodMap[r[5]] || '—';
@@ -850,7 +1217,7 @@ async function loadHummusTahiniTab() {
     batchRows.forEach(r => {
       if (!r[0]) return;
       const d = parseDate(r[4]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > wkEnd) return;
       const b = batchMap[r[0]] || {};
       const n = b.product || '—';
       if (!batchByProd[n]) batchByProd[n] = new Set();
@@ -858,7 +1225,7 @@ async function loadHummusTahiniTab() {
     });
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > wkEnd) return;
       const b = batchMap[r[1]] || {};
       const code = b.productCode || r[5];
       const n = b.product || prodMap[r[5]] || '—';
@@ -894,6 +1261,11 @@ async function loadHummusTahiniTab() {
 
     buildWeeklyTable('ht-weekly-hummus-body', weeklyHummus);
     buildWeeklyTable('ht-weekly-tahini-body', weeklyTahini);
+
+    // מטמון להשוואה + עדכון פס הניווט
+    _wkCache.ht = { reportRows, batchMap, hummus: hummusProducts, tahini: tahiniProducts };
+    updateWeekNav('ht');
+    renderCompare('ht');
 
   } catch(e) { console.error('HT tab error:', e); }
 }
@@ -949,6 +1321,32 @@ function toggleRepBatch(idx) {
   if (arr) arr.textContent = open ? '▼' : '▶';
 }
 
+// פתיחת פירוט יומי למוצר בטבלת הצבירה השבועית (כמה נארז ובאיזה יום)
+function togglePkgProduct(idx) {
+  const rows = document.querySelectorAll(`tr[id="wprod-det-${idx}"]`);
+  const arr = document.getElementById(`wprod-arr-${idx}`);
+  if (!rows.length) return;
+  const open = rows[0].style.display === 'none';
+  rows.forEach(r => r.style.display = open ? 'table-row' : 'none');
+  if (arr) arr.textContent = open ? '▼' : '▶';
+}
+
+// חיפוש מוצר בטבלאות מחלקת האריזה
+function pkgSearch() {
+  const inp = document.getElementById('pkg-search');
+  const q = (inp ? inp.value : '').trim().toLowerCase();
+  // שורות ראשיות: מציגים לפי התאמה
+  document.querySelectorAll('#page-packaging tr.pkg-row').forEach(tr => {
+    const name = (tr.getAttribute('data-prod') || '').toLowerCase();
+    tr.style.display = (!q || name.includes(q)) ? 'table-row' : 'none';
+  });
+  // שורות פירוט: בחיפוש פעיל נסגרות תמיד (נפתחות מחדש בלחיצה)
+  document.querySelectorAll('#page-packaging tr.pkg-sub').forEach(tr => { tr.style.display = 'none'; });
+  document.querySelectorAll('#page-packaging tr.pkg-row span[id^="wprod-arr-"], #page-packaging tr.pkg-row span[id^="rep-arr-"]').forEach(s => { s.textContent = '▶'; });
+  // שורות סיכום מוסתרות בזמן חיפוש כדי לא להטעות
+  document.querySelectorAll('#page-packaging tr.pkg-total').forEach(tr => { tr.style.display = q ? 'none' : 'table-row'; });
+}
+
 function toggleIng(id) {
   const rows = document.querySelectorAll(`tr[id="ing_${id}"]`);
   const arr = document.getElementById('arr_' + id);
@@ -976,13 +1374,15 @@ function switchTab(name){
   if (name === 'hummus') loadHummusTahiniTab();
 }
 
-// Week number and dates calculation
+// מספור שבועות מעוגן למוסכמת המנוע (ניתוח ייצור שבועי):
+// שבוע 27 מתחיל ביום ראשון 28/6/2026. מספור רציף (בלי איפוס שנתי),
+// כך שכל הלשוניות והמנוע מסכימים על אותו מספר שבוע.
+const WK_ANCHOR_SUN = new Date(2026, 5, 28);   // 2026-06-28, יום ראשון
+const WK_ANCHOR_NUM = 27;
 function getWeekNumber(date) {
-  const d = new Date(date);
-  const startOfYear = new Date(d.getFullYear(), 0, 1);
-  const startDay = startOfYear.getDay();
-  const dayOfYear = Math.floor((d - startOfYear) / 86400000);
-  return Math.ceil((dayOfYear + startDay + 1) / 7);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const sun = new Date(d); sun.setDate(d.getDate() - d.getDay());  // ראשון של אותו שבוע
+  return WK_ANCHOR_NUM + Math.round((sun - WK_ANCHOR_SUN) / (7 * 86400000));
 }
 
 function getWeekDates() {
@@ -1088,11 +1488,11 @@ async function loadLiveData() {
       });
     });
 
-    // חישוב שבוע נוכחי
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dow   = today.getDay();
-    const wkStart = new Date(today); wkStart.setDate(today.getDate() - dow);
-    const wkEnd   = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 5); // שישי
+    // חישוב השבוע הנבחר לפי ה-offset של הלשונית
+    const actualToday = new Date(); actualToday.setHours(0,0,0,0);
+    const R = getWeekRange(weekOffsetProcessing);
+    const wkStart = R.wkStart, wkEnd = R.wkEnd;
+    const isCur = weekOffsetProcessing === 0;
 
     // עיבוד תוכנית
     // עמודות: תאריך יצור, id_תוכנית, מוצר_תכנית, כמות מנות, מונה מנות
@@ -1127,7 +1527,7 @@ async function loadLiveData() {
       .sort((a,b) => a.date - b.date)
       .map(d => {
         const dn = dayNames[d.date.getDay()];
-        const isToday = d.date.getTime() === today.getTime();
+        const isToday = isCur && d.date.getTime() === actualToday.getTime();
         return {
           name: `יום ${dn}`,
           date: d.dateStr,
@@ -1137,16 +1537,34 @@ async function loadLiveData() {
         };
       });
 
-    if (newDays.length > 0) {
-      DAYS.length = 0;
-      newDays.forEach(d => DAYS.push(d));
-      currentDayIdx = DAYS.findIndex(d => d.isToday);
-      if (currentDayIdx < 0) currentDayIdx = DAYS.length - 1;
-    } else {
-      DAYS.length = 0;
+    // שומר את היום שנצפה כדי לא לקפוץ בזמן רענון אוטומטי
+    const prevDate = DAYS[currentDayIdx] ? DAYS[currentDayIdx].date : null;
+    const dayNamesAll = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    DAYS.length = 0;
+    newDays.forEach(d => DAYS.push(d));
+    // נבחר תאריך שאין בו ייצור — להזריק יום ריק כדי שיוצג "אין ייצור ביום זה"
+    if (gotoDateProc && !DAYS.some(d => d.date === gotoDateProc)) {
+      const dt = dateFromDMY(gotoDateProc);
+      if (dt) {
+        DAYS.push({ name: 'יום ' + dayNamesAll[dt.getDay()], date: gotoDateProc, isToday: false, done: [], pending: [] });
+        DAYS.sort((a, b) => dateFromDMY(a.date) - dateFromDMY(b.date));
+      }
+    }
+    if (DAYS.length === 0) {
       currentDayIdx = 0;
+      gotoDateProc = null;
+    } else {
+      let idx = -1;
+      if (gotoDateProc) { idx = DAYS.findIndex(d => d.date === gotoDateProc); gotoDateProc = null; }
+      if (idx < 0 && prevDate) idx = DAYS.findIndex(d => d.date === prevDate);
+      if (idx < 0) idx = isCur ? DAYS.findIndex(d => d.isToday) : DAYS.length - 1;
+      if (idx < 0) idx = DAYS.length - 1;
+      currentDayIdx = idx;
     }
     renderDay();
+
+    // מטמון לחישוב השוואה (כל ההיסטוריה)
+    _wkCache.proc = { byDate };
 
     // צבירה שבועית
     const weeklyMaterials = {};
@@ -1181,6 +1599,13 @@ async function loadLiveData() {
           </tr>`).join('');
     }
 
+    // כותרת צבירה שבועית לפי השבוע הנבחר
+    const wt = document.getElementById('weekly-title');
+    if (wt) wt.textContent = `שבוע ${R.weekNum}  |  ראשון ${R.sunStr} – שבת ${R.satStr}  |  בוצע בלבד`;
+
+    updateWeekNav('proc');
+    renderCompare('proc');
+
     document.getElementById('live-status').textContent = `עודכן בשעה ${new Date().toLocaleTimeString('he-IL')}`;
   } catch(e) {
     document.getElementById('live-status').textContent = '⚠️ שגיאה בטעינת נתונים';
@@ -1188,9 +1613,7 @@ async function loadLiveData() {
   }
 }
 
-// רענון כל 2 דקות
-loadLiveData();
-setInterval(loadLiveData, 2 * 60 * 1000);
+// טעינה ורענון רצף הייצור מופעלים אחרי כניסת גוגל (ב-startDashboard)
 
 // ===== PACKAGING LIVE DATA =====
 const PKG_SHEET_ID = '16Eq8L6mH6Bcvj7aEE9h0yIy_uLbeB7eV9DWJhJq_6MU';
@@ -1268,8 +1691,16 @@ async function loadPackagingData() {
       };
     });
 
-    // היום
-    const today = new Date(); today.setHours(0,0,0,0);
+    // השבוע הנבחר לפי ה-offset של הלשונית
+    const actualToday = new Date(); actualToday.setHours(0,0,0,0);
+    const R = getWeekRange(weekOffsetPackaging);
+    const wkStart = R.wkStart, wkEnd = R.wkEnd;
+    const isCur = weekOffsetPackaging === 0;
+    const today = actualToday; // נשמר לחישובי 'אתמול' ולגרף הרב-שבועי (תמיד מעוגן להיום בפועל)
+    // היקף "יומי": יום נבחר (בורר תאריך) > היום עצמו בשבוע הנוכחי > כל השבוע הנבחר בהיסטוריה
+    const dayMode = !!pkgSelectedDay;
+    const scopeStart = dayMode ? pkgSelectedDay : (isCur ? actualToday : wkStart);
+    const scopeEnd   = dayMode ? pkgSelectedDay : (isCur ? actualToday : wkEnd);
 
     // דיווח: עמודות: מזהה_דיווח, מזהה_אצווה, תאריך, שעה, אורזת, מוצר, משקל_אריזה, כמות_אריזות, סהכ_משקל_קג
     const hummusProducts = ['p011','p017','p018','p019','p020','p021','p022','p023'];
@@ -1278,14 +1709,22 @@ async function loadPackagingData() {
 
     const todayReports = reportRows.filter(r => {
       const d = parseDate(r[2]);
-      if (!d) return false;
-      d.setHours(0,0,0,0);
-      if (d.getTime() !== today.getTime()) return false;
+      if (!d || d < scopeStart || d > scopeEnd) return false;
       // סינון חומוס וטחינה – יופיעו בטאב הנפרד
       const b = batchMap[r[1]] || {};
       const code = b.productCode || r[5];
       return !hummusTahiniProducts.includes(code);
     });
+
+    // דיווחי היום בפועל – לגרף הרב-שבועי שנשאר מעוגן להיום
+    const actualTodayReports = reportRows.filter(r => {
+      const d = parseDate(r[2]);
+      if (!d || d.getTime() !== actualToday.getTime()) return false;
+      const b = batchMap[r[1]] || {};
+      const code = b.productCode || r[5];
+      return !hummusTahiniProducts.includes(code);
+    });
+    const actualTodayKg = actualTodayReports.reduce((s,r) => s + (parseFloat(r[8]) || 0), 0);
 
     // KPIs
     const batchesToday = new Set(todayReports.map(r => r[1])).size;
@@ -1294,7 +1733,42 @@ async function loadPackagingData() {
 
     document.getElementById('pkg-kpi-reports').textContent = todayReports.length;
     document.getElementById('pkg-kpi-kg').textContent = totalKg.toFixed(1);
-    document.getElementById('pkg-date-pill').textContent = `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+    const dayStr = dayMode ? fmtD(pkgSelectedDay) : '';
+    document.getElementById('pkg-date-pill').textContent = dayMode
+      ? dayStr
+      : (isCur
+        ? `${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`
+        : `שבוע ${R.weekNum} · ${R.sunStr}–${R.satStr}`);
+
+    // תוויות KPI לפי המצב: יום נבחר / היום / שבוע נבחר
+    const pkgDayWord = dayMode ? 'ביום' : (isCur ? 'היום' : 'בשבוע');
+    document.getElementById('pkg-lbl-kg').textContent = `סה"כ ק"ג ${pkgDayWord}`;
+    document.getElementById('pkg-lbl-reports').textContent = `אריזות ${pkgDayWord}`;
+    document.getElementById('pkg-lbl-batches-today').textContent = `אצוות שנפתחו ${pkgDayWord}`;
+    document.getElementById('pkg-daily-chart-title').textContent = dayMode
+      ? ('אריזה לפי אורזת — ' + dayStr)
+      : (isCur ? 'אריזה יומית לפי אורזת' : 'אריזה לפי אורזת — שבוע נבחר');
+    // שורות 'אתמול' רלוונטיות רק לשבוע הנוכחי; ביום נבחר/היסטוריה מציגים את התאריך/הטווח
+    window._pkgSubKgHTML = window._pkgSubKgHTML || document.getElementById('pkg-sub-kg').innerHTML;
+    window._pkgSubRepHTML = window._pkgSubRepHTML || document.getElementById('pkg-sub-reports').innerHTML;
+    if (dayMode) {
+      document.getElementById('pkg-sub-kg').textContent = dayStr;
+      document.getElementById('pkg-sub-reports').textContent = dayStr;
+    } else if (isCur) {
+      document.getElementById('pkg-sub-kg').innerHTML = window._pkgSubKgHTML;
+      document.getElementById('pkg-sub-reports').innerHTML = window._pkgSubRepHTML;
+    } else {
+      document.getElementById('pkg-sub-kg').textContent = `ראשון ${R.sunStr} – שבת ${R.satStr}`;
+      document.getElementById('pkg-sub-reports').textContent = `ראשון ${R.sunStr} – שבת ${R.satStr}`;
+    }
+    // סנכרון בורר התאריך של האריזה ליום המוצג + תקרת היום
+    { const di = document.getElementById('wkdate-pkg');
+      if (di) {
+        const td = new Date();
+        di.max = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+        const dd = dayMode ? pkgSelectedDay : (isCur ? actualToday : null);
+        if (dd) di.value = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+      } }
 
     // אצוות פתוחות = סכום כמות_אמבטיות_מדווח < כמות_אמבטיות באצווה
     // עמודה 16 בדיווח = כמות_אמבטיות_מדווח
@@ -1428,7 +1902,7 @@ async function loadPackagingData() {
 
         // שורת סיכום
         const summaryRow = `
-          <tr ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
+          <tr class="pkg-row" data-prod="${b.product}" ${onclick} style="border-bottom:1px solid var(--surface2);background:var(--surface);">
             <td style="padding:9px 8px;font-weight:700;font-size:13px;">${b.product} ${arrow}</td>
             <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? b.rows.length + ' אריזות' : (b.rows[0][4] || '—')}</td>
             <td style="padding:9px 8px;font-size:12px;color:var(--text-muted);">${hasMultiple ? '' : (packMap[b.rows[0][6]] || b.rows[0][6] || '—')}</td>
@@ -1442,7 +1916,7 @@ async function loadPackagingData() {
           const packName = packMap[r[6]] || r[6] || '—';
           const kg = parseFloat(r[8]) || 0;
           return `
-            <tr id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
+            <tr class="pkg-sub" data-prod="${b.product}" id="rep-det-${idx}" style="display:none;background:var(--surface2);border-bottom:1px solid var(--border);">
               <td style="padding:7px 8px 7px 20px;font-size:12px;color:var(--text-muted);">↳ ${r[4] || '—'}</td>
               <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);"></td>
               <td style="padding:7px 8px;font-size:12px;color:var(--text-muted);">${packName}</td>
@@ -1503,14 +1977,11 @@ async function loadPackagingData() {
       }
     }
 
-    // נתוני גרפים לפי אורזת – שבועי
-    const pkgDow = today.getDay();
-    const wkStart = new Date(today); wkStart.setDate(today.getDate() - pkgDow);
-
+    // נתוני גרפים לפי אורזת – לשבוע הנבחר
     const packerData = {};
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > wkEnd) return;
       const packer = r[4] || 'אחר';
       if (packer === 'אילנה') return;
       if (!packerData[packer]) packerData[packer] = {kg: 0, qty: 0};
@@ -1635,11 +2106,13 @@ async function loadPackagingData() {
     // שמירת נתוני אורזות לpopup
     const weeklyProducts = {};
     const weeklyBatchesByProduct = {};
+    const weeklyProductDaily = {};   // פירוט יומי לכל מוצר בשבוע הנבחר
+    const pkgDayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 
     batchRows.forEach(r => {
       if (!r[0]) return;
       const openDate = parseDate(r[4]);
-      if (!openDate || openDate < wkStart || openDate > today) return;
+      if (!openDate || openDate < wkStart || openDate > wkEnd) return;
       const b = batchMap[r[0]] || {};
       const productName = b.product || '—';
       if (!weeklyBatchesByProduct[productName]) weeklyBatchesByProduct[productName] = new Set();
@@ -1648,14 +2121,24 @@ async function loadPackagingData() {
 
     reportRows.forEach(r => {
       const d = parseDate(r[2]);
-      if (!d || d < wkStart || d > today) return;
+      if (!d || d < wkStart || d > wkEnd) return;
       const b = batchMap[r[1]] || {};
       const productCode = b.productCode || r[5];
       if (hummusTahiniProducts.includes(productCode)) return; // מסנן חומוס וטחינה
       const productName = b.product || prodMap[r[5]] || r[5] || '—';
+      const qty = parseInt(r[7]) || 0;
+      const kg = parseFloat(r[8]) || 0;
       if (!weeklyProducts[productName]) weeklyProducts[productName] = {qty: 0, kg: 0};
-      weeklyProducts[productName].qty += parseInt(r[7]) || 0;
-      weeklyProducts[productName].kg += parseFloat(r[8]) || 0;
+      weeklyProducts[productName].qty += qty;
+      weeklyProducts[productName].kg += kg;
+      // צבירה יומית למוצר
+      const dayKey = d.getTime();
+      if (!weeklyProductDaily[productName]) weeklyProductDaily[productName] = {};
+      if (!weeklyProductDaily[productName][dayKey]) {
+        weeklyProductDaily[productName][dayKey] = { ts: dayKey, dn: pkgDayNames[d.getDay()], label: `${d.getDate()}/${d.getMonth()+1}`, qty: 0, kg: 0 };
+      }
+      weeklyProductDaily[productName][dayKey].qty += qty;
+      weeklyProductDaily[productName][dayKey].kg += kg;
     });
 
     function renderWeeklyTable(bodyId, products) {
@@ -1665,20 +2148,33 @@ async function loadPackagingData() {
         body.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);">אין נתונים השבוע</td></tr>';
         return;
       }
-      let totalQty = 0, totalKg = 0, totalBatches = 0;
+      let totalQty = 0, totalKg = 0, totalBatches = 0, pidx = 0;
       const rowsHtml = Object.entries(products)
         .sort((a,b) => b[1].kg - a[1].kg)
         .map(([name, d]) => {
           const batches = weeklyBatchesByProduct[name] ? weeklyBatchesByProduct[name].size : 0;
           totalQty += d.qty; totalKg += d.kg; totalBatches += batches;
-          return `<tr style="border-bottom:1px solid var(--surface2);">
-            <td style="padding:9px 8px;font-weight:600;font-size:13px;">${name}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);">${batches}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);">${d.qty}</td>
-            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);">${d.kg.toFixed(1)}</td>
+          const idx = pidx++;
+          const days = Object.values(weeklyProductDaily[name] || {}).sort((a,b) => a.ts - b.ts);
+          const hasDays = days.length > 0;
+          const arrow = hasDays ? `<span id="wprod-arr-${idx}" style="font-size:9px;color:var(--text-muted);margin-left:4px;">▶</span>` : '';
+          const onclick = hasDays ? `onclick="togglePkgProduct('${idx}')" style="cursor:pointer;"` : '';
+          const mainRow = `<tr class="pkg-row" data-prod="${name}" ${onclick}>
+            <td style="padding:9px 8px;font-weight:600;font-size:13px;border-bottom:1px solid var(--surface2);">${name} ${arrow}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--purple);border-bottom:1px solid var(--surface2);">${batches}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--surface2);">${d.qty}</td>
+            <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--green);border-bottom:1px solid var(--surface2);">${d.kg.toFixed(1)}</td>
           </tr>`;
+          const detRows = days.map(day => `
+            <tr class="pkg-sub" data-prod="${name}" id="wprod-det-${idx}" style="display:none;background:var(--surface2);">
+              <td style="padding:7px 8px 7px 22px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border);">↳ ${day.dn} ${day.label}</td>
+              <td style="border-bottom:1px solid var(--border);"></td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--border);">${day.qty}</td>
+              <td style="padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green);border-bottom:1px solid var(--border);">${day.kg.toFixed(1)}</td>
+            </tr>`).join('');
+          return mainRow + detRows;
         }).join('');
-      body.innerHTML = rowsHtml + `<tr style="border-top:2px solid var(--border);background:var(--surface2);">
+      body.innerHTML = rowsHtml + `<tr class="pkg-total" style="border-top:2px solid var(--border);background:var(--surface2);">
         <td style="padding:9px 8px;font-weight:800;">סה"כ</td>
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--purple);">${totalBatches}</td>
         <td style="padding:9px 8px;font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--blue);">${totalQty}</td>
@@ -1700,14 +2196,14 @@ async function loadPackagingData() {
       const kg = parseFloat(r[8]) || 0;
       const qty = parseInt(r[7]) || 0;
 
-      if (d && d >= wkStart && d <= today) {
+      if (d && d >= wkStart && d <= wkEnd) {
         if (!window._packerDetails[packer]) window._packerDetails[packer] = {};
         if (!window._packerDetails[packer][productName]) window._packerDetails[packer][productName] = {kg:0, qty:0};
         window._packerDetails[packer][productName].kg += kg;
         window._packerDetails[packer][productName].qty += qty;
       }
 
-      if (d && d.getTime() === today.getTime()) {
+      if (d && d >= scopeStart && d <= scopeEnd) {
         if (!window._dailyPackerDetails[packer]) window._dailyPackerDetails[packer] = {};
         if (!window._dailyPackerDetails[packer][productName]) window._dailyPackerDetails[packer][productName] = {kg:0, qty:0};
         window._dailyPackerDetails[packer][productName].kg += kg;
@@ -1715,51 +2211,51 @@ async function loadPackagingData() {
       }
     });
 
-    // אצוות שנפתחו היום
+    // אצוות שנפתחו בהיקף הנבחר (היום / השבוע)
     const batchesOpenedToday = batchRows.filter(r => {
       if (!r[0]) return false;
       const openDate = parseDate(r[4]);
-      return openDate && openDate.getTime() === today.getTime();
+      return openDate && openDate >= scopeStart && openDate <= scopeEnd;
     }).length;
     document.getElementById('pkg-kpi-batches-today').textContent = batchesOpenedToday;
 
-    // חישוב אתמול
-    const yesterdayReports = reportRows.filter(r => {
-      const d = parseDate(r[2]);
-      return d && d.getTime() === yesterday.getTime();
-    });
+    // חישוב אתמול והחצים — רלוונטי רק לשבוע הנוכחי
+    if (isCur) {
+      const yesterdayReports = reportRows.filter(r => {
+        const d = parseDate(r[2]);
+        return d && d.getTime() === yesterday.getTime();
+      });
 
-    const yesterdayKg = yesterdayReports.reduce((s,r) => s + (parseFloat(r[8]) || 0), 0);
-    const yesterdayQty = yesterdayReports.reduce((s,r) => s + (parseInt(r[7]) || 0), 0);
+      const yesterdayKg = yesterdayReports.reduce((s,r) => s + (parseFloat(r[8]) || 0), 0);
+      const yesterdayQty = yesterdayReports.reduce((s,r) => s + (parseInt(r[7]) || 0), 0);
 
-    document.getElementById('pkg-kpi-kg-yesterday').textContent = yesterdayKg.toFixed(1);
-    document.getElementById('pkg-kpi-reports-yesterday').textContent = yesterdayQty;
+      document.getElementById('pkg-kpi-kg-yesterday').textContent = yesterdayKg.toFixed(1);
+      document.getElementById('pkg-kpi-reports-yesterday').textContent = yesterdayQty;
 
-    // חץ השוואה ק"ג
-    const kgDiff = totalKg - yesterdayKg;
-    const kgDiffEl = document.getElementById('pkg-kpi-kg-diff');
-    if (yesterdayKg > 0) {
-      kgDiffEl.textContent = kgDiff >= 0 ? `▲ ${kgDiff.toFixed(1)}` : `▼ ${Math.abs(kgDiff).toFixed(1)}`;
-      kgDiffEl.style.color = kgDiff >= 0 ? 'var(--green)' : 'var(--red)';
+      // חץ השוואה ק"ג
+      const kgDiff = totalKg - yesterdayKg;
+      const kgDiffEl = document.getElementById('pkg-kpi-kg-diff');
+      if (yesterdayKg > 0) {
+        kgDiffEl.textContent = kgDiff >= 0 ? `▲ ${kgDiff.toFixed(1)}` : `▼ ${Math.abs(kgDiff).toFixed(1)}`;
+        kgDiffEl.style.color = kgDiff >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+
+      // חץ השוואה אריזות
+      const qtyDiff = todayReports.length - yesterdayReports.length;
+      const qtyDiffEl = document.getElementById('pkg-kpi-reports-diff');
+      if (yesterdayReports.length > 0) {
+        qtyDiffEl.textContent = qtyDiff >= 0 ? `▲ ${qtyDiff}` : `▼ ${Math.abs(qtyDiff)}`;
+        qtyDiffEl.style.color = qtyDiff >= 0 ? 'var(--green)' : 'var(--red)';
+      }
     }
 
-    // חץ השוואה אריזות
-    const qtyDiff = todayReports.length - yesterdayReports.length;
-    const qtyDiffEl = document.getElementById('pkg-kpi-reports-diff');
-    if (yesterdayReports.length > 0) {
-      qtyDiffEl.textContent = qtyDiff >= 0 ? `▲ ${qtyDiff}` : `▼ ${Math.abs(qtyDiff)}`;
-      qtyDiffEl.style.color = qtyDiff >= 0 ? 'var(--green)' : 'var(--red)';
-    }
+    // מספר שבוע לפי השבוע הנבחר
+    document.getElementById('pkg-week-pill').textContent = `שבוע ${R.weekNum}`;
 
-    // מספר שבוע
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const weekNum2 = Math.ceil(((today - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
-    document.getElementById('pkg-week-pill').textContent = `שבוע ${weekNum2}`;
-
-    // גרף השוואת ק"ג לשבועות קודמים
+    // גרף השוואת ק"ג לשבועות קודמים — נשאר מעוגן להיום בפועל
     const dayOfWeek = today.getDay();
     const weekCompareLabels = ['השבוע'];
-    const weekCompareData = [totalKg];
+    const weekCompareData = [actualTodayKg];
 
     for (let w = 1; w <= 4; w++) {
       const weekStart = new Date(today);
@@ -1802,18 +2298,23 @@ async function loadPackagingData() {
       }
     });
 
+    // מטמון להשוואה + עדכון פס הניווט
+    _wkCache.pkg = { reportRows, batchMap, htProducts: hummusTahiniProducts };
+    updateWeekNav('pkg');
+    renderCompare('pkg');
+    pkgSearch();   // שמירה על סינון החיפוש הפעיל אחרי בנייה מחדש
+
   } catch(e) {
     console.error('Packaging data error:', e);
   }
 }
 
-// טעינה ורענון כל 5 דקות
-loadPackagingData();
-setInterval(loadPackagingData, 5 * 60 * 1000);
+// טעינה ורענון אריזות מופעלים אחרי כניסת גוגל (ב-startDashboard)
 
 // Init
 renderDay();
 renderWeightChart();
+['proc','pkg','ht'].forEach(updateWeekNav);
 </script>
 <script>
 function toggleFin(){
@@ -1827,5 +2328,30 @@ function updateFinBtn(){
 }
 updateFinBtn();
 </script>
+<style>
+/* קיפול הטאבים הפנימיים לרשימת בחירה (המבורגר) בסלולר */
+.tabsToggle{display:none}
+@media(max-width:680px){
+  .tabs{flex-wrap:wrap;overflow:visible}
+  .tabsToggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;box-sizing:border-box;padding:11px 16px;font:inherit;font-weight:700;cursor:pointer;background:transparent;color:inherit;border:none;border-bottom:2px solid rgba(128,128,128,.25)}
+  .tabsToggle .tabsCaret{font-size:17px;opacity:.9}
+  .tabs>.tab{display:none!important}
+  .tabs.open>.tab{display:block!important;width:100%;box-sizing:border-box;text-align:center}
+}
+</style>
+<script>
+(function(){
+  var strip=document.querySelector('.tabs'); if(!strip||strip.querySelector('.tabsToggle'))return;
+  var tg=document.createElement('button'); tg.type='button'; tg.className='tabsToggle';
+  function label(){ var a=strip.querySelector('.tab.active'); tg.innerHTML='<span class="tabsLbl">'+(((a&&a.textContent)||'תפריט').trim())+'</span><span class="tabsCaret">☰</span>'; }
+  tg.addEventListener('click',function(e){ e.stopPropagation(); strip.classList.toggle('open'); });
+  strip.addEventListener('click',function(e){ var t=e.target.closest('.tab'); if(!t)return; strip.classList.remove('open'); setTimeout(label,0); });
+  strip.insertBefore(tg,strip.firstChild);
+  label();
+})();
+</script>
+<!-- מודול הערות חי (drop-in) -->
+<script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
+<script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
 </body>
 </html>

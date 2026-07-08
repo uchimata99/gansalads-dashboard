@@ -340,7 +340,7 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gray);margin-to
 // ════════════════════════════════════════════════════════════
 const FIN_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
 const FIN_SHEET_ID='1_afs20qhbCT6Plq3twmZlxE7blORws1SG8jsvrlJQQM';
-const FIN_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
+const FIN_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const FIN_TOKEN_KEY='gsGoogleToken';
 
 let finTokenClient=null, finAccessToken=null, finBuilt=false;
@@ -451,9 +451,30 @@ window.addEventListener('load', ()=>{
 </script>
 <div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0 0 14px 0">
   <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <style>
+  #gsNav{position:relative}
+  #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer}
+  #gsNotesBtn{background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:15px;line-height:1;padding:3px 10px;cursor:pointer;position:relative}
+  #gsNotesBtn[data-ln-count]:not([data-ln-count=""])::after{content:attr(data-ln-count);position:absolute;top:-6px;inset-inline-end:-6px;background:#ff7a8a;color:#fff;font:600 10px sans-serif;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  @media(max-width:680px){
+    #gsNav{flex-wrap:nowrap;gap:8px}
+    #gsNav>span{flex:1;text-align:center}
+    #gsNavToggle{display:inline-block;order:-1}#gsNotesBtn{order:-1}
+    #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline-start:8px;width:max-content;min-width:150px;max-width:72vw;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+    #gsNav.gsopen #gsNavLinks{display:flex!important}
+    #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
+  }
+  </style>
+  <button id="gsNavToggle" type="button" aria-label="תפריט ניווט" onclick="this.closest('#gsNav').classList.toggle('gsopen')">☰</button>
+  <button id="gsNotesBtn" data-ln-trigger type="button" aria-label="הערות" title="הערות">📝</button>
+  <div id="gsNavLinks" style="display:contents">
   <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
   <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <a href="forecast.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">חיזוי ייצור</a>
+  <a href="dashboard_customers.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">לקוחות</a>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">פיננסי</span>
+  <a href="orders_report.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">דוח הזמנות</a>
+  </div>
   <button id="finToggle" onclick="toggleFin()">🙂</button>
 </div>
 
@@ -2571,5 +2592,49 @@ function updateFinBtn(){
 }
 updateFinBtn();
 </script>
+<style>
+/* קיפול הטאבים הפנימיים לרשימת בחירה (המבורגר) בסלולר */
+.tabsToggle{display:none}
+@media(max-width:680px){
+  .tabs{flex-wrap:wrap;overflow:visible}
+  .tabsToggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;box-sizing:border-box;padding:11px 16px;font:inherit;font-weight:700;cursor:pointer;background:transparent;color:inherit;border:none;border-bottom:2px solid rgba(128,128,128,.25)}
+  .tabsToggle .tabsCaret{font-size:17px;opacity:.9}
+  .tabs>.tab{display:none!important}
+  .tabs.open>.tab{display:block!important;width:100%;box-sizing:border-box;text-align:center}
+}
+</style>
+<script>
+(function(){
+  var strip=document.querySelector('.tabs'); if(!strip||strip.querySelector('.tabsToggle'))return;
+  var tg=document.createElement('button'); tg.type='button'; tg.className='tabsToggle';
+  function label(){ var a=strip.querySelector('.tab.active'); tg.innerHTML='<span class="tabsLbl">'+(((a&&a.textContent)||'תפריט').trim())+'</span><span class="tabsCaret">☰</span>'; }
+  tg.addEventListener('click',function(e){ e.stopPropagation(); strip.classList.toggle('open'); });
+  strip.addEventListener('click',function(e){ var t=e.target.closest('.tab'); if(!t)return; strip.classList.remove('open'); setTimeout(label,0); });
+  strip.insertBefore(tg,strip.firstChild);
+  label();
+})();
+</script>
+<script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
+<script>
+/* מעלה צילומי מסך של ההערות לתיקייה פרטית ב-Drive (מנצל את כניסת Google הקיימת),
+   ומשתף קריאה עם חשבון הסוכן. ללא הצלחה (לא מחוברת/אין הרשאה) — נפילה בחן להורדה. */
+(function(){
+  var SHARE_WITH='uchi.mata1@gmail.com';
+  function tok(){ try{ var o=JSON.parse(sessionStorage.getItem('gsGoogleToken')||'null'); if(o&&o.t&&(!o.exp||Date.now()<o.exp)) return o.t; }catch(e){} return null; }
+  function up(dataUrl,name){
+    var t=tok(); if(!t) return Promise.reject(new Error('no-token'));
+    return fetch(dataUrl).then(function(r){return r.blob();}).then(function(blob){
+      var fd=new FormData();
+      fd.append('metadata',new Blob([JSON.stringify({name:name,mimeType:'image/jpeg',description:'live-notes — סלטי גן'})],{type:'application/json'}));
+      fd.append('file',blob);
+      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
+    }).then(function(r){ if(!r.ok) throw new Error('upload '+r.status); return r.json(); }).then(function(j){
+      return fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions?sendNotificationEmail=false',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'user',emailAddress:SHARE_WITH})}).catch(function(){}).then(function(){ return {id:j.id,url:j.webViewLink||('https://drive.google.com/file/d/'+j.id+'/view')}; });
+    });
+  }
+  window.LIVE_NOTES_CONFIG=Object.assign(window.LIVE_NOTES_CONFIG||{},{uploadImage:up});
+})();
+</script>
+<script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
 </body>
 </html>

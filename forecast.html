@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#173f30">
+<title>סלטי גן — חיזוי ייצור שבועי</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>document.documentElement.classList.add('locked')</script>
+<script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
+<style>
+html.locked{overflow:hidden}
+html.locked body>*{display:none!important}
+html.locked #gsLock{display:flex!important}
+#gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
+#gsLock .lock-logo{font-size:38px}
+#gsLock .lock-title{color:#a7d7c2;font-size:19px;font-weight:800}
+#gsLock .lock-sub{color:#cfe8db;font-size:13px;max-width:300px;text-align:center;line-height:1.7}
+#gsLock .gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#3c4043;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+#gsLock .gbtn:hover{background:#f1f5f9}
+#gsLock .gbtn svg{width:18px;height:18px}
+#gsLock .lock-err{color:#ffb4a8;font-size:13px;min-height:18px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#1a3a5c;--blue:#2563a8;--lblue:#4a90d9;--sky:#e8f2fb;
+  --green:#16a34a;--lgreen:#dcfce7;--dgreen:#0d5f2c;
+  --amber:#d97706;--lamber:#fef3c7;
+  --red:#dc2626;--lred:#fee2e2;--gray:#64748b;--lgray:#f1f5f9;
+  --white:#fff;--border:#cbd5e1;--text:#1e293b;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+  --teal:#0d9488;--lteal:#ccfbf1;
+  --purple:#7c3aed;--lpurple:#ede9fe;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--text);direction:rtl;min-width:320px}
+.header{background:linear-gradient(135deg,var(--dgreen) 0%,var(--green) 100%);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header-brand{display:flex;align-items:center;gap:14px}
+.brand-icon{font-size:36px}
+.brand-name{font-size:22px;font-weight:800;letter-spacing:.3px}
+.brand-sub{font-size:11px;opacity:.85;margin-top:2px}
+.header-kpis{display:flex;gap:10px;flex-wrap:wrap}
+.hkpi{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);padding:8px 14px;border-radius:9px;min-width:120px;text-align:center}
+.hkpi-lbl{font-size:9px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.5px}
+.hkpi-val{font-size:17px;font-weight:800;margin-top:1px}
+.main{padding:20px 24px;max-width:1440px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:18px 22px;box-shadow:var(--shadow);margin-bottom:18px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sky);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.card-badge{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--lteal);color:var(--teal)}
+.card-badge.g{background:var(--lgreen);color:var(--green)}
+.card-badge.a{background:var(--lamber);color:var(--amber)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:13px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:11px;padding:15px 17px;box-shadow:var(--shadow);border-top:4px solid var(--blue)}
+.kpi.g{border-top-color:var(--green)}.kpi.a{border-top-color:var(--amber)}.kpi.t{border-top-color:var(--teal)}.kpi.n{border-top-color:var(--navy)}.kpi.r{border-top-color:var(--red)}.kpi.p{border-top-color:var(--purple)}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:800;color:var(--text);line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--gray);margin-top:4px}
+.kpi-sub.g{color:var(--green);font-weight:600}
+.kpi-sub.a{color:var(--amber);font-weight:600}
+.kpi-sub.r{color:var(--red);font-weight:600}
+.cw{position:relative;height:260px}.cw.t{height:320px}.cw.xt{height:520px}
+.ins{background:var(--lteal);border-right:4px solid var(--teal);padding:9px 13px;border-radius:0 8px 8px 0;font-size:11.5px;color:var(--navy);margin-top:9px;line-height:1.7}
+.ins.g{background:var(--lgreen);border-right-color:var(--green)}
+.ins.a{background:var(--lamber);border-right-color:var(--amber)}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{background:var(--navy);color:#fff;padding:9px 13px;font-weight:700;font-size:11.5px;white-space:nowrap;text-align:center;position:sticky;top:0}
+.tbl th:first-child{text-align:right}
+.tbl td{padding:7px 13px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap}
+.tbl td:first-child{text-align:right;font-weight:600;color:var(--navy)}
+.tbl tr:hover td{background:#f8fafc}
+.tbl tr.total td{background:#e0f7ef;font-weight:800;color:var(--dgreen);border-top:2px solid var(--green)}
+.prod-bar-wrap{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;min-width:80px;margin-top:3px}
+.prod-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px}
+.mbtn{border:2px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text);background:#fff;cursor:pointer;transition:all .15s}
+.mbtn:hover{border-color:var(--green)}
+.mbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
+.search-input{border:2px solid var(--border);border-radius:8px;padding:7px 13px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;outline:none;width:230px;max-width:60vw}
+.search-input:focus{border-color:var(--green)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:12px;font-weight:600;padding:4px 10px;border-radius:16px}
+.tag.up{background:var(--lred);color:#b91c1c}
+.tag.dn{background:var(--lgreen);color:#15803d}
+.empty-note{background:var(--lamber);border-right:4px solid var(--amber);padding:16px 18px;border-radius:0 10px 10px 0;font-size:14px;color:#92400e;line-height:1.8;font-weight:600}
+.tbl-scroll{max-height:520px;overflow-y:auto;border-radius:8px}
+/* ─── תוכנית ייצור יומית ─── */
+.plan-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:10px}
+@media(max-width:1000px){.plan-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.plan-grid{grid-template-columns:1fr}}
+.day-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.day-hd{padding:8px 11px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.day-hd .d-name{font-weight:800;font-size:14px}
+.day-hd .d-kg{font-weight:700;font-size:12px;white-space:nowrap}
+.day-dev{font-size:10px;font-weight:600;opacity:.85}
+.day-body{padding:9px 11px}
+.pg{margin-bottom:9px}
+.pg:last-child{margin-bottom:0}
+.pg-h{display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:12px;color:var(--navy);border-bottom:1px dashed #e2e8f0;padding-bottom:2px;margin-bottom:3px}
+.pg-i{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#475569;padding:1px 0}
+.pg-i .pg-kg{color:#94a3b8;white-space:nowrap}
+@media print{
+  @page{ size:A4 landscape; margin:6mm; }
+  *{ -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; box-sizing:border-box; }
+  html,body{background:#fff!important;width:100%}
+  #gsNav,.header,#fcKpis,#fcEmpty,#fcBody,#accSection,.live-notes,#gsLock{display:none!important}
+  .main{padding:0!important;max-width:none!important;width:100%!important;margin:0!important}
+  #planCard{box-shadow:none;border:none;padding:0;margin:0;width:100%}
+  #planCard .mbtn{display:none!important}
+  #planCard>.card-title{font-size:12px;margin-bottom:3px;padding-bottom:2px;border:none}
+  #planCard .ins{font-size:8px;line-height:1.35;padding:3px 6px;margin:0 0 4px}
+  /* צבע שלא תלוי ב"גרפיקת רקע": כותרת יום לבנה עם טקסט ומסגרת בצבע היום */
+  .plan-grid{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:4px;margin-top:0;width:100%}
+  .day-card{break-inside:avoid;min-width:0;border:1px solid var(--dc);border-radius:6px;overflow:hidden}
+  .day-hd{background:#fff!important;padding:3px 6px;border-bottom:2.5px solid var(--dc)}
+  .day-hd .d-name{font-size:11px;color:var(--dc)!important}
+  .day-hd .d-kg{font-size:8.5px;color:var(--dc)!important}
+  .day-dev{font-size:7.5px;color:var(--dc)!important}
+  .day-body{padding:3px 6px}
+  .pg{margin-bottom:3px}
+  .pg-h{font-size:8px;padding-bottom:1px;margin-bottom:1px}
+  .pg-i{font-size:7.5px;padding:0;gap:4px}
+  .pg-i span{overflow-wrap:anywhere}
+}
+@media(max-width:640px){.header{padding:14px 16px}.main{padding:14px 12px}.kpi-val{font-size:19px}}
+</style>
+</head>
+<body>
+<div id="gsLock">
+  <div class="lock-logo">🌿</div>
+  <div class="lock-title">סלטי גן — חיזוי ייצור שבועי</div>
+  <div class="lock-sub">הנתונים פרטיים ונטענים רק לאחר התחברות עם חשבון גוגל מורשה.</div>
+  <button class="gbtn" id="gsSignin" onclick="gsSignIn()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+    התחבר עם Google
+  </button>
+  <div class="lock-err" id="gsLockErr"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  התחברות גוגל + טעינת הנתונים מהגיליון המוגבל (קריאה בלבד)
+//  אין מספרים במקור הדף — הכול נטען בזמן ריצה אחרי כניסה.
+//  מפתח הסשן משותף עם production.html ו-finance.html (gsGoogleToken)
+//  כך שמי שכבר התחבר בעמוד אחר אינו מתבקש להתחבר שוב.
+//
+//  שתי לשוניות בגיליון, בפורמט של לשונית DATA:
+//  בלוק טקסט-JSON מובנה מפוצל לתאים רצופים בעמודה A. קוראים את כל
+//  עמודה A, משרשרים את התאים הלא-ריקים לפי הסדר ומפענחים לאובייקט.
+//
+//    FORECAST  — תחזית השבוע הקרוב (מתעדכן ביום חמישי בבוקר). מבנה:
+//      { week:"W26", week_start:"2026-06-28", generated:"2026-06-26",
+//        total_kg:Number, active_products:Number, peak_day:"שני",
+//        next_holiday:"" | "פסח" | {name,date},
+//        daily:{"ראשון":kg,...} | [{day,kg},...],
+//        products:[ {name, kg, id?, daily?:{"ראשון":kg,...}} , ... ] }
+//      שדות מצרפיים שאינם קיימים נגזרים מהמוצרים/הפילוח (לא מומצאים).
+//
+//    ACCURACY  — דוח ההצלחה של השבוע שעבר (מתעדכן ביום ראשון בבוקר,
+//      ע"י forecast_accuracy.py). מבנה:
+//      { week:"W25", forecast_total:Number, actual_total:Number,
+//        wape:Number (אחוז),
+//        products:[ {name, forecast, actual} , ... ],
+//        always_over:[name,...], always_under:[name,...] }
+//      אם הלשונית ריקה — מוצגת הודעה שהדוח יופיע ביום ראשון.
+// ════════════════════════════════════════════════════════════
+const FC_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
+const FC_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const FC_TOKEN_KEY='gsGoogleToken';   // משותף עם production.html ו-finance.html
+
+let fcTokenClient=null, fcAccessToken=null;
+let FORECAST=null, ACCURACY=null, PRODDATA=null, PLAN=null;
+
+function gsShowErr(msg){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=msg||''; }
+
+function gsInitClient(){
+  if(fcTokenClient) return fcTokenClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)) return null;
+  fcTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:FC_CLIENT_ID, scope:FC_SCOPE,
+    callback:(resp)=>{
+      if(resp&&resp.error){ gsShowErr('ההתחברות נכשלה — נסה שוב'); return; }
+      fcAccessToken=resp.access_token;
+      try{ sessionStorage.setItem(FC_TOKEN_KEY, JSON.stringify({t:fcAccessToken, exp:Date.now()+((resp.expires_in||3600)*1000)})); }catch(e){}
+      gsAfterToken();
+    }
+  });
+  return fcTokenClient;
+}
+
+function gsSignIn(){
+  gsShowErr('');
+  const c=gsInitClient();
+  if(!c){ gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע'); return; }
+  c.requestAccessToken({prompt: fcAccessToken?'':'consent'});
+}
+
+function gsAfterToken(){
+  loadForecastData().then(()=>{
+    document.documentElement.classList.remove('locked');
+    const l=document.getElementById('gsLock'); if(l) l.style.display='none';
+    startDashboard();
+  }).catch(err=>{
+    fcAccessToken=null;
+    try{ sessionStorage.removeItem(FC_TOKEN_KEY); }catch(e){}
+    gsShowErr('אין הרשאה לנתונים עם החשבון הזה. התחבר עם החשבון המורשה.');
+  });
+}
+
+// משיכת עמודה A מלשונית, שרשור התאים הלא-ריקים ופענוח לאובייקט אחד.
+// FORECAST חובה; ACCURACY אופציונלי (ריק → null, מוצגת הודעה).
+async function fetchTabObject(tab, required){
+  const range=encodeURIComponent(tab+'!A:A');
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+range,
+    {headers:{Authorization:'Bearer '+fcAccessToken}});
+  if(r.status===401||r.status===403) throw new Error('auth '+r.status);
+  if(!r.ok){
+    if(required) throw new Error(tab+' '+r.status);
+    return null;   // לשונית שלא קיימת עדיין — לא נחשב כשגיאה
+  }
+  const j=await r.json();
+  const cells=(j.values||[]).map(row=>(row&&row.length?row[0]:'')).filter(x=>x!==''&&x!=null);
+  if(!cells.length){ if(required) throw new Error(tab+' empty'); return null; }
+  return JSON.parse(cells.join(''));
+}
+
+async function loadForecastData(){
+  // FORECAST ו-ACCURACY אינן חובה: אם לשונית חסרה/ריקה — מוצגת הודעת המתנה.
+  // רק שגיאת הרשאה (401/403) מחזירה למסך הכניסה.
+  try{ FORECAST=await fetchTabObject('FORECAST', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; FORECAST=null; }
+  try{ ACCURACY=await fetchTabObject('ACCURACY', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; ACCURACY=null; }
+  // PLAN — תוכנית הייצור היומית (production_plan.py). אם ריקה — מחושבת מהתחזית.
+  try{ PLAN=await fetchTabObject('PLAN', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; PLAN=null; }
+  // נתוני הייצור ההיסטוריים (אותו גיליון, לשונית DATA כמו ב-production.html) —
+  // משמשים לחישוב תחזית זמנית כל עוד לשונית FORECAST ריקה.
+  try{ PRODDATA=await fetchTabObject('DATA', false); }
+  catch(e){ if(String(e.message).indexOf('auth')===0) throw e; PRODDATA=null; }
+}
+
+// עזרי טריות: מספר השבוע האחרון בנתונים, ומספר שבוע משם/מספר ("W27"→27)
+function fcMaxDataWeek(){ try{ return (PRODDATA&&PRODDATA.WEEKS&&PRODDATA.WEEKS.length)?Math.max.apply(null,PRODDATA.WEEKS.map(w=>+w.w)):null; }catch(e){ return null; } }
+function fcWeekNum(v){ if(v==null) return null; if(typeof v==='number') return v; const m=String(v).match(/\d+/); return m?+m[0]:null; }
+
+function startDashboard(){
+  const go=()=>{
+    try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
+    // תחזית רשמית (לשונית FORECAST) שנכתבה לשבוע שכבר הסתיים היא ישנה — הנתונים כבר
+    // כוללים שבוע מאוחר יותר. דורסים אותה ומחשבים תחזית טרייה לשבוע הבא מ-DATA, עד
+    // שהמנוע יכתוב את התחזית הבאה (יום חמישי). כך העלאת נתונים ביום ראשון מרעננת מיד.
+    const _fwn = FORECAST ? fcWeekNum(FORECAST.week_num!=null?FORECAST.week_num:FORECAST.week) : null;
+    const _mdw = fcMaxDataWeek();
+    if(FORECAST && _fwn!=null && _mdw!=null && _fwn<=_mdw) FORECAST=null;   // תחזית ישנה — נחשב מחדש
+    // אם אין תחזית רשמית עדכנית בלשונית FORECAST — מחשבים תחזית זמנית מנתוני DATA
+    if(!(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null))){
+      const c=computeForecastFromData(PRODDATA);
+      if(c) FORECAST=c;
+    }
+    if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
+      document.getElementById('fcBody').style.display='';
+      fcApplyHolidayBoost(FORECAST);
+      const ha=FORECAST.holiday_applied;
+      const holBanner=ha
+        ? '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', והגדלתי את כל התחזית אוטומטית ב-<b>'+Math.round(ha.uplift*100)+'%</b> לפי העלייה ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'
+        : '';
+      document.getElementById('fcEmpty').innerHTML = holBanner + (FORECAST.computed
+        ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
+        : '');
+      prepareForecast();
+      renderHeader();
+      renderForecastKpis();
+      buildDailyChart();
+      buildTopProductsChart();
+      buildProductsTable();
+    } else {
+      renderForecastEmpty();
+    }
+    renderProductionPlan();
+    renderAccuracy();
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go, {once:true});
+  else go();
+}
+
+// בטעינה: אם יש אסימון תקף בסשן — להמשיך; אחרת להציג מסך התחברות
+window.addEventListener('load', ()=>{
+  let tok=null; try{ tok=JSON.parse(sessionStorage.getItem(FC_TOKEN_KEY)||'null'); }catch(e){}
+  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){ fcAccessToken=tok.t; gsAfterToken(); return; }
+  let tries=0; const iv=setInterval(()=>{ if(gsInitClient()||++tries>40) clearInterval(iv); }, 150);
+});
+</script>
+
+<div dir="rtl" id="gsNav" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#173f30;padding:9px 14px;border-radius:0 0 14px 14px;font-family:'Segoe UI',Arial,sans-serif;margin:0 0 14px 0">
+  <span style="color:#a7d7c2;font-weight:800;font-size:13.5px;margin-left:6px">🌿 סלטי גן</span>
+  <style>
+  #gsNav{position:relative}
+  #gsNavToggle{display:none;background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:17px;line-height:1;padding:3px 11px;cursor:pointer}
+  #gsNotesBtn{background:none;border:1px solid #2e6b52;color:#d7efe3;border-radius:8px;font-size:15px;line-height:1;padding:3px 10px;cursor:pointer;position:relative}
+  #gsNotesBtn[data-ln-count]:not([data-ln-count=""])::after{content:attr(data-ln-count);position:absolute;top:-6px;inset-inline-end:-6px;background:#ff7a8a;color:#fff;font:600 10px sans-serif;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  @media(max-width:680px){
+    #gsNav{flex-wrap:nowrap;gap:8px}
+    #gsNav>span{flex:1;text-align:center}
+    #gsNavToggle{display:inline-block;order:-1}#gsNotesBtn{order:-1}
+    #gsNavLinks{display:none!important;position:absolute;top:100%;inset-inline-start:8px;width:max-content;min-width:150px;max-width:72vw;z-index:300;flex-direction:column;align-items:stretch;background:#173f30;padding:8px;border-radius:12px;gap:6px;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+    #gsNav.gsopen #gsNavLinks{display:flex!important}
+    #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
+  }
+  </style>
+  <button id="gsNavToggle" type="button" aria-label="תפריט ניווט" onclick="this.closest('#gsNav').classList.toggle('gsopen')">☰</button>
+  <button id="gsNotesBtn" data-ln-trigger type="button" aria-label="הערות" title="הערות">📝</button>
+  <div id="gsNavLinks" style="display:contents">
+  <a href="dashboard_gansalads.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">רצפת ייצור</a>
+  <a href="production.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">ייצור שבועי</a>
+  <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">חיזוי ייצור</span>
+  <a href="dashboard_customers.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">לקוחות</a>
+  <a href="finance.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">פיננסי</a>
+  <a href="orders_report.html" style="color:#d7efe3;text-decoration:none;font-size:13px;font-weight:600;padding:5px 13px;border-radius:18px;border:1px solid #2e6b52">דוח הזמנות</a>
+  </div>
+  <style>#finToggle{margin-inline-start:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:3px 9px;font-size:16px;line-height:1.3;cursor:pointer;font-family:inherit}#finToggle:hover{background:rgba(255,255,255,.22)}html.nofin .fin{display:none!important}</style>
+  <button id="finToggle" onclick="toggleFin()">🙂</button>
+</div>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">🔮</div>
+    <div>
+      <div class="brand-name">סלטי גן — חיזוי ייצור שבועי</div>
+      <div class="brand-sub" id="hdrSub"></div>
+    </div>
+  </div>
+  <div class="header-kpis" id="hdrKpis"></div>
+</header>
+
+<div class="main">
+
+  <!-- ═══════ תחזית השבוע הקרוב ═══════ -->
+  <div class="kpi-grid" id="fcKpis"></div>
+  <div id="fcEmpty"></div>
+
+  <div id="fcBody">
+    <div id="fcControls" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-size:12px;color:var(--gray);font-weight:700">יחידת מדידה:</span>
+      <button class="mbtn active" id="mbtn-kg" onclick="setFcMetric('kg')">ק"ג</button>
+      <button class="mbtn" id="mbtn-pkg" onclick="setFcMetric('pkg')">אריזות</button>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">פילוח התחזית לימי השבוע <span class="card-badge g" id="dailyBadge">ק"ג</span></div>
+        <div class="cw t"><canvas id="dailyChart"></canvas></div>
+        <div class="ins g" id="dailyIns"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">18 המוצרים המובילים בתחזית <span class="card-badge" id="topBadge">ק"ג לשבוע</span></div>
+        <div class="cw xt"><canvas id="topChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        כל המוצרים הפעילים בתחזית
+        <input class="search-input" id="prodSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="filterProducts()">
+      </div>
+      <div class="tbl-scroll"><div class="tbl-wrap"><table class="tbl" id="prodTable"></table></div></div>
+    </div>
+  </div><!-- /fcBody -->
+
+  <!-- ═══════ תוכנית ייצור יומית (מתוך PLAN, או מחושבת מהתחזית) ═══════ -->
+  <div id="planSection"></div>
+
+  <!-- ═══════ בדיקת החיזוי (מתוך ACCURACY) ═══════ -->
+  <div id="accSection"></div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════ UTILS ═══════════════════════════════
+const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const DAYS_COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706','#ca8a04'];
+const fmt=n=>Math.round(n).toLocaleString('he-IL');
+const fmt1=n=>Number(n).toLocaleString('he-IL',{minimumFractionDigits:1,maximumFractionDigits:1});
+const pct=(a,b)=>b?((a/b)*100).toFixed(1)+'%':'—';
+const num=x=>{ if(x===''||x==null) return 0; if(typeof x==='number') return x; const n=parseFloat(String(x).replace(/,/g,'')); return isNaN(n)?0:n; };
+
+let charts={};
+function makeChart(id,cfg){ if(charts[id]){charts[id].destroy();delete charts[id];} const ctx=document.getElementById(id); if(!ctx)return; charts[id]=new Chart(ctx,cfg); return charts[id]; }
+const gridOpts={color:'rgba(0,0,0,.05)',lineWidth:1};
+const tickOpts={color:'#64748b',font:{size:11}};
+const ttip={backgroundColor:'rgba(15,23,42,.92)',titleColor:'#fff',bodyColor:'#cbd5e1',padding:10,cornerRadius:8};
+
+// נתונים מעובדים לתצוגה
+let PRODUCTS=[];      // [{name,id, kg,pkg, daily_kg:{}, daily_pkg:{}, std_kg,std_pkg}]
+let DAILY=[];         // [{day, v}] במדד הנבחר
+let TOTAL=0, PEAK_DAY='', NEXT_HOL='';
+let fcMetric='kg';    // 'kg' | 'pkg'
+let HAS_PKG=false, HAS_STD=false;
+
+// עזרי מדד נבחר
+function unitLbl(){ return fcMetric==='kg'?'ק"ג':'אריזות'; }
+function pVal(p){ return fcMetric==='kg'?p.kg:p.pkg; }
+function pDaily(p){ return fcMetric==='kg'?p.daily_kg:p.daily_pkg; }
+function pStd(p){ return fcMetric==='kg'?p.std_kg:p.std_pkg; }
+function stdev(arr){ const n=arr.length; if(n<2) return 0; const m=arr.reduce((a,b)=>a+b,0)/n; let s=0; arr.forEach(v=>{const x=v-m;s+=x*x;}); return Math.sqrt(s/(n-1)); }
+
+function holName(h){ if(!h) return ''; if(typeof h==='string') return h; return h.name||''; }
+function holText(h){ if(!h) return ''; if(typeof h==='string') return h; return (h.name||'')+(h.date?(' ('+h.date+')'):''); }
+
+// נורמליזציה של daily לאובייקט {יום:ק"ג}
+function normDaily(d){
+  const out={}; DAYS.forEach(day=>out[day]=0);
+  if(!d) return out;
+  if(Array.isArray(d)){ d.forEach(x=>{ const day=x&&(x.day||x.d); if(day&&out.hasOwnProperty(day)) out[day]=num(x.kg!=null?x.kg:x.k); }); }
+  else if(typeof d==='object'){ DAYS.forEach(day=>{ if(d[day]!=null) out[day]=num(d[day]); }); }
+  return out;
+}
+
+// ─── תחזית זמנית מנתוני DATA (ממוצע נע של 4 השבועות האחרונים, פר מוצר ופר יום) ───
+// אינה ממציאה מספרים: כל ערך הוא ממוצע של הק"ג בפועל בשבועות האחרונים.
+// ── למידה מונחית-מיכל: שבועות חריגים חד-פעמיים שמוצאים מהממוצע ──
+// כל רשומה: {p:"שם מוצר", w:מספר שבוע, why:"סיבה"} — מתווסף כשמיכל מסבירה טעות גדולה
+// ("הזמנה חד-פעמית" וכו') בשגרת יום ראשון. השבוע ההוא לא ייכלל בממוצע החיזוי של המוצר.
+const FC_NOTES=[
+  {p:"חציל אמל'ה 4 ק\"ג", type:"one_off", w:26, why:"הזמנה מיוחדת של לקוח ספציפי"},
+  {p:"חמוצים אסיאתים 4ל", type:"one_off", w:26, why:"לקוח נתקע עם מלאי — שבוע נמוך חד-פעמי; צפוי לחזור לרגיל"},
+  {p:"מטבוחה מיוחדת 4 ק\"ג", type:"note", why:"לא מגמת עלייה אלא לקוח מדלג (אייס מן, שבועות אפס) — ממוצע נע פשוט מדויק יותר מהטיה למגמה. עודכן 5.7 לפי בדיקת קובץ הלקוחות"},
+  {p:"מטבוחה מיוחדת 2 ק\"ג", type:"note", why:"לא מגמת עלייה אלא לקוח מדלג (אייס מן, שבועות אפס) — ממוצע נע פשוט מדויק יותר מהטיה למגמה. עודכן 5.7 לפי בדיקת קובץ הלקוחות"},
+  {p:"רוטב שמן זית לימון 16 ק\"ג", type:"discontinued", why:"לא מוכרים את המוצר יותר — מיכל 5.7"},
+  {p:"חומוס בארכה 4 ק\"ג (מכיל בוטנים)", type:"discontinued", why:"הופסק — כבר לא קיים"},
+  {p:"(חומוס בארכה 4 ק\"ג (מכיל בוטנים", type:"discontinued", why:"הופסק — כבר לא קיים (וריאנט כתיב)"},
+  {p:"לקט ירקות 3 ק\"ג טורשי", type:"trend", why:"מגמתיות ניתנת לניבוי — לפי מיכל"},
+  {p:"צ'ימיצ'ורי שקד תממ 3 קג", type:"trend", why:"מגמתיות ניתנת לניבוי — לפי מיכל"}
+];
+function fcNote(name){ for(const n of FC_NOTES){ if(n.p===name) return n; } return null; }
+function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.type==='one_off' && n.p===name && +n.w===+w) return true; } return false; }
+
+// ─── התראת שבוע-לפני-חג (מבוססת נתונים, לא חוק אוטומטי) ───
+// נבדק אמפירית על 11 שנות מכירות (2015–2026, מיושר לשבוע העסקי א'–ה'):
+// בשבוע שלפני חלק מהחגים המכירות המצרפיות עולות באופן עקבי. את התחזית
+// עצמה איננו מנפחים — היא נשארת ממוצע המכירות בפועל. במקום זאת מוצגת
+// התראה כך שמיכל תחליט להגדיל ידנית לשבוע הרלוונטי (כמו FC_NOTES —
+// למידה מונחית-אדם). uplift = העלייה המצרפית שנמדדה בשבוע שלפני החג.
+// התאריכים לפי הלוח העברי (חושבו מראש; מתעדכנים שנתית).
+const FC_HOLIDAYS=[
+  {name:"ראש השנה",   date:"2026-09-12", uplift:0.37},
+  {name:"פסח",        date:"2026-04-02", uplift:0.16},
+  {name:"יום העצמאות",date:"2026-04-22", uplift:0.15},
+  {name:"ראש השנה",   date:"2027-10-02", uplift:0.37},
+  {name:"פסח",        date:"2027-04-22", uplift:0.16},
+  {name:"יום העצמאות",date:"2027-05-12", uplift:0.15},
+  {name:"ראש השנה",   date:"2028-09-21", uplift:0.37},
+  {name:"פסח",        date:"2028-04-11", uplift:0.16},
+  {name:"יום העצמאות",date:"2028-05-02", uplift:0.15}
+];
+// מחזיר את החג הקרוב שהשבוע העסקי הבא הוא "השבוע שלפניו" (עד ~12 ימים קדימה),
+// או null. השבוע העסקי מתחיל ביום ראשון (א'–ה').
+function fcHolidayPreWeek(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const sun=new Date(now); sun.setDate(now.getDate()-((now.getDay())%7)); // יום ראשון של השבוע הנוכחי
+  const coming=new Date(sun); coming.setDate(sun.getDate()+7);            // ראשון של השבוע הקרוב (תחזית)
+  let best=null;
+  for(const h of FC_HOLIDAYS){
+    const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue;
+    const days=Math.round((hd-coming)/86400000);
+    if(days>=0 && days<=12){ if(!best || days<best.days) best={name:h.name, date:h.date, uplift:h.uplift, days}; }
+  }
+  return best;
+}
+// מיישם את תיקון-החג אוטומטית: אם השבוע הקרוב הוא לפני חג, מגדיל את
+// התחזית (סה"כ, פר-מוצר ופר-יום) באחוז ההיסטורי שנמדד. מיכל ביקשה
+// שהתיקון ייעשה אוטומטית — לא צריך אישור; רק נרשמת הערה במסך.
+function fcApplyHolidayBoost(f){
+  if(!f || f.holiday_applied) return f;   // הגנה מפני החלה כפולה
+  const h=fcHolidayPreWeek(); if(!h) return f;
+  const k=1+h.uplift;
+  (f.products||[]).forEach(p=>{
+    ['kg','pkg','total_kg','std_kg','std_pkg'].forEach(x=>{ if(p[x]!=null) p[x]=num(p[x])*k; });
+    ['daily_kg','daily_pkg','daily'].forEach(dk=>{ const d=p[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  });
+  if(f.total_kg!=null)  f.total_kg =num(f.total_kg)*k;
+  if(f.total_pkg!=null) f.total_pkg=num(f.total_pkg)*k;
+  ['daily_kg','daily_pkg'].forEach(dk=>{ const d=f[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } });
+  f.holiday_applied={name:h.name, date:h.date, uplift:h.uplift};
+  return f;
+}
+
+function computeForecastFromData(d){
+  if(!d || !d.PROD_DETAIL) return null;
+  const PD=d.PROD_DETAIL;
+  const weeks=(d.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
+  if(!weeks.length) return null;
+  const recentAll=weeks.slice(-Math.min(4,weeks.length));
+  const products=[];
+  for(const name in PD){
+    const note=fcNote(name);
+    if(note && note.type==='discontinued') continue;          // מוצר שהופסק — לא נכנס לחיזוי
+    const wk=PD[name];
+    const recent=recentAll.filter(w=>!fcIsOneOff(name,w));     // דילוג על שבועות חריגים חד-פעמיים
+    const useWeeks=recent.length?recent:recentAll;
+    const trend=!!(note && note.type==='trend');              // מגמה מונחית-מיכל → שבועות אחרונים במשקל גבוה יותר
+    const wts=useWeeks.map((_,i)=> trend?(i+1):1);
+    const wsum=wts.reduce((a,b)=>a+b,0)||1;
+    const sumP=DAYS.map(()=>0), sumK=DAYS.map(()=>0);  // 0=אריזות, 1=ק"ג בנתוני המקור
+    const wkP=[], wkK=[]; let any=false;
+    useWeeks.forEach((w,idx)=>{
+      const dd=wk[w]; let tp=0, tk=0;
+      if(dd){ for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){
+        const p=num(dd[di][0]), k=num(dd[di][1]); sumP[i]+=wts[idx]*p; sumK[i]+=wts[idx]*k; tp+=p; tk+=k; if(p||k) any=true; } } }
+      wkP.push(tp); wkK.push(tk);
+    });
+    if(!any) continue;
+    const dailyP={}, dailyK={}; let totP=0, totK=0;
+    DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/wsum; dailyK[day]=sumK[i]/wsum; totP+=dailyP[day]; totK+=dailyK[day]; });
+    if(totK<=0 && totP<=0) continue;
+    products.push({name:String(name), pkg:totP, kg:totK, daily_pkg:dailyP, daily_kg:dailyK, std_pkg:stdev(wkP), std_kg:stdev(wkK)});
+  }
+  if(!products.length) return null;
+  products.sort((a,b)=>b.kg-a.kg);
+  const dtP={}, dtK={}; DAYS.forEach(day=>{ dtP[day]=0; dtK[day]=0; });
+  products.forEach(p=>DAYS.forEach(day=>{ dtP[day]+=p.daily_pkg[day]; dtK[day]+=p.daily_kg[day]; }));
+  return {
+    computed:true, metrics:true,
+    based_on:'שבועות '+recentAll[0]+'–'+recentAll[recentAll.length-1],
+    week:'', week_start:'', generated:'',
+    total_kg:products.reduce((a,p)=>a+p.kg,0),
+    total_pkg:products.reduce((a,p)=>a+p.pkg,0),
+    active_products:products.length, next_holiday:'',
+    daily_kg:dtK, daily_pkg:dtP, products
+  };
+}
+
+function prepareForecast(){
+  const f=FORECAST||{};
+  HAS_PKG = !!f.metrics;        // אריזות זמינות רק כשהתחזית מחושבת מ-DATA
+  HAS_STD = !!f.metrics;        // סטיית תקן זמינה רק במצב המחושב
+  if(!HAS_PKG) fcMetric='kg';
+  PRODUCTS=(f.products||[]).map(p=>({
+    name:String(p.name!=null?p.name:p.id||'—'),
+    id:p.id!=null?String(p.id):'',
+    kg:num(p.kg!=null?p.kg:p.total_kg),
+    pkg:num(p.pkg),
+    daily_kg:normDaily(p.daily_kg||p.daily),
+    daily_pkg:normDaily(p.daily_pkg),
+    std_kg:num(p.std_kg),
+    std_pkg:num(p.std_pkg)
+  }));
+  NEXT_HOL = holName(f.next_holiday) || (fcHolidayPreWeek()||{}).name || '';
+  // הסתרת בורר היחידה אם אין נתוני אריזות
+  const ctrl=document.getElementById('fcControls');
+  if(ctrl) ctrl.style.display = HAS_PKG ? 'flex' : 'none';
+  applyMetric();
+}
+
+// מחשב מחדש את התצוגות לפי המדד הנבחר (ק"ג/אריזות) וממיין
+function applyMetric(){
+  PRODUCTS.sort((a,b)=>pVal(b)-pVal(a));
+  const dayObj={}; DAYS.forEach(day=>dayObj[day]=0);
+  PRODUCTS.forEach(p=>{ const dd=pDaily(p); DAYS.forEach(day=>dayObj[day]+=dd[day]); });
+  DAILY=DAYS.map(day=>({day, v:dayObj[day]}));
+  TOTAL=PRODUCTS.reduce((a,p)=>a+pVal(p),0);
+  PEAK_DAY=(DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null)||{}).day||'—';
+}
+
+// החלפת יחידת מדידה ורענון התצוגה
+function setFcMetric(m){
+  if(m===fcMetric) return;
+  fcMetric=m;
+  ['kg','pkg'].forEach(x=>{ const b=document.getElementById('mbtn-'+x); if(b) b.classList.toggle('active',x===m); });
+  applyMetric();
+  renderHeader(); renderForecastKpis(); buildDailyChart(); buildTopProductsChart(); buildProductsTable();
+}
+
+function renderHeader(){
+  const f=FORECAST||{};
+  const wk=f.week||f.week_label||'';
+  const sub=[wk?('תחזית ל'+wk):'תחזית השבוע הקרוב'];
+  if(f.week_start) sub.push('שבוע מתחיל '+f.week_start);
+  if(f.generated) sub.push('הופק '+f.generated);
+  if(f.computed) sub.push('תחזית זמנית · מבוסס על '+(f.based_on||'הנתונים האחרונים'));
+  document.getElementById('hdrSub').textContent=sub.join(' · ');
+  document.getElementById('hdrKpis').innerHTML=
+    '<div class="hkpi"><div class="hkpi-lbl">סה"כ '+unitLbl()+' לשבוע</div><div class="hkpi-val">'+fmt(TOTAL)+'</div></div>'+
+    '<div class="hkpi"><div class="hkpi-lbl">מוצרים פעילים</div><div class="hkpi-val">'+fmt(FORECAST.active_products!=null?FORECAST.active_products:PRODUCTS.length)+'</div></div>'+
+    '<div class="hkpi"><div class="hkpi-lbl">יום השיא</div><div class="hkpi-val">'+PEAK_DAY+'</div></div>';
+}
+
+function kc(cls,lbl,val,sub,subCls){ return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub '+(subCls||'')+'">'+(sub||'')+'</div></div>'; }
+
+function renderForecastKpis(){
+  const peak=DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null);
+  const activeProducts=FORECAST.active_products!=null?FORECAST.active_products:PRODUCTS.length;
+  const avgStd=HAS_STD&&PRODUCTS.length?PRODUCTS.reduce((a,p)=>a+pStd(p),0)/PRODUCTS.length:0;
+  document.getElementById('fcKpis').innerHTML=
+    kc('g','סה"כ '+unitLbl()+' לשבוע',fmt(TOTAL),'תחזית מצרפית')+
+    kc('t','מוצרים פעילים',fmt(activeProducts),'בתחזית השבוע')+
+    kc('a','יום השיא',PEAK_DAY,peak&&peak.v>0?(fmt(peak.v)+' '+unitLbl()+' · '+pct(peak.v,TOTAL)):'')+
+    (HAS_STD
+      ? kc('n','סטיית תקן ממוצעת','±'+fmt1(avgStd),'תנודתיות שבועית למוצר ('+unitLbl()+')')
+      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?(holText(FORECAST.next_holiday)||'שבוע לפני החג — ביקוש גבוה'):'בשבוע הקרוב', NEXT_HOL?'a':''));
+}
+
+function buildDailyChart(){
+  makeChart('dailyChart',{type:'bar',data:{labels:DAYS,datasets:[{label:unitLbl(),data:DAILY.map(d=>d.v),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' '+unitLbl()+' ('+pct(c.raw,TOTAL)+')'}}},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}}});
+  const badge=document.getElementById('dailyBadge'); if(badge) badge.textContent=unitLbl();
+  const peak=DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null);
+  const e=document.getElementById('dailyIns');
+  if(e&&peak) e.textContent='🔵 יום השיא הצפוי: '+peak.day+' ('+fmt(peak.v)+' '+unitLbl()+'). סה"כ שבועי צפוי: '+fmt(TOTAL)+' '+unitLbl()+'.';
+}
+
+function buildTopProductsChart(){
+  const top=PRODUCTS.slice(0,18);
+  const vals=top.map(p=>pVal(p)), errs=top.map(p=>pStd(p));
+  // קווי סטיית תקן אופקיים (רק במצב מחושב)
+  const errPlugin={id:'fcTopErr',afterDatasetsDraw(chart){
+    if(!HAS_STD) return;
+    const x=chart.scales.x, ctx=chart.ctx, meta=chart.getDatasetMeta(0);
+    ctx.save(); ctx.strokeStyle='#334155'; ctx.lineWidth=1.5;
+    meta.data.forEach((bar,i)=>{ const e=errs[i]; if(!e) return;
+      const cy=bar.y, right=x.getPixelForValue(vals[i]+e), left=x.getPixelForValue(Math.max(0,vals[i]-e));
+      ctx.beginPath(); ctx.moveTo(left,cy); ctx.lineTo(right,cy);
+      ctx.moveTo(right,cy-4); ctx.lineTo(right,cy+4); ctx.moveTo(left,cy-4); ctx.lineTo(left,cy+4); ctx.stroke(); });
+    ctx.restore(); }};
+  makeChart('topChart',{type:'bar',data:{labels:top.map(p=>p.name.length>22?p.name.slice(0,22)+'…':p.name),
+    datasets:[{label:unitLbl(),data:vals,backgroundColor:'rgba(13,148,136,0.75)',borderColor:'#0d9488',borderWidth:2,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>' '+fmt1(c.raw)+' '+unitLbl()+(HAS_STD?(' · סטיית תקן ±'+fmt1(errs[c.dataIndex])):'')}}},
+      scales:{x:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}},y:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}}}},
+    plugins:[errPlugin]});
+  const badge=document.getElementById('topBadge'); if(badge) badge.textContent=unitLbl()+' לשבוע';
+}
+
+function buildProductsTable(){
+  const maxV=PRODUCTS.length?pVal(PRODUCTS[0]):0;
+  const stdTh=HAS_STD?'<th>סטיית תקן</th>':'';
+  let html='<thead><tr><th>#</th><th>מוצר</th><th>'+unitLbl()+' לשבוע</th>'+stdTh+'<th>% מהסה"כ</th>'+DAYS.map(d=>'<th>'+d+'</th>').join('')+'</tr></thead><tbody>';
+  PRODUCTS.forEach((p,i)=>{
+    const v=pVal(p), dd=pDaily(p);
+    const barW=maxV?Math.round(v/maxV*100):0;
+    const stdTd=HAS_STD?'<td>±'+fmt1(pStd(p))+'</td>':'';
+    html+='<tr data-name="'+p.name.replace(/"/g,'&quot;')+'"><td>'+(i+1)+'</td>'+
+      '<td title="'+p.name.replace(/"/g,'&quot;')+'">'+(p.name.length>28?p.name.slice(0,28)+'…':p.name)+'</td>'+
+      '<td>'+fmt1(v)+'</td>'+stdTd+
+      '<td>'+pct(v,TOTAL)+'<div class="prod-bar-wrap"><div class="prod-bar" style="width:'+barW+'%"></div></div></td>'+
+      DAYS.map(d=>'<td>'+(dd[d]>0?fmt1(dd[d]):'<span style="color:#cbd5e1">—</span>')+'</td>').join('')+
+      '</tr>';
+  });
+  const totRow=DAYS.map(d=>PRODUCTS.reduce((a,p)=>a+pDaily(p)[d],0));
+  html+='<tr class="total"><td></td><td>סה"כ</td><td>'+fmt1(PRODUCTS.reduce((a,p)=>a+pVal(p),0))+'</td>'+(HAS_STD?'<td></td>':'')+'<td></td>'+totRow.map(v=>'<td>'+fmt1(v)+'</td>').join('')+'</tr></tbody>';
+  document.getElementById('prodTable').innerHTML=html;
+}
+
+function filterProducts(){
+  const q=(document.getElementById('prodSearch').value||'').trim();
+  document.querySelectorAll('#prodTable tbody tr').forEach(tr=>{
+    if(tr.classList.contains('total')){ tr.style.display=q?'none':''; return; }
+    const n=tr.getAttribute('data-name')||'';
+    tr.style.display=(!q||n.indexOf(q)>=0)?'':'none';
+  });
+}
+
+// מצב ריק — אין עדיין תחזית בלשונית FORECAST
+function renderForecastEmpty(){
+  document.getElementById('hdrSub').textContent='התחזית תתעדכן ביום חמישי';
+  document.getElementById('hdrKpis').innerHTML='';
+  document.getElementById('fcKpis').innerHTML='';
+  document.getElementById('fcBody').style.display='none';
+  document.getElementById('fcEmpty').innerHTML=
+    '<div class="card"><div class="card-title">תחזית השבוע הקרוב <span class="card-badge a">ממתין</span></div>'+
+    '<div class="empty-note">התחזית לשבוע הקרוב תופיע כאן ביום חמישי, אחרי הפקת החיזוי.</div></div>';
+}
+
+// ═══════════════════════════════ תוכנית ייצור יומית ═══════════════════════════════
+// מציג את לשונית PLAN (production_plan.py). אם אינה קיימת עדיין — מחשב את אותו
+// שיבוץ בצד הלקוח מתוך מוצרי התחזית: 5 ימים (א'–ה'), איזון לפי ק"ג, קיבוץ לפי
+// סוג מוצר, חומוס/טחינה מוחרגים. מראה גם את התחזית הזמנית.
+const PLAN_DAYS=['ראשון','שני','שלישי','רביעי','חמישי'];
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function isHummusTahina(n){ return (n.indexOf('חומוס')>=0||n.indexOf('טחינה')>=0)&&n.indexOf('גרגרי')<0&&n.indexOf('חציל')<0; }
+function planType(n){ const s=String(n).replace(/\d+.*$/,'').trim().split(/\s+/); return s[0]||'אחר'; }
+
+function computePlanFromForecast(){
+  const src=((FORECAST||{}).products)||[];
+  const load={}, bins={}; PLAN_DAYS.forEach(d=>{ load[d]=0; bins[d]=[]; });
+  // 1) ההתניות הקבועות של מיכל — שיבוץ ראשוני לימים ולק"ג שקבעה (גרעין התוכנית)
+  let condKg=0;
+  MY_PLAN.forEach(p=>{ PLAN_DAYS.forEach(d=>{ const kg=p.d[d]; if(kg>0){ bins[d].push({type:planType(p.n), p:{name:p.n,kg:kg,pkg:0}, fixed:true}); load[d]+=kg; condKg+=kg; } }); });
+  // 2) שאר מוצרי החיזוי (ללא חומוס/טחינה וללא מוצרי ההתניות) — חיזוי שמתאזן מעל ההתניות
+  const prods=[], excl=[];
+  src.forEach(p=>{ const nm=String(p.name!=null?p.name:(p.id||'—'));
+    if(MY_BASES.has(planBaseOf(nm))) return;   // מנוהל בהתניות — לא לשבץ אוטומטית
+    const o={name:nm, kg:num(p.kg!=null?p.kg:p.total_kg), pkg:num(p.pkg)};
+    (isHummusTahina(o.name)?excl:prods).push(o); });
+  prods.sort((a,b)=>b.kg-a.kg);
+  const autoKg=prods.reduce((a,p)=>a+p.kg,0);
+  const target=(condKg+autoKg)/PLAN_DAYS.length;   // יעד מאוזן לכלל היום (התניות + חיזוי)
+  const types={}; prods.forEach(p=>{ const t=planType(p.name); (types[t]=types[t]||[]).push(p); });
+  const leastDay=ex=>{ let best=null; PLAN_DAYS.forEach(d=>{ if(d===ex)return; if(best===null||load[d]<load[best])best=d; }); return best; };
+  const place=(p,t,d)=>{ load[d]+=p.kg; bins[d].push({type:t,p:p}); };
+  const units=Object.keys(types).map(t=>({t,items:types[t],kg:types[t].reduce((a,p)=>a+p.kg,0)})).sort((a,b)=>b.kg-a.kg);
+  units.forEach(u=>{
+    if(u.kg<=target*1.15 || u.items.length===1){ const d=leastDay(null); u.items.forEach(p=>place(p,u.t,d)); }
+    else { const d1=leastDay(null), d2=leastDay(d1); let a=0,b=0;
+      u.items.slice().sort((x,y)=>y.kg-x.kg).forEach(p=>{ if(a<=b){ place(p,u.t,d1); a+=p.kg; } else { place(p,u.t,d2); b+=p.kg; } }); }
+  });
+  const days=PLAN_DAYS.map(d=>{
+    const byType={};
+    bins[d].forEach(o=>{ const g=byType[o.type]=byType[o.type]||{type:o.type,kg:0,pkg:0,items:[],fixed:false}; g.kg+=o.p.kg; g.pkg+=o.p.pkg; g.items.push(Object.assign({fixed:!!o.fixed},o.p)); if(o.fixed)g.fixed=true; });
+    const groups=Object.keys(byType).map(k=>byType[k]).sort((x,y)=>y.kg-x.kg);
+    return {day:d, kg:load[d], pct:target?((load[d]-target)/target*100):0, n_products:bins[d].length, groups};
+  });
+  if(!days.some(d=>d.kg>0)) return null;
+  return {computed:true, n_days:PLAN_DAYS.length, target_kg:target, total_kg:condKg+autoKg,
+    cond_kg:condKg, cond_n:MY_PLAN.length,
+    excluded_label:'חומוס/טחינה', excluded_kg:excl.reduce((a,p)=>a+p.kg,0), excluded_n:excl.length, days};
+}
+
+function renderProductionPlan(){
+  const host=document.getElementById('planSection'); if(!host) return;
+  // לשונית PLAN מהמנוע אם קיימת; אחרת חישוב צד-לקוח: ההתניות של מיכל + חיזוי לשאר המוצרים
+  const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
+  if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
+  // דגל חריגה/חוסר — ברמה השבועית פר מוצר: תוכנית שבועית מול חיזוי שבועי (מאוחד לבסיס), סף 20 ק"ג
+  const baseFc={}; (PRODUCTS||[]).forEach(p=>{ const b=planBaseOf(p.name); baseFc[b]=(baseFc[b]||0)+num(p.kg); });
+  const flagOf={};
+  MY_PLAN.forEach(p=>{ const wp=PLAN_DAYS.reduce((a,d)=>a+(p.d[d]||0),0); const fcv=Math.round(baseFc[p.b]||0); const dev=Math.round(wp-fcv);
+    if(Math.abs(dev)>20) flagOf[p.n]={dev:dev, plan:wp, fc:fcv}; });
+  const COLORS=['#e11d48','#7c3aed','#2563eb','#16a34a','#d97706'];
+  let cards='';
+  plan.days.forEach((d,i)=>{
+    const dev=' <span class="day-dev">('+(d.pct>=0?'+':'')+Math.round(d.pct)+'%)</span>';
+    let groups='';
+    (d.groups||[]).forEach(g=>{
+      const items=(g.items||[]).map(it=>{
+        let mark='';
+        if(it.fixed){
+          const f=flagOf[it.name];
+          if(f){ const over=f.dev>0; const msg=it.name+': '+(over?'עודף':'חוסר')+' של '+fmt(Math.abs(f.dev))+' ק&quot;ג בשבוע מול החיזוי (תוכנית '+fmt(f.plan)+' · חיזוי '+fmt(f.fc)+')';
+            mark='<span class="dev-flag" data-msg="'+msg+'" onclick="alert(this.getAttribute(\'data-msg\'))" title="'+msg+'" style="cursor:pointer">'+(over?'🟢':'🔴')+'</span> '; }
+          else { mark='<span title="התניה קבועה שלך — בתחום (±20 ק\"ג)" style="color:#16a34a">●</span> '; }
+        }
+        const nm=it.fixed?'<b>'+esc(it.name)+'</b>':esc(it.name);
+        return '<div class="pg-i"><span>'+mark+nm+'</span><span class="pg-kg">'+fmt(it.kg)+'</span></div>';
+      }).join('');
+      groups+='<div class="pg"><div class="pg-h"><span>'+esc(g.type)+'</span><span>'+fmt(g.kg)+' ק"ג</span></div>'+items+'</div>';
+    });
+    cards+='<div class="day-card" style="--dc:'+COLORS[i%5]+'"><div class="day-hd" style="background:'+COLORS[i%5]+'">'+
+      '<span class="d-name">'+esc(d.day)+'</span>'+
+      '<span class="d-kg">'+fmt(d.kg)+' ק"ג'+dev+'</span></div>'+
+      '<div class="day-body">'+(groups||'<div class="pg-i">—</div>')+'</div></div>';
+  });
+  const badge=plan.computed?'<span class="card-badge a">ההתניות שלך + חיזוי</span>':'<span class="card-badge g">תוכנית מאושרת</span>';
+  const condTxt=plan.cond_kg!=null?(' · מתוכם <b>'+fmt(plan.cond_kg)+' ק"ג</b> לפי ההתניות שלך ('+plan.cond_n+' מוצרים, <span style="color:#16a34a">●</span>), השאר חיזוי מאוזן'):'';
+  const legend=plan.cond_kg!=null?' · <b>🔴/🟢</b> = חוסר/עודף שבועי מול החיזוי (מעל 20 ק"ג) — לחיצה מציגה כמה':'';
+  const ins='📋 סה"כ <b>'+fmt(plan.total_kg)+' ק"ג</b> ל-5 ימי ייצור · יעד <b>'+fmt(plan.target_kg)+' ק"ג ליום</b>'+condTxt+legend+' · חומוס/טחינה (<b>'+fmt(plan.excluded_kg)+' ק"ג</b>) בנפרד.';
+  host.innerHTML='<div class="card" id="planCard"><div class="card-title">תוכנית ייצור יומית — 5 ימים '+badge+
+    '<button class="mbtn" onclick="window.print()">🖨️ הדפס</button></div>'+
+    '<div class="ins g" style="margin-top:0">'+ins+'</div>'+
+    '<div class="plan-grid">'+cards+'</div></div>';
+}
+
+// ═══════════════════ התניות ייצור — תוכנית קבועה לפי ימים (מיכל) ═══════════════════
+// MY_PLAN = ההתניות של מיכל: לכל מוצר הימים והק"ג שבהם הוא מיוצר בפועל (מקובץ האקסל).
+//   n = שם המוצר כפי שמיכל קוראת לו · b = מוצר-הבסיס במערכת (להחרגה מהשיבוץ האוטומטי) ·
+//   d = {יום: ק"ג}.
+// *** תהליך מתמשך: כשמיכל נותנת התניה חדשה (מוצר → ימים → ק"ג) — מוסיפים/מעדכנים כאן
+//     שורה ב-MY_PLAN. המוצר משובץ אוטומטית בתוכנית היומית ומוסר מהשיבוץ האוטומטי. ***
+const MY_PLAN=[
+  {n:"טונה במיונז וירקות", b:"טונה במיונז וירקות", d:{"ראשון":164,"חמישי":164}},
+  {n:"טונה סלרי",          b:"טונה סלרי",          d:{"ראשון":130,"חמישי":130}},
+  {n:"סלט אבוקדו",         b:"סלט אבוקדו",         d:{"ראשון":135,"חמישי":135}},
+  {n:'סלט תפו"א',          b:'סלט תפו"א',          d:{"ראשון":128,"חמישי":128}},
+  {n:"סלט ביצים",          b:"סלט ביצים",          d:{"ראשון":200,"חמישי":150}},
+  {n:"טורקי מיוחד",        b:"סלט טורקי מיוחד",    d:{"שני":480,"רביעי":480}},
+  {n:"פלפל קצוץ",          b:"פלפל קצוץ",          d:{"ראשון":140,"שלישי":140,"חמישי":70}},
+  {n:"מטבוחה",             b:"מטבוחה מיוחדת",      d:{"ראשון":600,"שלישי":600,"חמישי":600}},
+  {n:"מרדומה",             b:"מרדומה",             d:{"שני":400}},
+  {n:"שקשוקה",             b:"רוטב שקשוקה",        d:{"שני":300}},
+  {n:"חציל טבעי",          b:"חציל טבעי על האש",   d:{"שני":150,"חמישי":100}},
+  {n:"חציל במיונז",        b:"חציל במיונז",        d:{"שני":1000,"חמישי":350}},
+  {n:"חציל על האש במיונז", b:"חציל במיונז על האש", d:{"שני":100}},
+  {n:"בלקני בצל",          b:"חציל בלקני בצל",     d:{"שני":100}},
+  {n:"גזר מרוקאי",         b:"גזר מרוקאי",         d:{"ראשון":280,"רביעי":280}},
+  {n:"גזר לימון",          b:"גזר לימון",          d:{"ראשון":280,"רביעי":140}},
+  {n:"סלק צ'יפס",          b:"סלק צ'יפס",          d:{"שני":300,"חמישי":300}},
+  {n:"סלק קוביות",         b:"סלק קוביות",         d:{"שני":100,"חמישי":100}},
+  {n:"פלפל רצועות",        b:"פלפל רצועות",        d:{"ראשון":100,"רביעי":150}}
+];
+function planBaseOf(name){
+  const PU=(PRODDATA&&PRODDATA.PROD_UNI)||{};
+  if(PU[name]) return PU[name];
+  return String(name).replace(/\s*\d+(\.\d+)?\s*(ק"ג|קג|גרם|גר|ג')?\s*$/,'').trim();
+}
+const MY_BASES=new Set(MY_PLAN.map(p=>p.b));
+// ההתניות משובצות בתוך computePlanFromForecast (גרעין קבוע + חיזוי מאוזן לשאר).
+
+// ═══════════════════════════════ בדיקת החיזוי (ACCURACY) ═══════════════════════════════
+// ── בדיקת דיוק חיה: חיזוי (ממוצע 4 שבועות שקדמו, ללא חריגים) מול הביקוש בפועל בשבוע האחרון ──
+function fcWeeklyKgMap(PD){ const m={}; for(const n in PD){ m[n]={}; for(const w in PD[n]){ let k=0; const dd=PD[n][w]; for(const di in dd) k+=num(dd[di][1]); m[n][+w]=k; } } return m; }
+function fcPredWeek(m,name,targetW,weeks){
+  const note=fcNote(name);
+  if(note && note.type==='discontinued') return 0;
+  const prior=weeks.filter(w=>w<targetW).slice(-4);
+  const use=prior.filter(w=>!fcIsOneOff(name,w));
+  const ws=use.length?use:prior;
+  if(!ws.length) return null;
+  const trend=!!(note && note.type==='trend');
+  let s=0,wsum=0; ws.forEach((w,i)=>{ const wt=trend?(i+1):1; s+=wt*(m[name][w]||0); wsum+=wt; });
+  return wsum? s/wsum : null;
+}
+function fcWeekAcc(m,names,weeks,targetW){
+  let ta=0,tf=0,sae=0; const rows=[];
+  names.forEach(nm=>{ const a=(m[nm][targetW]||0); const f=fcPredWeek(m,nm,targetW,weeks); if(f==null)return; ta+=a; tf+=f; sae+=Math.abs(f-a); rows.push({name:nm,f:f,a:a,d:a-f}); });
+  if(ta<=0) return null;
+  const top=rows.slice().sort((x,y)=>y.a-x.a).slice(0,50); let ta50=0,sae50=0; top.forEach(r=>{ta50+=r.a;sae50+=Math.abs(r.f-r.a);});
+  return {wape:sae/ta*100, wape50:ta50?sae50/ta50*100:0, totA:ta, totF:tf, totErr:(tf-ta)/ta*100, rows:rows};
+}
+function renderLiveAccuracy(){
+  const PD=PRODDATA&&PRODDATA.PROD_DETAIL; if(!PD) return '';
+  const weeks=(PRODDATA.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
+  if(weeks.length<5) return '';
+  const m=fcWeeklyKgMap(PD), names=Object.keys(PD);
+  const lastW=weeks[weeks.length-1], acc=fcWeekAcc(m,names,weeks,lastW); if(!acc) return '';
+  const accPrev=fcWeekAcc(m,names,weeks,weeks[weeks.length-2]);
+  const trend=accPrev?(acc.wape<=accPrev.wape?'g':'r'):'';
+  const trendTxt=accPrev?((acc.wape<accPrev.wape?'השתפר מ-':'עלה מ-')+fmt1(accPrev.wape)+'%'):'';
+  const misses=acc.rows.filter(r=>Math.abs(r.d)>=40 && (Math.abs(r.d)/Math.max(1,r.a)>=0.25 || Math.abs(r.d)>=150)).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,12);
+  let html='<div class="card"><div class="card-title">בדיקת דיוק החיזוי — שבוע '+lastW+' <span class="card-badge">מחושב מהנתונים</span></div>';
+  html+='<div class="kpi-grid">'+
+    kc('a','שגיאה שבועית (WAPE)',fmt1(acc.wape)+'%',trendTxt,trend)+
+    kc('g','שגיאה — טופ 50',fmt1(acc.wape50)+'%','רוב הנפח')+
+    kc(acc.totErr<0?'r':'t','חיזוי מול בפועל',(acc.totErr>=0?'+':'')+fmt1(acc.totErr)+'%',fmt(acc.totF)+' מול '+fmt(acc.totA)+' ק"ג')+
+    kc('n','טעויות גדולות',misses.length,'לבירור בשגרת יום ראשון')+'</div>';
+  if(misses.length){
+    html+='<div class="ins a">🔎 המוצרים שהכי חרגו בשבוע '+lastW+' — אלה שאשאל עליהם ביום ראשון (חד-פעמי? לקוח חדש? חג?), וההסבר שלך ייכנס למודל:</div>';
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>מוצר</th><th>חיזוי (ק"ג)</th><th>בפועל (ק"ג)</th><th>פער</th></tr></thead><tbody>';
+    misses.forEach(r=>{ const over=r.d<0, col=over?'#d97706':'#dc2626', lbl=over?'חזינו יותר מדי':'חזינו מעט מדי';
+      html+='<tr><td title="'+esc(r.name)+'">'+esc(r.name)+'</td><td>'+fmt1(r.f)+'</td><td>'+fmt1(r.a)+'</td><td style="color:'+col+';font-weight:700">'+lbl+' · '+fmt1(Math.abs(r.d))+'</td></tr>'; });
+    html+='</tbody></table></div>';
+  } else { html+='<div class="ins g">אין טעויות חריגות השבוע — החיזוי היה קרוב לביקוש.</div>'; }
+  return html+'</div>';
+}
+
+function renderAccuracy(){
+  const host=document.getElementById('accSection');
+  let a=ACCURACY;
+  // דוח דיוק מהמנוע שאינו מכסה את השבוע האחרון בנתונים — ישן. מעדיפים חישוב חי
+  // (renderLiveAccuracy בודק תמיד את השבוע האחרון ב-DATA), כך שהעלאת נתונים מרעננת מיד.
+  try{ const awn=a?fcWeekNum(a.week):null, mdw=fcMaxDataWeek(); if(a && awn!=null && mdw!=null && awn<mdw) a=null; }catch(e){}
+  if(!a || (!a.wape && !a.forecast_total && !(a.products&&a.products.length))){
+    // אין לשונית ACCURACY עדכנית מהמנוע — מציגים בדיקת דיוק חיה, מחושבת מהנתונים
+    const live=renderLiveAccuracy();
+    host.innerHTML = live || ('<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה <span class="card-badge a">ממתין</span></div>'+
+      '<div class="empty-note">דוח ההצלחה יופיע ביום ראשון, אחרי העלאת הנתונים בפועל.</div></div>');
+    return;
+  }
+  const ft=num(a.forecast_total), at=num(a.actual_total);
+  const wape=a.wape!=null?num(a.wape):(at?Math.abs(ft-at)/at*100:0);
+  const diff=at?((ft-at)/at*100):0;
+  const wk=a.week?(' — '+a.week):'';
+  const hist=(a.history||[]).filter(h=>h&&h.wape!=null);
+
+  let html='<div class="card"><div class="card-title">בדיקת החיזוי — דוח ההצלחה'+wk+' <span class="card-badge g">חיזוי מול פועל</span></div>';
+  const w50=a.wape_top50!=null?num(a.wape_top50):null;
+  html+='<div class="kpi-grid">'+
+    kc('a','שגיאה מצרפית — כל המוצרים (WAPE)',fmt1(wape)+'%',wape<=12?'דיוק טוב':'לשיפור', wape<=12?'g':'r')+
+    (w50!=null?kc('g','שגיאה מצרפית — טופ 50 מוצרים',fmt1(w50)+'%','~90% מהנפח — המספר לייצור', w50<=18?'g':'a'):'')+
+    kc('t','חיזוי',fmt(ft)+' ק"ג','השבוע שעבר')+
+    kc('g','בפועל',fmt(at)+' ק"ג','השבוע שעבר')+
+    kc('n','פער',(diff>=0?'+':'')+fmt1(diff)+'%',diff>=0?'חיזוי גבוה מהפועל':'חיזוי נמוך מהפועל', diff>=0?'a':'r')+
+    '</div>';
+
+  // השוואת חיזוי מול פועל — המוצרים המובילים
+  const prods=(a.products||[]).map(p=>({name:String(p.name||p.id||'—'),f:num(p.forecast),act:num(p.actual)}))
+    .sort((x,y)=>Math.max(y.f,y.act)-Math.max(x.f,x.act)).slice(0,15);
+  if(prods.length){
+    html+='<div class="card-title" style="border:none;margin-top:6px">השוואת חיזוי מול פועל — מוצרים מובילים</div>'+
+      '<div class="cw t"><canvas id="accChart"></canvas></div>';
+  }
+
+  // מוצרים שתמיד מעל / מתחת לחיזוי
+  const over=a.always_over||[], under=a.always_under||[];
+  if(over.length||under.length){
+    html+='<div class="grid2" style="margin-top:14px">'+
+      '<div><div class="card-title" style="border:none">מוצרים שתמיד מעל החיזוי <span class="card-badge a">חיזוי נמוך מדי</span></div>'+
+        (over.length?'<div class="tags">'+over.map(n=>'<span class="tag up">'+String(n)+'</span>').join('')+'</div>':'<div class="kpi-sub">אין</div>')+'</div>'+
+      '<div><div class="card-title" style="border:none">מוצרים שתמיד מתחת לחיזוי <span class="card-badge g">חיזוי גבוה מדי</span></div>'+
+        (under.length?'<div class="tags">'+under.map(n=>'<span class="tag dn">'+String(n)+'</span>').join('')+'</div>':'<div class="kpi-sub">אין</div>')+'</div>'+
+      '</div>';
+  }
+
+  // מגמת דיוק לאורך זמן — מאפשר לראות אם המודל משתפר
+  if(hist.length>=2){
+    html+='<div class="card-title" style="border:none;margin-top:6px">מגמת דיוק לאורך זמן '+
+      '<span class="card-badge g">WAPE שבועי — נמוך יותר = מדויק יותר</span></div>'+
+      '<div class="cw t"><canvas id="accHist"></canvas></div>';
+  }
+  html+='</div>';
+  host.innerHTML=html;
+
+  if(hist.length>=2){
+    makeChart('accHist',{type:'line',data:{labels:hist.map(h=>'שבוע '+h.week),
+      datasets:[
+        {label:'שגיאה ק"ג — כל המוצרים',data:hist.map(h=>num(h.wape)),borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#d97706',borderWidth:2.5},
+        {label:'שגיאה ק"ג — טופ 50',data:hist.map(h=>h.wape_top50!=null?num(h.wape_top50):null),borderColor:'#16a34a',fill:false,tension:.3,pointRadius:4,pointBackgroundColor:'#16a34a',borderWidth:2.2,spanGaps:true},
+        {label:'שגיאה אריזות',data:hist.map(h=>num(h.wape_pkg)),borderColor:'#2563a8',borderDash:[5,3],fill:false,tension:.3,pointRadius:3,borderWidth:1.8}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+fmt1(c.raw)+'%'}}},
+        scales:{x:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v+'%'}}}}});
+  }
+
+  if(prods.length){
+    makeChart('accChart',{type:'bar',data:{labels:prods.map(p=>p.name.length>16?p.name.slice(0,16)+'…':p.name),
+      datasets:[
+        {label:'חיזוי',data:prods.map(p=>p.f),backgroundColor:'rgba(37,99,168,0.75)',borderColor:'#2563a8',borderWidth:1.5,borderRadius:4},
+        {label:'בפועל',data:prods.map(p=>p.act),backgroundColor:'rgba(22,163,74,0.75)',borderColor:'#16a34a',borderWidth:1.5,borderRadius:4}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+fmt1(c.raw)+' ק"ג'}}},
+        scales:{x:{grid:{display:false},ticks:{...tickOpts,font:{size:10}}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}}});
+  }
+}
+</script>
+
+<!--
+  ════════════════════════════════════════════════════════════════════
+  השגרה השבועית (לתיעוד — אין כאן אוטומציה)
+  ────────────────────────────────────────────────────────────────────
+  • יום חמישי בבוקר: מופקת תחזית לשבוע הקרוב ונכתבת ללשונית FORECAST
+    בגיליון המוגבל (אותו מנגנון service-account שכותב ללשונית DATA).
+  • יום ראשון בבוקר: מיכל מעלה את נתוני השבוע שעבר לדשבורד
+    "ניתוח ייצור שבועי", ואז מורץ forecast_accuracy.py שכותב ללשונית
+    ACCURACY (WAPE, חיזוי מול פועל, מוצרים שתמיד מעל/מתחת).
+  • forecast.html אינו משתנה כל שבוע — הוא רק קורא את הגיליון אחרי כניסה,
+    ומתעדכן לבד בכל פעם שהלשוניות מתעדכנות.
+  ════════════════════════════════════════════════════════════════════
+-->
+<!-- מודול הערות חי (drop-in) — רדום כברירת מחדל; הפעלה במכשירך עם ?notes=1 -->
+<script>
+function toggleFin(){var h=document.documentElement.classList.toggle('nofin');try{localStorage.setItem('gsHideFin',h?'1':'0');}catch(e){}updateFinBtn();}
+function updateFinBtn(){var b=document.getElementById('finToggle');if(b)b.textContent=document.documentElement.classList.contains('nofin')?'😊':'🙂';}
+document.addEventListener('DOMContentLoaded',updateFinBtn);
+</script>
+<script>window.LIVE_NOTES_CONFIG={repo:'uchimata99/gansalads-dashboard',title:'הערות',accent:'#16a34a',always:true};</script>
+<script>
+/* מעלה צילומי מסך של ההערות לתיקייה פרטית ב-Drive (מנצל את כניסת Google הקיימת),
+   ומשתף קריאה עם חשבון הסוכן. ללא הצלחה (לא מחוברת/אין הרשאה) — נפילה בחן להורדה. */
+(function(){
+  var SHARE_WITH='uchi.mata1@gmail.com';
+  function tok(){ try{ var o=JSON.parse(sessionStorage.getItem('gsGoogleToken')||'null'); if(o&&o.t&&(!o.exp||Date.now()<o.exp)) return o.t; }catch(e){} return null; }
+  function up(dataUrl,name){
+    var t=tok(); if(!t) return Promise.reject(new Error('no-token'));
+    return fetch(dataUrl).then(function(r){return r.blob();}).then(function(blob){
+      var fd=new FormData();
+      fd.append('metadata',new Blob([JSON.stringify({name:name,mimeType:'image/jpeg',description:'live-notes — סלטי גן'})],{type:'application/json'}));
+      fd.append('file',blob);
+      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t},body:fd});
+    }).then(function(r){ if(!r.ok) throw new Error('upload '+r.status); return r.json(); }).then(function(j){
+      return fetch('https://www.googleapis.com/drive/v3/files/'+j.id+'/permissions?sendNotificationEmail=false',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'user',emailAddress:SHARE_WITH})}).catch(function(){}).then(function(){ return {id:j.id,url:j.webViewLink||('https://drive.google.com/file/d/'+j.id+'/view')}; });
+    });
+  }
+  window.LIVE_NOTES_CONFIG=Object.assign(window.LIVE_NOTES_CONFIG||{},{uploadImage:up});
+})();
+</script>
+<script src="https://uchimata99.github.io/live-notes/live-notes.js"></script>
+</body>
+</html>
