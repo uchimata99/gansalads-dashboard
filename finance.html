@@ -962,9 +962,7 @@ window.addEventListener('load', ()=>{
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">התפלגות עלות המכר — % מהכנסות</div>
           <div class="cw t"><canvas id="mc_cogs_stack"></canvas></div>
-          <div class="ins a" style="margin-top:8px">
-            מאי: שכר הייצור בדוח (~6% מהכנסות) היה רישום חלקי — נורמל לממוצע ינואר–אפריל (~23% מהכנסות). COGS לאחר נרמול: 74.6%, שולי גולמי: 25.4%.
-          </div>
+          <div class="ins a" style="margin-top:8px" id="cogsNormNote"></div>
         </div>
       </div>
 
@@ -1769,6 +1767,12 @@ function buildMonthly(){
   document.getElementById('monthlyResults').style.display = 'block';
   document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — '+period;
   ['gpmBadge','ebitBadge'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=period; });
+  // הערת נרמול COGS — דינמית לפי החודש המוערך (אם יש)
+  const estM=[...data].reverse().find(r=>r.labor!==r.laborReported);
+  const cnn=document.getElementById('cogsNormNote');
+  if(cnn) cnn.innerHTML = estM
+    ? `${estM.month}: שכר הייצור בדוח היה חלקי/חסר — נורמל לאומדן (₪${fmtNum(estM.labor)}). לאחר נרמול: COGS ${(estM.cogs/estM.rev*100).toFixed(1)}%, שולי גולמי ${estM.gpm.toFixed(1)}%.`
+    : '';
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
   const revGrow = prev ? ((latest.rev-prev.rev)/prev.rev*100).toFixed(1) : null;
@@ -1810,7 +1814,7 @@ function buildMonthly(){
     ]},
     options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}},
       plugins:{...base().plugins, tooltip:{callbacks:{
-        afterBody: ctx => ctx[0].dataIndex===4 ? ['ℹ️ מאי: שכר ייצור נורמל לממוצע'] : []
+        afterBody: ctx => { const r=data[ctx[0].dataIndex]; return (r&&r.labor!==r.laborReported) ? ['ℹ️ '+mName(r.month)+': שכר ייצור נורמל (אומדן)'] : []; }
       }}}}
   });
 
