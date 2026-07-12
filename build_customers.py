@@ -35,6 +35,7 @@ import openpyxl
 C_ACC, C_FAM, C_KEY, C_NAME, C_WEEK, C_DAY, C_BAL, C_KG, C_MONEY = 0, 1, 3, 4, 5, 6, 8, 9, 10
 
 DEV_FLAG = 3.0   # סף סטייה באחוזים לדגל מכירה חריגה
+RECENT_W = 8     # חלון שבועות אחרונים להצגת דגלים (הדגלים נועדו לפעולה, לא להיסטוריה)
 
 
 def detail_sheet(wb):
@@ -97,18 +98,6 @@ def dirs(row):
     if row["bal"] > 0:        # זיכוי
         return -row["bal"], -abs(row["money"])
     return 0.0, row["money"]
-
-
-def normal_prices(rows):
-    """מחיר 'רגיל' לכל (לקוח, פריט) = המחיר עם הכי הרבה אריזות מכירה. עמיד לחריגים."""
-    buckets = defaultdict(lambda: defaultdict(float))
-    for r in rows:
-        if r["bal"] >= 0:
-            continue
-        pk = -r["bal"]
-        price = round(abs(r["money"]) / pk, 2)
-        buckets[(r["acc"], r["name"])][price] += pk
-    return {k: max(d.items(), key=lambda kv: kv[1])[0] for k, d in buckets.items()}
 
 
 def sd(vals):
@@ -339,23 +328,79 @@ def build_insights(rows, weeks, cust, cust_item):
 
 
 def build_red_flags(rows):
-    """דגלים אדומים: מכירות חריגות — מחיר שסוטה ≥DEV_FLAG% מהמחיר הרגיל, או מחיר 0."""
-    norm = normal_prices(rows)
-    flags = []
+    """דגלים אדומים: מכירות *חריגות באמת* — מחיר שסוטה ≥DEV_FLAG% מהצפוי, או מחיר 0.
+
+    'הצפוי' = המחיר האחרון של אותו לקוח+פריט, *מתוקן לפי השינוי הכללי של אותו שבוע*.
+    כשמיכל מעלה מחירון (עדכון רוחבי של 4–6% לכולם), חציון השינוי השבועי סופג את
+    העלייה, כך שלקוח שקיבל בדיוק את העלייה הכללית אינו מסומן — מסומן רק מי שחורג
+    מעבר לה (למשל +11% כשכולם קיבלו +5%), או מחיר 0. מוצגים רק RECENT_W השבועות
+    האחרונים — הכלי נועד לפעולה על טעויות תמחור עכשוויות, לא לסקירת היסטוריה."""
+    sales = defaultdict(list)   # (לקוח,פריט) -> [(שבוע, מחיר, אריזות, כסף, שורה)]
     for r in rows:
         if r["bal"] >= 0:
             continue
         pk = -r["bal"]
-        price = abs(r["money"]) / pk
-        base = norm.get((r["acc"], r["name"]))
-        if not base:
+        if pk <= 0:
             continue
-        dev = (price - base) / base * 100
-        if abs(dev) >= DEV_FLAG or r["money"] == 0:
-            flags.append(dict(cust=r["acc"], item=r["name"], week=r["week"], pkg=round(pk, 1),
-                              price=round(price, 2), normal=round(base, 2), dev=round(dev, 1),
-                              impact=round(abs(abs(r["money"]) - base * pk), 2),
-                              zero=(r["money"] == 0)))
+        sales[(r["acc"], r["name"])].append(
+            (r["week"], abs(r["money"]) / pk, pk, r["money"], r))
+    if not sales:
+        return []
+
+    # שלב 1: לכל מכירה — בסיס = מחיר מודלי של שבוע-המכירה הקודם, וסטייה גולמית מולו
+    entries = []   # dict לכל מכירה עם dev גולמי (None כשאין מחיר קודם)
+    for lst in sales.values():
+        weeks_sorted = sorted({s[0] for s in lst})
+        for (wk, price, pk, money, r) in lst:
+            prev = [w for w in weeks_sorted if w < wk]
+            base = 0.0
+            if prev:
+                buck = defaultdict(float)
+                for (w2, p2, pk2, m2, r2) in lst:
+                    if w2 == prev[-1]:
+                        buck[round(p2, 2)] += pk2
+                if buck:
+                    base = max(buck.items(), key=lambda kv: kv[1])[0]
+            dev = (price - base) / base * 100 if (base > 0 and money != 0) else None
+            entries.append(dict(wk=wk, cust=r["acc"], item=r["name"], pk=pk, price=price,
+                                money=money, base=base, dev=dev))
+
+    # שלב 2: לכל שבוע, "הצפוי" = {0 (ללא שינוי), עוצמת העדכון הרוחבי}.
+    # עוצמת העדכון = חציון הסטיות החיוביות המהותיות (≥DEV_FLAG) של אותו שבוע.
+    # פריסה מדורגת של עליית מחיר יוצרת פיזור דו-שיאי (0 ו-+5%) — שניהם לגיטימיים.
+    week_bump = {}
+    per_week = defaultdict(list)
+    for e in entries:
+        if e["dev"] is not None:
+            per_week[e["wk"]].append(e["dev"])
+    for w, v in per_week.items():
+        pos = [d for d in v if d >= DEV_FLAG]
+        week_bump[w] = median(pos) if len(pos) >= max(5, 0.05 * len(v)) else 0.0
+
+    # שלב 3: דגל רק אם הסטייה רחוקה מ*כל* ערך צפוי (ירידת מחיר, זינוק חריג), או מחיר 0
+    max_week = max(r["week"] for r in rows)
+    cutoff = max_week - RECENT_W + 1
+    flags = []
+    for e in entries:
+        if e["wk"] < cutoff:
+            continue
+        if e["money"] == 0:
+            flags.append(dict(cust=e["cust"], item=e["item"], week=e["wk"], pkg=round(e["pk"], 1),
+                              price=0.0, normal=round(e["base"], 2),
+                              dev=(-100.0 if e["base"] else 0.0),
+                              impact=round(e["base"] * e["pk"], 2), zero=True))
+            continue
+        if e["dev"] is None or e["base"] <= 0:
+            continue   # אין מחיר קודם להשוות מולו — לא ניתן לשפוט
+        bump = week_bump.get(e["wk"], 0.0)
+        expected = [0.0] + ([bump] if bump else [])
+        near = min(expected, key=lambda x: abs(e["dev"] - x))
+        resid = e["dev"] - near
+        if abs(resid) >= DEV_FLAG:
+            norm = e["base"] * (1 + near / 100)
+            flags.append(dict(cust=e["cust"], item=e["item"], week=e["wk"], pkg=round(e["pk"], 1),
+                              price=round(e["price"], 2), normal=round(norm, 2), dev=round(resid, 1),
+                              impact=round(abs(e["money"] - norm * e["pk"]), 2), zero=False))
     flags.sort(key=lambda f: -f["impact"])
     return flags
 
