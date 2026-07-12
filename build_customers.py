@@ -36,6 +36,7 @@ C_ACC, C_FAM, C_KEY, C_NAME, C_WEEK, C_DAY, C_BAL, C_KG, C_MONEY = 0, 1, 3, 4, 5
 
 DEV_FLAG = 3.0   # סף סטייה באחוזים לדגל מכירה חריגה
 RECENT_W = 8     # חלון שבועות אחרונים להצגת דגלים (הדגלים נועדו לפעולה, לא להיסטוריה)
+STALE_W = 6      # אם המחיר הקודם ישן מ-STALE_W שבועות — לא ניתן לשפוט (קונה לסירוגין)
 
 
 def detail_sheet(wb):
@@ -354,16 +355,17 @@ def build_red_flags(rows):
         for (wk, price, pk, money, r) in lst:
             prev = [w for w in weeks_sorted if w < wk]
             base = 0.0
-            if prev:
+            base_week = prev[-1] if prev else None
+            if base_week is not None:
                 buck = defaultdict(float)
                 for (w2, p2, pk2, m2, r2) in lst:
-                    if w2 == prev[-1]:
+                    if w2 == base_week:
                         buck[round(p2, 2)] += pk2
                 if buck:
                     base = max(buck.items(), key=lambda kv: kv[1])[0]
             dev = (price - base) / base * 100 if (base > 0 and money != 0) else None
             entries.append(dict(wk=wk, cust=r["acc"], item=r["name"], pk=pk, price=price,
-                                money=money, base=base, dev=dev))
+                                money=money, base=base, base_week=base_week, dev=dev))
 
     # שלב 2: לכל שבוע, "הצפוי" = {0 (ללא שינוי), עוצמת העדכון הרוחבי}.
     # עוצמת העדכון = חציון הסטיות החיוביות המהותיות (≥DEV_FLAG) של אותו שבוע.
@@ -392,6 +394,8 @@ def build_red_flags(rows):
             continue
         if e["dev"] is None or e["base"] <= 0:
             continue   # אין מחיר קודם להשוות מולו — לא ניתן לשפוט
+        if e["base_week"] is None or e["wk"] - e["base_week"] > STALE_W:
+            continue   # המחיר הקודם ישן מדי (קונה לסירוגין) — אין בסיס אמין לשיפוט
         bump = week_bump.get(e["wk"], 0.0)
         expected = [0.0] + ([bump] if bump else [])
         near = min(expected, key=lambda x: abs(e["dev"] - x))
