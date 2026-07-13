@@ -193,7 +193,7 @@ function gsSignIn(){
 }
 
 function gsAfterToken(){
-  loadProdData().then(()=>{
+  Promise.all([loadProdData(), fcLoadRules()]).then(()=>{   // fcLoadRules אף פעם לא דוחה (עוטף try)
     document.documentElement.classList.remove('locked');
     const l=document.getElementById('gsLock'); if(l) l.style.display='none';
     startDashboard();
@@ -714,14 +714,60 @@ function toggleMetric(m){
   buildWeeklyTrendChart();
 }
 function initSummary(){buildWeeklyTrendChart();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
+// ═══════ חיזוי לשבוע הבא — עמודת "חיזוי" בגרף המגמה הראשי ═══════
+// *** מקור האמת של כללי החיזוי הוא forecast.html *** — FC_NOTES / FC_CUSTOMER_OUT /
+// FC_HOLIDAYS נטענים ממנו בזמן ריצה (אותו origin) כדי שהעמודה כאן תהיה זהה
+// למספר שבדף החיזוי, בלי כפילות שתיווצר לה סטייה. לוגיקת החישוב תואמת את
+// computeForecastFromData שם. אם הטעינה נכשלת — פשוט לא תוצג עמודת חיזוי.
+let FC_NOTES=[], FC_CUSTOMER_OUT=[], FC_HOLIDAYS=[], fcRulesLoaded=false;
+async function fcLoadRules(){
+  try{
+    const html=await (await fetch('forecast.html',{cache:'no-store'})).text();
+    const grab=re=>{const m=html.match(re); return m?(new Function('return '+m[1])()):null;};
+    FC_NOTES=grab(/const FC_NOTES\s*=\s*(\[[\s\S]*?\]);/)||[];
+    FC_CUSTOMER_OUT=grab(/const FC_CUSTOMER_OUT\s*=\s*(\[[\s\S]*?\]);/)||[];
+    FC_HOLIDAYS=grab(/const FC_HOLIDAYS\s*=\s*(\[[\s\S]*?\]);/)||[];
+    fcRulesLoaded=true;
+  }catch(e){ fcRulesLoaded=false; }
+}
+function fcNum(x){const n=parseFloat(x);return isNaN(n)?0:n;}
+function fcNote(name){for(const n of FC_NOTES){if(n.p===name)return n;}return null;}
+function fcIsOneOff(name,w){for(const n of FC_NOTES){if(n.type==='one_off'&&n.p===name&&+n.w===+w)return true;}return false;}
+function fcCustomerOutFactor(name,totK,tw){const e=FC_CUSTOMER_OUT.find(x=>x.p===name);if(!e)return 1;if(e.from!=null&&tw!=null&&tw<e.from)return 1;if(!(totK>0))return 1;return Math.max(0,(totK-e.kg)/totK);}
+function fcHolidayPreWeek(){const now=new Date();now.setHours(0,0,0,0);const sun=new Date(now);sun.setDate(now.getDate()-((now.getDay())%7));const coming=new Date(sun);coming.setDate(sun.getDate()+7);let best=null;for(const h of FC_HOLIDAYS){const hd=new Date(h.date+'T00:00:00');if(isNaN(hd))continue;const days=Math.round((hd-coming)/864e5);if(days>=0&&days<=12){if(!best||days<best.days)best={name:h.name,uplift:h.uplift,days};}}return best;}
+// {pkg,kg} לשבוע הבא — ממוצע נע 4 שבועות פר-מוצר עם הכללים (זהה ל-forecast.html)
+function computeWeekForecastTotals(){
+  if(!fcRulesLoaded || !PROD_DETAIL || !ALLWEEKS.length) return null;
+  const weeks=ALLWEEKS.map(w=>w.w).sort((a,b)=>a-b);
+  const recentAll=weeks.slice(-Math.min(4,weeks.length));
+  const targetWeek=weeks[weeks.length-1]+1;
+  let totPkg=0,totKg=0;
+  for(const name in PROD_DETAIL){
+    const note=fcNote(name); if(note&&note.type==='discontinued') continue;
+    const wk=PROD_DETAIL[name];
+    const recent=recentAll.filter(w=>!fcIsOneOff(name,w)); const useW=recent.length?recent:recentAll;
+    const trend=!!(note&&note.type==='trend'); const wts=useW.map((_,i)=>trend?(i+1):1); const wsum=wts.reduce((a,b)=>a+b,0)||1;
+    let sp=0,sk=0,any=false;
+    useW.forEach((w,idx)=>{const dd=wk[w]; if(dd)for(const di in dd){const i=+di; if(i>=0&&i<6){sp+=wts[idx]*fcNum(dd[di][0]); sk+=wts[idx]*fcNum(dd[di][1]); if(dd[di][0]||dd[di][1])any=true;}}});
+    if(!any) continue;
+    let tp=sp/wsum, tk=sk/wsum; if(tk<=0&&tp<=0) continue;
+    const cf=fcCustomerOutFactor(String(name),tk,targetWeek); tp*=cf; tk*=cf;
+    totPkg+=tp; totKg+=tk;
+  }
+  const h=fcHolidayPreWeek(); const k=h?(1+h.uplift):1;
+  return {pkg:totPkg*k, kg:totKg*k, targetWeek, holiday:h?h.name:null};
+}
 function buildWeeklyTrendChart(){
+  const fc=(currentMetric!=='rev')?computeWeekForecastTotals():null;   // חיזוי רק לאריזות/ק"ג
   const labels=WEEKS.map(w=>wLabel(w.w));
   let data,label,color;
   if(currentMetric==='pkg'){data=WEEKS.map(w=>w.pkg);label='אריזות';color='#16a34a';}
   else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
   else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
-  makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:WEEKS.map((_,i)=>i===1?color:color+'CC'),borderColor:color,borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:ttip},
+  const bg=WEEKS.map((_,i)=>i===1?color:color+'CC'), bc=WEEKS.map(()=>color);
+  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:fc.kg); labels.push('חיזוי'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }
+  makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:bc,borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>c.label==='חיזוי'?(' חיזוי לשבוע הבא: '+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+fmt(c.raw))}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
 }
 function buildGroupStackChart(){

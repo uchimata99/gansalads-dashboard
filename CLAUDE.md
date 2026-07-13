@@ -47,6 +47,7 @@
 - `PROD_DETAIL` / `PROD_UNI` — פירוט פר-פריט/שבוע/יום ומיפוי פריט→סוג מאוחד.
 - קבועי תצוגה סטטיים נשארים בקוד (`DAYS, DAYS_COLORS, WK_COLORS, PKG_TYPES, PKG_COLORS, PROD_MI, PROD_LBL`). `DAY_WEEKS` ו-`UNIFIED_MEMBERS` נגזרים בזמן ריצה ב-`prepareDerived()`.
 - הגרפים נבנים ב-Chart.js; האתחול (`startDashboard`→`initSummary`) רץ רק אחרי שהנתונים נטענו וה-DOM מוכן.
+- **עמודת "חיזוי" בגרף המגמה הראשי** (`weeklyTrendChart`, מטריקות אריזות/ק"ג בלבד — לא הכנסות): עמודה כתומה בקצה עם החיזוי לשבוע הבא. כדי שהמספר יהיה **זהה לדף החיזוי**, `fcLoadRules()` מושך את `FC_NOTES`/`FC_CUSTOMER_OUT`/`FC_HOLIDAYS` מ-`forecast.html` בזמן ריצה (אותו origin) ו-`computeWeekForecastTotals()` מריץ את אותה לוגיקה (ממוצע נע 4 שבועות פר-מוצר + הכללים + חג + לקוח שעוזב). **מקור האמת נשאר forecast.html בלבד — אין צורך לעדכן את production.html בשגרת יום ראשון.** אם המשיכה נכשלת — העמודה פשוט לא מוצגת.
 
 - **התחברות:** מסך כניסה (`#gsLock`) עם כפתור "התחבר עם Google". `PROD_CLIENT_ID`, `PROD_SHEET_ID`, `PROD_SCOPE` בראש הסקריפט. הרשאה: קריאה בלבד. שגיאת הרשאה מנקה את האסימון ומחזירה למסך הכניסה.
 - **תלות פריסה (חד-פעמית):** בפרויקט גוגל קלאוד צריך Google Sheets API מופעל, ההרשאה `spreadsheets.readonly` במסך ההסכמה, והגיליון משותף בקריאה לחשבון הכניסה. המקור המורשה כבר מוגדר: `https://uchimata99.github.io`.
