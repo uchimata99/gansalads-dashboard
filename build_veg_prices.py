@@ -161,10 +161,13 @@ def build_veg(key, name, txns):
 
     by_month = {}
     by_sup = {}
+    by_year = {}          # שנה -> {kg,spend,min,max,n}
+    by_year_sup = {}      # (שנה,קוד ספק) -> {kg,spend,n}
     tot_kg = tot_spend = 0.0
     pmin = pmax = None
     for t in purch:
         m = _month(t['date'])
+        yr = (m or '?').split('-')[0]
         kg = t['inn']
         sp = t['price'] * kg
         tot_kg += kg
@@ -177,6 +180,12 @@ def build_veg(key, name, txns):
         d['min'] = min(d['min'], t['price']); d['max'] = max(d['max'], t['price'])
         s = by_sup.setdefault(t['code'], {'kg': 0.0, 'spend': 0.0, 'n': 0})
         s['kg'] += kg; s['spend'] += sp; s['n'] += 1
+        yd = by_year.setdefault(yr, {'kg': 0.0, 'spend': 0.0, 'min': t['price'],
+                                     'max': t['price'], 'n': 0})
+        yd['kg'] += kg; yd['spend'] += sp; yd['n'] += 1
+        yd['min'] = min(yd['min'], t['price']); yd['max'] = max(yd['max'], t['price'])
+        ys = by_year_sup.setdefault((yr, t['code']), {'kg': 0.0, 'spend': 0.0, 'n': 0})
+        ys['kg'] += kg; ys['spend'] += sp; ys['n'] += 1
 
     monthly = [{'m': m, 'kg': round(v['kg'], 1), 'spend': round(v['spend'], 1),
                 'avg': round(v['spend'] / v['kg'], 3) if v['kg'] else None,
@@ -185,6 +194,16 @@ def build_veg(key, name, txns):
     bysup = [{'code': c, 'kg': round(v['kg'], 1), 'spend': round(v['spend'], 1),
               'avg': round(v['spend'] / v['kg'], 3) if v['kg'] else None, 'n': v['n']}
              for c, v in sorted(by_sup.items(), key=lambda kv: -kv[1]['kg'])]
+    annual = []
+    for y in sorted(by_year):
+        v = by_year[y]
+        ysup = [{'code': c, 'kg': round(d['kg'], 1), 'spend': round(d['spend'], 1),
+                 'avg': round(d['spend'] / d['kg'], 3) if d['kg'] else None, 'n': d['n']}
+                for (yy, c), d in sorted(by_year_sup.items(), key=lambda kv: -kv[1]['kg']) if yy == y]
+        annual.append({'year': y, 'kg': round(v['kg'], 1), 'spend': round(v['spend'], 1),
+                       'avg': round(v['spend'] / v['kg'], 3) if v['kg'] else None,
+                       'min': round(v['min'], 3), 'max': round(v['max'], 3),
+                       'n': v['n'], 'bySupplier': ysup})
 
     veg = {
         'key': str(key), 'name': name,
@@ -195,7 +214,7 @@ def build_veg(key, name, txns):
         'nTxn': len(purch),
         'firstMonth': monthly[0]['m'] if monthly else None,
         'lastMonth': monthly[-1]['m'] if monthly else None,
-        'monthly': monthly, 'bySupplier': bysup,
+        'monthly': monthly, 'bySupplier': bysup, 'annual': annual,
     }
     ret_rows = [{'veg': name, 'date': str(t['date']), 'code': t['code'],
                  'kg': round(t['out'] or t['inn'], 1), 'price': round(t['price'], 3)}
@@ -242,12 +261,14 @@ def main():
         sys.exit("לא נבנה דבר — אין תנועות בקבצים.")
 
     months = sorted({m['m'] for v in vegs for m in v['monthly'] if m['m']})
+    years = sorted({a['year'] for v in vegs for a in v['annual']})
     suppliers = {c: SUPPLIER_LABELS.get(c, f'ספק {c}') for c in sorted(sup_codes)}
     payload = {
         'generatedAt': args.date or date.today().isoformat(),
         'currency': '₪ לק"ג',
         'period': {'from': months[0] if months else None, 'to': months[-1] if months else None},
         'months': months,
+        'years': years,
         'suppliers': suppliers,
         'veg': sorted(vegs, key=lambda v: -v['totalSpend']),
         'returns': {'totalKg': round(sum(r['kg'] for r in ret_all), 1), 'rows': ret_all},
