@@ -84,6 +84,7 @@ html.locked #gsLock{display:flex!important}
  <div class="tab active" data-p="ov">סקירה וניתוח</div>
  <div class="tab" data-p="hist">היסטוריית הזמנות</div>
  <div class="tab" data-p="veg">מכרזי ירקות</div>
+ <div class="tab" data-p="vp">מחירי ירקות</div>
 </div>
 
 <div class="main">
@@ -113,6 +114,18 @@ html.locked #gsLock{display:flex!important}
   <div class="kpi-row" id="vegKpi"></div>
   <div class="card"><div class="card-t"><span>מחיר אחרון פר ירק וספק</span></div><div class="scroll" id="vegTab"><div class="empty">טוען…</div></div></div>
  </div>
+
+ <div class="page" id="vp">
+  <div class="note">ניתוח מחירי הירקות הטריים מתוך כרטסות המלאי (תיקיית "קניית ירקות"). המחיר החודשי הוא <b>ממוצע משוקלל בק"ג</b> של חשבוניות הרכש. הנתונים נטענים מלשונית VEG_PRICES.</div>
+  <div class="kpi-row" id="vpKpi"></div>
+  <div class="card"><div class="card-t"><span>מחיר ממוצע חודשי (₪ לק"ג)</span><span class="lbl" id="vpRange"></span></div><div class="cw" id="vpTrendWrap"><canvas id="vpTrend"></canvas></div></div>
+  <div class="grid2" style="margin-top:18px">
+   <div class="card"><div class="card-t">הוצאת רכש לפי ירק</div><div class="cw s"><canvas id="vpSpend"></canvas></div></div>
+   <div class="card"><div class="card-t">כמות חודשית לפי ירק (ק"ג)</div><div class="cw s"><canvas id="vpVol"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט לפי ירק</span><span class="lbl">שינוי = מחיר החודש האחרון מול הראשון</span></div><div class="scroll" id="vpTab"><div class="empty">טוען…</div></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t">החזרות</div><div id="vpReturns"></div></div>
+ </div>
 </div>
 
 <script>
@@ -124,7 +137,8 @@ const RPT_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גילי
 const RPT_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const RPT_TOKEN_KEY='gsGoogleToken';
 let rptToken=null, rptClient=null;
-let PO=[], VEG=[];
+let PO=[], VEG=[], VP=null;
+const VEGCOL=['#2d6a3f','#b03030','#b8890e','#2a5a88','#6b3fa0','#2a8a8a'];
 const ILS=n=>'₪'+Math.round(n||0).toLocaleString('en-US');
 const P2=n=>(n==null||n===''||isNaN(n))?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const NUM=n=>Math.round(n||0).toLocaleString('en-US');
@@ -137,7 +151,7 @@ function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 
 function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
- if(p==='ov')renderOverview();if(p==='hist')renderHist();if(p==='veg')renderVeg();}
+ if(p==='ov')renderOverview();if(p==='hist')renderHist();if(p==='veg')renderVeg();if(p==='vp')renderVegPrices();}
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 
 // ---------- טעינה ----------
@@ -146,9 +160,17 @@ async function readRange(range){
  if(!r.ok){if(r.status===400)return [];throw new Error(range+' '+r.status);}
  return ((await r.json()).values)||[];
 }
+// עמודת base64 (חלוקה למקטעים) -> אובייקט JSON (UTF-8), כמו לשונית CUSTOMERS
+function b64json(rows){
+ const b64=(rows||[]).map(r=>(r&&r[0])||'').join('');
+ if(!b64)return null;
+ try{const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));}catch(e){console.error('VEG_PRICES decode',e);return null;}
+}
 async function loadAll(force){
  try{
-  const [po,veg]=await Promise.all([readRange('PO_HISTORY!A:I'),readRange('VEG_AUCTION!A:H')]);
+  const [po,veg,vp]=await Promise.all([readRange('PO_HISTORY!A:I'),readRange('VEG_AUCTION!A:H'),readRange('VEG_PRICES!A:A')]);
+  VP=b64json(vp);
   // PO: תאריך,מזהה,מפתח ספק,שם ספק,מפתח פריט,שם פריט,כמות,מחיר אחרון,הערכת עלות
   PO=po.filter(r=>r&&r.length>=7&&!isNaN(parseFloat(r[6]))).map(r=>({date:r[0]||'',oid:r[1]||'',supK:r[2]||'',sup:r[3]||'',itemK:r[4]||'',item:r[5]||'',qty:parseFloat(r[6])||0,price:(r[7]===''||r[7]==null)?null:parseFloat(r[7]),cost:(r[8]===''||r[8]==null)?0:parseFloat(r[8])||0}));
   // VEG: תאריך,מפתח ירק,שם ירק,מפתח ספק,שם ספק,מחיר,כמות,נבחר
@@ -156,7 +178,7 @@ async function loadAll(force){
   const sup=[...new Set(PO.map(r=>r.sup).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he'));
   const sel=document.getElementById('hSup');sel.innerHTML='<option value="">הכל</option>'+sup.map(s=>'<option>'+esc(s)+'</option>').join('');
   setTxt('hdrRange',(new Set(PO.map(r=>r.oid))).size+' הזמנות · '+VEG.length+' רשומות מכרז');
-  renderOverview();renderHist();renderVeg();
+  renderOverview();renderHist();renderVeg();renderVegPrices();
  }catch(e){console.error(e);document.getElementById('histTab').innerHTML='<div class="empty">שגיאה בטעינה: '+esc(e.message)+'</div>';}
 }
 
@@ -226,6 +248,67 @@ function renderVeg(){
   h+='<tr><td><b>'+esc(veg)+'</b></td><td class="num">'+esc(v.last)+'</td><td>'+offers+'</td></tr>';
  });
  document.getElementById('vegTab').innerHTML=h+'</tbody></table>';
+}
+
+// ---------- מחירי ירקות ----------
+const mlabel=m=>{const p=String(m).split('-');return p.length===2?p[1]+'/'+p[0].slice(2):m;};
+function renderVegPrices(){
+ const kEl=document.getElementById('vpKpi'),tEl=document.getElementById('vpTab'),rEl=document.getElementById('vpReturns');
+ if(!kEl)return;
+ if(!VP||!VP.veg||!VP.veg.length){
+  kEl.innerHTML='';rEl.innerHTML='';
+  tEl.innerHTML='<div class="empty">לשונית VEG_PRICES ריקה. יש להריץ build_veg_prices.py ואז ingest_veg_prices.py.</div>';
+  ['vpTrend','vpSpend','vpVol'].forEach(id=>{if(charts[id])charts[id].destroy();});
+  return;
+ }
+ const t=VP.totals||{}, R=VP.returns||{rows:[],totalKg:0};
+ setTxt('vpRange',VP.period?VP.period.from+' – '+VP.period.to:'');
+ kEl.innerHTML=
+  kpi('y','הוצאת רכש',ILS(t.spend),'סה"כ בתקופה')+
+  kpi('g','כמות',NUM(t.kg)+' ק"ג','נקנו')+
+  kpi('b','ירקות',NUM(t.nVeg),t.txns?NUM(t.txns)+' עסקאות':'במעקב')+
+  kpi('p','החזרות',R.rows.length?NUM(R.rows.length):'0',R.totalKg?NUM(R.totalKg)+' ק"ג':'לא נמצאו');
+ const months=VP.months||[], labels=months.map(mlabel);
+ // מחיר ממוצע חודשי — הניתוח המרכזי
+ mk('vpTrend',{type:'line',data:{labels,datasets:VP.veg.map((v,i)=>{
+   const by={};v.monthly.forEach(x=>by[x.m]=x.avg);
+   return {label:v.name,data:months.map(m=>m in by?by[m]:null),borderColor:VEGCOL[i%VEGCOL.length],
+    backgroundColor:VEGCOL[i%VEGCOL.length],tension:.3,spanGaps:true,pointRadius:2,borderWidth:2};
+ })},options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+P2(c.parsed.y)}}},
+   scales:{y:{ticks:{callback:v=>'₪'+v}}}}});
+ // הוצאה לפי ירק
+ mk('vpSpend',{type:'bar',data:{labels:VP.veg.map(v=>v.name),datasets:[{data:VP.veg.map(v=>Math.round(v.totalSpend)),
+   backgroundColor:VP.veg.map((v,i)=>VEGCOL[i%VEGCOL.length]),borderRadius:5}]},
+   options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>ILS(c.parsed.x)}}},
+   scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+ // כמות חודשית מוערמת לפי ירק
+ mk('vpVol',{type:'bar',data:{labels,datasets:VP.veg.map((v,i)=>{const by={};v.monthly.forEach(x=>by[x.m]=x.kg);
+   return {label:v.name,data:months.map(m=>by[m]||0),backgroundColor:VEGCOL[i%VEGCOL.length]};})},
+   options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+NUM(c.parsed.y)+' ק"ג'}}},
+   scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>(v/1000)+'K'}}}}});
+ // טבלת פירוט
+ let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע</th><th>טווח</th><th>ראשון</th><th>אחרון</th><th>שינוי</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע)</th></tr></thead><tbody>';
+ VP.veg.forEach((v,i)=>{
+  const first=v.monthly[0],last=v.monthly[v.monthly.length-1];
+  const delta=(first&&last&&first.avg)?((last.avg-first.avg)/first.avg*100):null;
+  const dtxt=delta==null?'—':(delta>=0?'▲ ':'▼ ')+Math.abs(delta).toFixed(0)+'%';
+  const dsty=delta==null?'':(delta>=0?'style="color:var(--red);font-weight:700"':'style="color:var(--green);font-weight:700"');
+  const sup=(v.bySupplier||[]).map(s=>esc((VP.suppliers&&VP.suppliers[s.code])||s.code)+' '+P2(s.avg)).join(' · ');
+  h+='<tr><td><b style="color:'+VEGCOL[i%VEGCOL.length]+'">'+esc(v.name)+'</b></td><td class="num">'+P2(v.avgPrice)+'</td>'+
+     '<td class="num">'+P2(v.minPrice)+'–'+P2(v.maxPrice)+'</td><td class="num">'+(first?P2(first.avg):'—')+'</td>'+
+     '<td class="num">'+(last?P2(last.avg):'—')+'</td><td class="num" '+dsty+'>'+dtxt+'</td><td class="num">'+NUM(v.totalKg)+'</td>'+
+     '<td class="num">'+ILS(v.totalSpend)+'</td><td style="font-size:11px">'+sup+'</td></tr>';
+ });
+ tEl.innerHTML=h+'</tbody></table>';
+ // החזרות
+ if(!R.rows.length){
+  rEl.innerHTML='<div class="empty">לא נמצאו החזרות בתקופה — כל תנועות המלאי הן חשבוניות רכש (עמודת "יציאה" ריקה).</div>';
+ }else{
+  let rh='<div class="note">סה"כ '+NUM(R.totalKg)+' ק"ג בהחזרות ('+R.rows.length+' רשומות).</div>'+
+   '<table><thead><tr><th>ירק</th><th>תאריך</th><th>ספק</th><th>ק"ג</th><th>מחיר</th></tr></thead><tbody>';
+  R.rows.forEach(r=>{rh+='<tr><td>'+esc(r.veg)+'</td><td class="num">'+esc(r.date)+'</td><td>'+esc((VP.suppliers&&VP.suppliers[r.code])||r.code)+'</td><td class="num">'+NUM(r.kg)+'</td><td class="num">'+P2(r.price)+'</td></tr>';});
+  rEl.innerHTML=rh+'</tbody></table>';
+ }
 }
 
 // ================= התחברות גוגל (קריאה בלבד) =================

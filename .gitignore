@@ -8,3 +8,5 @@ service_account*.json
 C_*.xlsx
 I_*.xlsx
 customers_D.json
+# ניתוח מחירי ירקות — מכיל מחירי קנייה, נקלט לגיליון בלבד (כמו purchasing_catalog.json)
+veg_prices.json
