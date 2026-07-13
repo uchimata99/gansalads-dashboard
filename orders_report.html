@@ -352,7 +352,7 @@ function renderVegPrices(){
  const prevHas=!!prevYear&&VP.veg.some(v=>vegAvgForMonths(v,prevYear,selMoSet)!=null);
  const chHdr=prevHas?('מול '+prevYear):'שינוי';
  setTxt('vpTabLbl',prevHas?('"מול '+prevYear+'" = ממוצע משוקלל באותם חודשים'):(vpYear==='all'?'שינוי = חודש אחרון מול ראשון':''));
- let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע</th><th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע)</th></tr></thead><tbody>';
+ let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע משוקלל</th><th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע משוקלל)</th></tr></thead><tbody>';
  scoped.forEach((o,i)=>{
   const s=o.s;let delta=null;
   if(prevHas){const pa=vegAvgForMonths(o.v,prevYear,selMoSet);if(pa&&s.avg)delta=(s.avg-pa)/pa*100;}
