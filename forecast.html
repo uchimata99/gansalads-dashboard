@@ -439,6 +439,29 @@ const FC_NOTES=[
 function fcNote(name){ for(const n of FC_NOTES){ if(n.p===name) return n; } return null; }
 function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.type==='one_off' && n.p===name && +n.w===+w) return true; } return false; }
 
+// ─── לקוח שעוזב — הורדת הכמות השבועית שלו פר-מוצר מהחיזוי, החל משבוע נתון ───
+// שינוי מבני מונחה-מיכל: כשלקוח מודיע שהוא מפסיק, מורידים את הצריכה שלו
+// פר-מוצר (נמדד מקובץ הלקוחות) מהחיזוי, כך שלא מייצרים עודף. `kg` = הכמות
+// השבועית שיורדת · `from` = השבוע שממנו מפעילים (לפני כן הלקוח עוד קנה).
+// נאפיס (7 סניפים) — כולם עוזבים יולי 2026; נמדד משבוע 28.
+const FC_CUSTOMER_OUT=[
+  {p:"חומוס אמיגה 4 ק\"ג",       kg:724, from:29, why:"נאפיס — כל הסניפים עוזבים (יולי 2026)"},
+  {p:"סחוג ירוק 2 ק\"ג",         kg:190, from:29, why:"נאפיס"},
+  {p:"חריף טחון 2 ק\"ג",         kg:22,  from:29, why:"נאפיס"},
+  {p:"לקט ירקות 3 ק\"ג טורשי",   kg:18,  from:29, why:"נאפיס"},
+  {p:"רוטב שקשוקה 4 ק\"ג",       kg:16,  from:29, why:"נאפיס"},
+  {p:"שום כתוש 4 ק\"ג",          kg:12,  from:29, why:"נאפיס"},
+  {p:"חציל במיונז 4 ק\"ג",       kg:8,   from:29, why:"נאפיס"},
+  {p:"צ'ימיצורי 2 ק\"ג",         kg:4,   from:29, why:"נאפיס"}
+];
+// מקדם הפחתה למוצר לשבוע-היעד: (סה"כ − כמות הלקוח שעזב)/סה"כ, לא שלילי.
+function fcCustomerOutFactor(name, totK, targetWeek){
+  const e=FC_CUSTOMER_OUT.find(x=>x.p===name); if(!e) return 1;
+  if(e.from!=null && targetWeek!=null && targetWeek<e.from) return 1;   // עוד לא הגיע השבוע
+  if(!(totK>0)) return 1;
+  return Math.max(0, (totK-e.kg)/totK);
+}
+
 // ─── התראת שבוע-לפני-חג (מבוססת נתונים, לא חוק אוטומטי) ───
 // נבדק אמפירית על 11 שנות מכירות (2015–2026, מיושר לשבוע העסקי א'–ה'):
 // בשבוע שלפני חלק מהחגים המכירות המצרפיות עולות באופן עקבי. את התחזית
@@ -495,6 +518,7 @@ function computeForecastFromData(d){
   const weeks=(d.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
   if(!weeks.length) return null;
   const recentAll=weeks.slice(-Math.min(4,weeks.length));
+  const targetWeek=weeks[weeks.length-1]+1;   // השבוע שאותו חוזים — לצורך הורדת לקוח שעוזב
   const products=[];
   for(const name in PD){
     const note=fcNote(name);
@@ -517,6 +541,9 @@ function computeForecastFromData(d){
     const dailyP={}, dailyK={}; let totP=0, totK=0;
     DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/wsum; dailyK[day]=sumK[i]/wsum; totP+=dailyP[day]; totK+=dailyK[day]; });
     if(totK<=0 && totP<=0) continue;
+    // הורדת לקוח שעוזב (נאפיס): מפחיתים את הכמות שלו פר-מוצר, פרופורציונלי על פני הימים
+    const cf=fcCustomerOutFactor(String(name), totK, targetWeek);
+    if(cf<1){ DAYS.forEach(day=>{ dailyP[day]*=cf; dailyK[day]*=cf; }); totP*=cf; totK*=cf; }
     products.push({name:String(name), pkg:totP, kg:totK, daily_pkg:dailyP, daily_kg:dailyK, std_pkg:stdev(wkP), std_kg:stdev(wkK)});
   }
   if(!products.length) return null;
