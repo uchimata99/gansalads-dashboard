@@ -125,13 +125,13 @@ html.locked #gsLock{display:flex!important}
   <div class="note">ניתוח מחירי הירקות הטריים מתוך כרטסות המלאי (תיקיית "קניית ירקות"). המחיר הוא <b>ממוצע משוקלל בק"ג</b> של חשבוניות הרכש. בחרו שנה לתצוגה שנתית, או "כל השנים" לכל התקופה. הנתונים נטענים מלשונית VEG_PRICES.</div>
   <div class="ynav" id="vpYears"></div>
   <div class="kpi-row" id="vpKpi"></div>
-  <div class="card"><div class="card-t"><span>מחיר ממוצע חודשי (₪ לק"ג)</span><span class="lbl" id="vpRange"></span></div><div class="cw" id="vpTrendWrap"><canvas id="vpTrend"></canvas></div></div>
+  <div class="card"><div class="card-t"><span>מחיר ממוצע משוקלל חודשי — לכל ירק (₪ לק"ג)</span><span class="lbl" id="vpRange"></span></div><div class="cw" id="vpTrendWrap"><canvas id="vpTrend"></canvas></div></div>
   <div class="grid2" style="margin-top:18px">
    <div class="card"><div class="card-t">הוצאת רכש לפי ירק</div><div class="cw s"><canvas id="vpSpend"></canvas></div></div>
    <div class="card"><div class="card-t">כמות חודשית לפי ירק (ק"ג)</div><div class="cw s"><canvas id="vpVol"></canvas></div></div>
   </div>
-  <div class="card" style="margin-top:18px"><div class="card-t"><span>השוואת מחיר לפי חודש בין השנים</span><span class="lbl" id="vpCmpLbl"></span></div><div class="ynav" id="vpCmpVeg" style="margin-bottom:12px"></div><div class="cw"><canvas id="vpCmp"></canvas></div></div>
-  <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט לפי ירק</span><span class="lbl">שינוי = מחיר החודש האחרון מול הראשון</span></div><div class="scroll" id="vpTab"><div class="empty">טוען…</div></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>השוואה בין שנים — <span id="vpCmpLbl" style="font-weight:800"></span></span><span class="ychips" id="vpCmpMetric"></span></div><div class="ynav" id="vpCmpVeg" style="margin-bottom:12px"></div><div class="cw"><canvas id="vpCmp"></canvas></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט לפי ירק</span><span class="lbl" id="vpTabLbl"></span></div><div class="scroll" id="vpTab"><div class="empty">טוען…</div></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t">החזרות</div><div id="vpReturns"></div></div>
  </div>
 </div>
@@ -274,11 +274,17 @@ function vegScope(v){
  const sup=Object.values(by).map(d=>({code:d.code,kg:d.kg,spend:d.spend,avg:d.kg?d.spend/d.kg:null,n:d.n})).sort((a,b)=>b.kg-a.kg);
  return kg?{kg,spend,avg:spend/kg,min,max,n,bySupplier:sup}:null;
 }
-let vpCmpVeg=null;   // מפתח הירק שנבחר לגרף ההשוואה
+let vpCmpVeg=null;          // מפתח הירק שנבחר לגרף ההשוואה
+let vpCmpMetric='price';    // 'price' (מחיר משוקלל) או 'qty' (כמות ק"ג)
 function vpSet(y){vpYear=y;renderVegPrices();}
 function vpSetCmpVeg(k){vpCmpVeg=k;renderVegPrices();}
+function vpSetCmpMetric(m){vpCmpMetric=m;renderVegPrices();}
 function renderVpCmpVeg(){const el=document.getElementById('vpCmpVeg');if(!el)return;
  el.innerHTML='<span class="ychips">'+(VP.veg||[]).map(v=>'<span class="ychip'+(vpCmpVeg===v.key?' on':'')+'" onclick="vpSetCmpVeg(\''+v.key+'\')">'+esc(v.name)+'</span>').join('')+'</span>';}
+function renderVpCmpMetric(){const el=document.getElementById('vpCmpMetric');if(!el)return;
+ el.innerHTML=[['price','מחיר משוקלל'],['qty','כמות']].map(o=>'<span class="ychip'+(vpCmpMetric===o[0]?' on':'')+'" onclick="vpSetCmpMetric(\''+o[0]+'\')">'+o[1]+'</span>').join('');}
+// ממוצע משוקלל של ירק על פני תקופה (שנה + קבוצת חודשי-לוח) — להשוואת "תקופה זהה"
+function vegAvgForMonths(v,year,moSet){let kg=0,sp=0;(v.monthly||[]).forEach(x=>{const p=x.m.split('-');if(p[0]===year&&moSet.has(p[1])){kg+=x.kg;sp+=x.spend;}});return kg?sp/kg:null;}
 function vpStep(d){const ys=vpYearsAll();let i=ys.indexOf(vpYear);if(i<0)i=ys.length-1;i=Math.min(ys.length-1,Math.max(0,i+d));vpYear=ys[i];renderVegPrices();}
 function renderVpYears(){
  const el=document.getElementById('vpYears');if(!el)return;
@@ -328,23 +334,28 @@ function renderVegPrices(){
  mk('vpVol',{type:'bar',data:{labels,datasets:scoped.map((o,i)=>{const by={};(o.v.monthly||[]).forEach(x=>{if(mset.has(x.m))by[x.m]=x.kg;});
    return {label:o.v.name,data:months.map(m=>by[m]||0),backgroundColor:VEGCOL[i%VEGCOL.length]};})},
    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+NUM(c.parsed.y)+' ק"ג'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>(v/1000)+'K'}}}}});
- // גרף השוואה — אותו חודש בשנים שונות, לירק נבחר (ממוצע משוקלל, קו לכל שנה)
+ // גרף השוואה — אותו חודש בשנים שונות, לירק נבחר; מדד: מחיר משוקלל / כמות
  const MON=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
  if(vpCmpVeg==null||!VP.veg.some(v=>v.key===vpCmpVeg))vpCmpVeg=((scoped[0]&&scoped[0].v)||VP.veg[0]).key;
- renderVpCmpVeg();
+ renderVpCmpVeg();renderVpCmpMetric();
  const cveg=VP.veg.find(v=>v.key===vpCmpVeg)||VP.veg[0];
- setTxt('vpCmpLbl',cveg.name+' · ממוצע משוקלל בק"ג');
- const cby={};(cveg.monthly||[]).forEach(x=>cby[x.m]=x.avg);
+ const cQty=vpCmpMetric==='qty';
+ setTxt('vpCmpLbl',cveg.name+' · '+(cQty?'כמות (ק"ג)':'מחיר משוקלל (₪/ק"ג)'));
+ const cby={};(cveg.monthly||[]).forEach(x=>cby[x.m]=cQty?x.kg:x.avg);
  const cmpDs=vpYearsAll().map((y,i)=>({label:y,borderColor:YEARCOL[i%YEARCOL.length],backgroundColor:YEARCOL[i%YEARCOL.length],tension:.3,spanGaps:true,pointRadius:3,borderWidth:2.5,
-   data:Array.from({length:12},(_,mo)=>{const k=y+'-'+String(mo+1).padStart(2,'0');return k in cby?Math.round(cby[k]*100)/100:null;})}));
+   data:Array.from({length:12},(_,mo)=>{const k=y+'-'+String(mo+1).padStart(2,'0');return k in cby?(cQty?Math.round(cby[k]):Math.round(cby[k]*100)/100):null;})}));
  mk('vpCmp',{type:'line',data:{labels:MON,datasets:cmpDs},
-   options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+P2(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>'₪'+v}}}}});
- // טבלת פירוט — עמודת שינוי = מול השנה הקודמת (בשנה נבחרת) או ראשון מול אחרון (בכל השנים)
- const chHdr=prevYear&&VP.veg.some(v=>vegAnnual(v,prevYear))?('מול '+prevYear):'שינוי';
+   options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(cQty?NUM(c.parsed.y)+' ק"ג':P2(c.parsed.y))}}},
+   scales:{y:{ticks:{callback:v=>cQty?NUM(v):'₪'+v}}}}});
+ // עמודת שינוי: מול השנה הקודמת ב**תקופה זהה** (ממוצע משוקלל, אותם חודשי-לוח); ב"כל השנים" — חודש אחרון מול ראשון
+ const selMoSet=new Set(months.map(m=>m.split('-')[1]));
+ const prevHas=!!prevYear&&VP.veg.some(v=>vegAvgForMonths(v,prevYear,selMoSet)!=null);
+ const chHdr=prevHas?('מול '+prevYear):'שינוי';
+ setTxt('vpTabLbl',prevHas?('"מול '+prevYear+'" = ממוצע משוקלל באותם חודשים'):(vpYear==='all'?'שינוי = חודש אחרון מול ראשון':''));
  let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע</th><th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע)</th></tr></thead><tbody>';
  scoped.forEach((o,i)=>{
   const s=o.s;let delta=null;
-  if(prevYear){const pa=vegAnnual(o.v,prevYear);if(pa&&pa.avg&&s.avg)delta=(s.avg-pa.avg)/pa.avg*100;}
+  if(prevHas){const pa=vegAvgForMonths(o.v,prevYear,selMoSet);if(pa&&s.avg)delta=(s.avg-pa)/pa*100;}
   else{const ms=(o.v.monthly||[]).filter(x=>mset.has(x.m));const f=ms[0],l=ms[ms.length-1];if(f&&l&&f.avg)delta=(l.avg-f.avg)/f.avg*100;}
   const dtxt=delta==null?'—':(delta>=0?'▲ ':'▼ ')+Math.abs(delta).toFixed(0)+'%';
   const dsty=delta==null?'':(delta>=0?'style="color:var(--red);font-weight:700"':'style="color:var(--green);font-weight:700"');
