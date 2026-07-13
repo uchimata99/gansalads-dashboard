@@ -46,6 +46,12 @@ select:focus,input:focus{border-color:var(--green)}
 .note{background:var(--blue-l);border:1px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:12.5px;line-height:1.7;color:#1f3f5c;margin-bottom:18px}.note b{color:var(--blue)}
 .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
 .cheap{color:var(--green);font-weight:700}.star{color:var(--gold)}
+.ynav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.ybtn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--green);cursor:pointer}
+.ybtn:hover:not(:disabled){background:var(--green-l)}.ybtn:disabled{opacity:.35;cursor:default}
+.ychips{display:flex;gap:5px;flex-wrap:wrap}
+.ychip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 15px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.ychip:hover{color:var(--green)}.ychip.on{background:var(--green);color:#fff;border-color:var(--green)}
 @media(max-width:780px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.main{padding:14px}.topbar{padding:0 14px}.tabs{padding:0 10px}table{font-size:11.5px}th,td{padding:6px 7px}}
 html.locked #gsLock{display:flex!important}
 #gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
@@ -116,7 +122,8 @@ html.locked #gsLock{display:flex!important}
  </div>
 
  <div class="page" id="vp">
-  <div class="note">ניתוח מחירי הירקות הטריים מתוך כרטסות המלאי (תיקיית "קניית ירקות"). המחיר החודשי הוא <b>ממוצע משוקלל בק"ג</b> של חשבוניות הרכש. הנתונים נטענים מלשונית VEG_PRICES.</div>
+  <div class="note">ניתוח מחירי הירקות הטריים מתוך כרטסות המלאי (תיקיית "קניית ירקות"). המחיר הוא <b>ממוצע משוקלל בק"ג</b> של חשבוניות הרכש. בחרו שנה לתצוגה שנתית, או "כל השנים" לכל התקופה. הנתונים נטענים מלשונית VEG_PRICES.</div>
+  <div class="ynav" id="vpYears"></div>
   <div class="kpi-row" id="vpKpi"></div>
   <div class="card"><div class="card-t"><span>מחיר ממוצע חודשי (₪ לק"ג)</span><span class="lbl" id="vpRange"></span></div><div class="cw" id="vpTrendWrap"><canvas id="vpTrend"></canvas></div></div>
   <div class="grid2" style="margin-top:18px">
@@ -250,63 +257,91 @@ function renderVeg(){
  document.getElementById('vegTab').innerHTML=h+'</tbody></table>';
 }
 
-// ---------- מחירי ירקות ----------
+// ---------- מחירי ירקות (תצוגה שנתית + דפדוף בין שנים) ----------
 const mlabel=m=>{const p=String(m).split('-');return p.length===2?p[1]+'/'+p[0].slice(2):m;};
+let vpYear=null;   // 'all' או 'YYYY'
+function vpYearsAll(){return (VP&&VP.years&&VP.years.length)?VP.years.slice():[...new Set((VP&&VP.months||[]).map(m=>String(m).split('-')[0]))].sort();}
+function vpScopeMonths(){return vpYear==='all'?(VP.months||[]).slice():(VP.months||[]).filter(m=>String(m).startsWith(vpYear+'-'));}
+function vegAnnual(v,y){return (v.annual||[]).find(a=>a.year===y);}
+// אגרגציה של ירק לטווח הנבחר (שנה בודדת = שורת annual; "כל השנים" = איחוד)
+function vegScope(v){
+ if(vpYear!=='all'){const a=vegAnnual(v,vpYear);return a?{kg:a.kg,spend:a.spend,avg:a.avg,min:a.min,max:a.max,n:a.n,bySupplier:a.bySupplier||[]}:null;}
+ const by={};let kg=0,spend=0,min=null,max=null,n=0;
+ (v.annual||[]).forEach(a=>{kg+=a.kg;spend+=a.spend;n+=a.n;if(a.min!=null)min=min==null?a.min:Math.min(min,a.min);if(a.max!=null)max=max==null?a.max:Math.max(max,a.max);
+  (a.bySupplier||[]).forEach(s=>{const d=by[s.code]=by[s.code]||{code:s.code,kg:0,spend:0,n:0};d.kg+=s.kg;d.spend+=s.spend;d.n+=s.n;});});
+ const sup=Object.values(by).map(d=>({code:d.code,kg:d.kg,spend:d.spend,avg:d.kg?d.spend/d.kg:null,n:d.n})).sort((a,b)=>b.kg-a.kg);
+ return kg?{kg,spend,avg:spend/kg,min,max,n,bySupplier:sup}:null;
+}
+function vpSet(y){vpYear=y;renderVegPrices();}
+function vpStep(d){const ys=vpYearsAll();let i=ys.indexOf(vpYear);if(i<0)i=ys.length-1;i=Math.min(ys.length-1,Math.max(0,i+d));vpYear=ys[i];renderVegPrices();}
+function renderVpYears(){
+ const el=document.getElementById('vpYears');if(!el)return;
+ const ys=vpYearsAll();
+ if(vpYear==null||(vpYear!=='all'&&ys.indexOf(vpYear)<0))vpYear=ys.length?ys[ys.length-1]:'all';
+ const i=ys.indexOf(vpYear),atAll=vpYear==='all';
+ let h='<button class="ybtn" onclick="vpStep(-1)"'+((atAll||i<=0)?' disabled':'')+'>‹ קודמת</button><span class="ychips">';
+ h+='<span class="ychip'+(atAll?' on':'')+'" onclick="vpSet(\'all\')">כל השנים</span>';
+ ys.forEach(y=>{h+='<span class="ychip'+(vpYear===y?' on':'')+'" onclick="vpSet(\''+y+'\')">'+y+'</span>';});
+ h+='</span><button class="ybtn" onclick="vpStep(1)"'+((atAll||i>=ys.length-1)?' disabled':'')+'>הבאה ›</button>';
+ el.innerHTML=h;
+}
 function renderVegPrices(){
- const kEl=document.getElementById('vpKpi'),tEl=document.getElementById('vpTab'),rEl=document.getElementById('vpReturns');
+ const kEl=document.getElementById('vpKpi'),tEl=document.getElementById('vpTab'),rEl=document.getElementById('vpReturns'),yEl=document.getElementById('vpYears');
  if(!kEl)return;
  if(!VP||!VP.veg||!VP.veg.length){
-  kEl.innerHTML='';rEl.innerHTML='';
+  kEl.innerHTML='';rEl.innerHTML='';if(yEl)yEl.innerHTML='';
   tEl.innerHTML='<div class="empty">לשונית VEG_PRICES ריקה. יש להריץ build_veg_prices.py ואז ingest_veg_prices.py.</div>';
   ['vpTrend','vpSpend','vpVol'].forEach(id=>{if(charts[id])charts[id].destroy();});
   return;
  }
- const t=VP.totals||{}, R=VP.returns||{rows:[],totalKg:0};
- setTxt('vpRange',VP.period?VP.period.from+' – '+VP.period.to:'');
+ renderVpYears();
+ const months=vpScopeMonths(), mset=new Set(months), labels=months.map(mlabel);
+ // ירקות בעלי נתונים בטווח הנבחר, ממוינים לפי הוצאה
+ const scoped=VP.veg.map(v=>({v,s:vegScope(v)})).filter(o=>o.s).sort((a,b)=>b.s.spend-a.s.spend);
+ const prevYear=vpYear!=='all'?String((+vpYear)-1):null;
+ // KPI לטווח
+ const spend=scoped.reduce((a,o)=>a+o.s.spend,0), kg=scoped.reduce((a,o)=>a+o.s.kg,0);
+ const R=VP.returns||{rows:[],totalKg:0};
+ const rrows=(R.rows||[]).filter(r=>{if(vpYear==='all')return true;const mm=String(r.date).match(/(\d{2,4})\s*$/);if(!mm)return true;const y=+mm[1];return String(y<100?2000+y:y)===vpYear;});
+ setTxt('vpRange',vpYear==='all'?((VP.period&&VP.period.from)+' – '+(VP.period&&VP.period.to)):('שנת '+vpYear));
  kEl.innerHTML=
-  kpi('y','הוצאת רכש',ILS(t.spend),'סה"כ בתקופה')+
-  kpi('g','כמות',NUM(t.kg)+' ק"ג','נקנו')+
-  kpi('b','ירקות',NUM(t.nVeg),t.txns?NUM(t.txns)+' עסקאות':'במעקב')+
-  kpi('p','החזרות',R.rows.length?NUM(R.rows.length):'0',R.totalKg?NUM(R.totalKg)+' ק"ג':'לא נמצאו');
- const months=VP.months||[], labels=months.map(mlabel);
- // מחיר ממוצע חודשי — הניתוח המרכזי
- mk('vpTrend',{type:'line',data:{labels,datasets:VP.veg.map((v,i)=>{
-   const by={};v.monthly.forEach(x=>by[x.m]=x.avg);
-   return {label:v.name,data:months.map(m=>m in by?by[m]:null),borderColor:VEGCOL[i%VEGCOL.length],
-    backgroundColor:VEGCOL[i%VEGCOL.length],tension:.3,spanGaps:true,pointRadius:2,borderWidth:2};
- })},options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+P2(c.parsed.y)}}},
-   scales:{y:{ticks:{callback:v=>'₪'+v}}}}});
- // הוצאה לפי ירק
- mk('vpSpend',{type:'bar',data:{labels:VP.veg.map(v=>v.name),datasets:[{data:VP.veg.map(v=>Math.round(v.totalSpend)),
-   backgroundColor:VP.veg.map((v,i)=>VEGCOL[i%VEGCOL.length]),borderRadius:5}]},
-   options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>ILS(c.parsed.x)}}},
-   scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
- // כמות חודשית מוערמת לפי ירק
- mk('vpVol',{type:'bar',data:{labels,datasets:VP.veg.map((v,i)=>{const by={};v.monthly.forEach(x=>by[x.m]=x.kg);
-   return {label:v.name,data:months.map(m=>by[m]||0),backgroundColor:VEGCOL[i%VEGCOL.length]};})},
-   options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+NUM(c.parsed.y)+' ק"ג'}}},
-   scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>(v/1000)+'K'}}}}});
- // טבלת פירוט
- let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע</th><th>טווח</th><th>ראשון</th><th>אחרון</th><th>שינוי</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע)</th></tr></thead><tbody>';
- VP.veg.forEach((v,i)=>{
-  const first=v.monthly[0],last=v.monthly[v.monthly.length-1];
-  const delta=(first&&last&&first.avg)?((last.avg-first.avg)/first.avg*100):null;
+  kpi('y','הוצאת רכש',ILS(spend),vpYear==='all'?'כל התקופה':'שנת '+vpYear)+
+  kpi('g','כמות',NUM(kg)+' ק"ג','נקנו')+
+  kpi('b','מחיר ממוצע',kg?P2(spend/kg):'—','₪ לק"ג · כל הירקות')+
+  kpi('p','החזרות',rrows.length?NUM(rrows.length):'0',rrows.length?NUM(rrows.reduce((a,r)=>a+r.kg,0))+' ק"ג':'לא נמצאו');
+ // מחיר ממוצע חודשי (חודשי הטווח)
+ mk('vpTrend',{type:'line',data:{labels,datasets:scoped.map((o,i)=>{const by={};(o.v.monthly||[]).forEach(x=>{if(mset.has(x.m))by[x.m]=x.avg;});
+   return {label:o.v.name,data:months.map(m=>m in by?by[m]:null),borderColor:VEGCOL[i%VEGCOL.length],backgroundColor:VEGCOL[i%VEGCOL.length],tension:.3,spanGaps:true,pointRadius:2,borderWidth:2};})},
+   options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+P2(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>'₪'+v}}}}});
+ // הוצאה לפי ירק (בטווח)
+ mk('vpSpend',{type:'bar',data:{labels:scoped.map(o=>o.v.name),datasets:[{data:scoped.map(o=>Math.round(o.s.spend)),backgroundColor:scoped.map((o,i)=>VEGCOL[i%VEGCOL.length]),borderRadius:5}]},
+   options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>ILS(c.parsed.x)}}},scales:{x:{ticks:{callback:v=>'₪'+(v/1000)+'K'}}}}});
+ // כמות חודשית מוערמת (בטווח)
+ mk('vpVol',{type:'bar',data:{labels,datasets:scoped.map((o,i)=>{const by={};(o.v.monthly||[]).forEach(x=>{if(mset.has(x.m))by[x.m]=x.kg;});
+   return {label:o.v.name,data:months.map(m=>by[m]||0),backgroundColor:VEGCOL[i%VEGCOL.length]};})},
+   options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+NUM(c.parsed.y)+' ק"ג'}}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>(v/1000)+'K'}}}}});
+ // טבלת פירוט — עמודת שינוי = מול השנה הקודמת (בשנה נבחרת) או ראשון מול אחרון (בכל השנים)
+ const chHdr=prevYear&&VP.veg.some(v=>vegAnnual(v,prevYear))?('מול '+prevYear):'שינוי';
+ let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע</th><th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע)</th></tr></thead><tbody>';
+ scoped.forEach((o,i)=>{
+  const s=o.s;let delta=null;
+  if(prevYear){const pa=vegAnnual(o.v,prevYear);if(pa&&pa.avg&&s.avg)delta=(s.avg-pa.avg)/pa.avg*100;}
+  else{const ms=(o.v.monthly||[]).filter(x=>mset.has(x.m));const f=ms[0],l=ms[ms.length-1];if(f&&l&&f.avg)delta=(l.avg-f.avg)/f.avg*100;}
   const dtxt=delta==null?'—':(delta>=0?'▲ ':'▼ ')+Math.abs(delta).toFixed(0)+'%';
   const dsty=delta==null?'':(delta>=0?'style="color:var(--red);font-weight:700"':'style="color:var(--green);font-weight:700"');
-  const sup=(v.bySupplier||[]).map(s=>esc((VP.suppliers&&VP.suppliers[s.code])||s.code)+' '+P2(s.avg)).join(' · ');
-  h+='<tr><td><b style="color:'+VEGCOL[i%VEGCOL.length]+'">'+esc(v.name)+'</b></td><td class="num">'+P2(v.avgPrice)+'</td>'+
-     '<td class="num">'+P2(v.minPrice)+'–'+P2(v.maxPrice)+'</td><td class="num">'+(first?P2(first.avg):'—')+'</td>'+
-     '<td class="num">'+(last?P2(last.avg):'—')+'</td><td class="num" '+dsty+'>'+dtxt+'</td><td class="num">'+NUM(v.totalKg)+'</td>'+
-     '<td class="num">'+ILS(v.totalSpend)+'</td><td style="font-size:11px">'+sup+'</td></tr>';
+  const sup=(s.bySupplier||[]).map(x=>esc((VP.suppliers&&VP.suppliers[x.code])||x.code)+' '+P2(x.avg)).join(' · ');
+  h+='<tr><td><b style="color:'+VEGCOL[i%VEGCOL.length]+'">'+esc(o.v.name)+'</b></td><td class="num">'+P2(s.avg)+'</td>'+
+     '<td class="num">'+P2(s.min)+'–'+P2(s.max)+'</td><td class="num" '+dsty+'>'+dtxt+'</td><td class="num">'+NUM(s.kg)+'</td>'+
+     '<td class="num">'+ILS(s.spend)+'</td><td style="font-size:11px">'+sup+'</td></tr>';
  });
- tEl.innerHTML=h+'</tbody></table>';
- // החזרות
- if(!R.rows.length){
-  rEl.innerHTML='<div class="empty">לא נמצאו החזרות בתקופה — כל תנועות המלאי הן חשבוניות רכש (עמודת "יציאה" ריקה).</div>';
+ tEl.innerHTML=scoped.length?h+'</tbody></table>':'<div class="empty">אין נתונים לשנה זו.</div>';
+ // החזרות (בטווח)
+ if(!rrows.length){
+  rEl.innerHTML='<div class="empty">לא נמצאו החזרות'+(vpYear==='all'?' בתקופה':' בשנת '+vpYear)+' — כל תנועות המלאי הן חשבוניות רכש (עמודת "יציאה" ריקה).</div>';
  }else{
-  let rh='<div class="note">סה"כ '+NUM(R.totalKg)+' ק"ג בהחזרות ('+R.rows.length+' רשומות).</div>'+
+  let rh='<div class="note">סה"כ '+NUM(rrows.reduce((a,r)=>a+r.kg,0))+' ק"ג בהחזרות ('+rrows.length+' רשומות).</div>'+
    '<table><thead><tr><th>ירק</th><th>תאריך</th><th>ספק</th><th>ק"ג</th><th>מחיר</th></tr></thead><tbody>';
-  R.rows.forEach(r=>{rh+='<tr><td>'+esc(r.veg)+'</td><td class="num">'+esc(r.date)+'</td><td>'+esc((VP.suppliers&&VP.suppliers[r.code])||r.code)+'</td><td class="num">'+NUM(r.kg)+'</td><td class="num">'+P2(r.price)+'</td></tr>';});
+  rrows.forEach(r=>{rh+='<tr><td>'+esc(r.veg)+'</td><td class="num">'+esc(r.date)+'</td><td>'+esc((VP.suppliers&&VP.suppliers[r.code])||r.code)+'</td><td class="num">'+NUM(r.kg)+'</td><td class="num">'+P2(r.price)+'</td></tr>';});
   rEl.innerHTML=rh+'</tbody></table>';
  }
 }
