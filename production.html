@@ -765,9 +765,9 @@ function buildWeeklyTrendChart(){
   else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
   else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
   const bg=WEEKS.map((_,i)=>i===1?color:color+'CC'), bc=WEEKS.map(()=>color);
-  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:fc.kg); labels.push('חיזוי'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }
+  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:fc.kg); labels.push('השבוע הקרוב'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }
   makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:bc,borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>c.label==='חיזוי'?(' חיזוי לשבוע הבא: '+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+fmt(c.raw))}}},
+    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>c.label==='השבוע הקרוב'?(' חיזוי לשבוע הקרוב: '+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+fmt(c.raw))}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
 }
 function buildGroupStackChart(){
