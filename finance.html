@@ -339,7 +339,7 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gray);margin-to
 //  כל המספרים הפיננסיים נטענים בזמן ריצה — אין מספרים במקור הדף.
 // ════════════════════════════════════════════════════════════
 const FIN_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
-const FIN_SHEET_ID='1_afs20qhbCT6Plq3twmZlxE7blORws1SG8jsvrlJQQM';
+const FIN_SHEET_ID='1hCghpEyPkhRZyVqGjjvU3fI4DeenU_1UAnSWzjGSQMA';
 const FIN_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const FIN_TOKEN_KEY='gsGoogleToken';
 
@@ -962,9 +962,7 @@ window.addEventListener('load', ()=>{
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">התפלגות עלות המכר — % מהכנסות</div>
           <div class="cw t"><canvas id="mc_cogs_stack"></canvas></div>
-          <div class="ins a" style="margin-top:8px">
-            מאי: שכר הייצור בדוח (~6% מהכנסות) היה רישום חלקי — נורמל לממוצע ינואר–אפריל (~23% מהכנסות). COGS לאחר נרמול: 74.6%, שולי גולמי: 25.4%.
-          </div>
+          <div class="ins a" style="margin-top:8px" id="cogsNormNote"></div>
         </div>
       </div>
 
@@ -1769,6 +1767,12 @@ function buildMonthly(){
   document.getElementById('monthlyResults').style.display = 'block';
   document.getElementById('monthlyTitle').textContent = 'ניתוח חודשי — '+period;
   ['gpmBadge','ebitBadge'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=period; });
+  // הערת נרמול COGS — דינמית לפי החודש המוערך (אם יש)
+  const estM=[...data].reverse().find(r=>r.labor!==r.laborReported);
+  const cnn=document.getElementById('cogsNormNote');
+  if(cnn) cnn.innerHTML = estM
+    ? `${estM.month}: שכר הייצור בדוח היה חלקי/חסר — נורמל לאומדן (₪${fmtNum(estM.labor)}). לאחר נרמול: COGS ${(estM.cogs/estM.rev*100).toFixed(1)}%, שולי גולמי ${estM.gpm.toFixed(1)}%.`
+    : '';
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
   const revGrow = prev ? ((latest.rev-prev.rev)/prev.rev*100).toFixed(1) : null;
@@ -1810,7 +1814,7 @@ function buildMonthly(){
     ]},
     options:{...base(), scales:{x:{ticks:{font:F}}, y:{ticks:{font:F, callback:v=>'₪'+v+'K'}}},
       plugins:{...base().plugins, tooltip:{callbacks:{
-        afterBody: ctx => ctx[0].dataIndex===4 ? ['ℹ️ מאי: שכר ייצור נורמל לממוצע'] : []
+        afterBody: ctx => { const r=data[ctx[0].dataIndex]; return (r&&r.labor!==r.laborReported) ? ['ℹ️ '+mName(r.month)+': שכר ייצור נורמל (אומדן)'] : []; }
       }}}}
   });
 
@@ -1819,13 +1823,11 @@ function buildMonthly(){
     type:'line',
     data:{ labels, datasets:[
       { label:'שולי גולמי %', data:gpmData, borderColor:C.blue, backgroundColor:C.sky+'55', fill:true, tension:.4, pointRadius:5,
-        pointBackgroundColor: gpmData.map((_,i)=>i===4?C.amber:C.blue) },
+        pointBackgroundColor: data.map(r=> r.labor!==r.laborReported ? C.amber : C.blue) },
       { label:'שולי EBIT %',  data:ebitData, borderColor:C.green, backgroundColor:C.lgreen+'33', fill:true, tension:.4, pointRadius:5 },
-      { label:'ממוצע גולמי תעשייה (22.9%)', data:data.map(()=>22.9), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
+      { label:`ממוצע גולמי תעשייה (${S1('indGrossPct').toFixed(1)}%)`, data:data.map(()=>S1('indGrossPct')), borderColor:C.gray, borderDash:[5,3], pointRadius:0 }
     ]},
-    options:{...base(true), plugins:{...base().plugins, annotation:{
-      annotations:{ maylabel:{ type:'label', xValue:4, yValue:30, content:'מאי: נורמל', color:C.amber }}
-    }}}
+    options:{...base(true)}
   });
 
   destroyChart('mc_cf');
@@ -1876,7 +1878,7 @@ function buildMonthly(){
   document.getElementById('ytdBody').innerHTML = data.map(r => {
     ytdRev += r.rev; ytdNet += r.net;
     const gCol = r.gpm>22?'#dcfce7':r.gpm>16?'#fef3c7':'#fee2e2';
-    const flag = r.month.includes('מאי') ? ' ⚠️' : '';
+    const flag = (r.labor!==r.laborReported) ? ' ⚠️' : '';
     return `<tr>
       <td><strong>${r.month}</strong>${flag}</td>
       <td>₪${fmtNum(r.rev)}</td>
@@ -1947,7 +1949,7 @@ function buildMonthly(){
     ${latest.labor!==latest.laborReported ? `<div class="ins a" style="margin-top:12px">* שכר הייצור של ${latest.month} נורמל לממוצע (₪${fmtNum(latest.labor)}) — בדוח הופיע רישום חלקי/חסר (₪${fmtNum(latest.laborReported)}). הממוצעים כוללים את החודש המנורמל.</div>` : ''}`;
 
   // ── Gross Margin Breakdown ────────────────────────────────────────────────
-  const GPM = data.map(r=>({ m:r.month, rev:r.rev, purchases:r.purchases, labor:r.labor, factory:r.factory, totalCogs:r.cogsBreak }));
+  const GPM = data.map(r=>({ m:r.month, rev:r.rev, purchases:r.purchases, labor:r.labor, laborReported:r.laborReported, factory:r.factory, totalCogs:r.cogsBreak }));
   GPM.forEach(r => {
     r.gpm_full      = r.rev ? (r.rev-r.totalCogs)/r.rev*100 : 0;
     r.gpm_purchases = r.rev ? (r.rev-r.purchases)/r.rev*100 : 0;
@@ -1993,7 +1995,7 @@ function buildMonthly(){
   const colors = { full:'', purch:'#dbeafe', labor:'#dcfce7', factory:'#fef3c7' };
   const gBody = document.getElementById('gpmBreakBody');
   if (gBody) gBody.innerHTML = GPM.map(r => {
-    const mayFlag = r.m.includes('מאי') ? ' ⚠️' : '';
+    const mayFlag = (r.labor!==r.laborReported) ? ' ⚠️' : '';
     const laborCell = r.labor > 0
       ? `₪${fmtNum(r.labor|0)} (${r.pct_labor.toFixed(1)}%)`
       : `<span style="color:var(--red);font-weight:700">לא הוזן ⚠️</span>`;
