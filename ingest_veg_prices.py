@@ -55,6 +55,21 @@ def main():
         args.key, scopes=["https://www.googleapis.com/auth/spreadsheets"])
     sh = build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
 
+    # העשרת שמות הספקים מקטלוג הרכש (לשונית PURCHASING) — כדי ששמות הספקים לא
+    # יישמרו בקוד הציבורי אלא ייגזרו בזמן הקליטה ממיפוי קוד->שם שכבר בגיליון.
+    try:
+        prows = sh.values().get(spreadsheetId=SHEET_ID, range="PURCHASING!A:A").execute().get("values", [])
+        cat = json.loads(base64.b64decode("".join(r[0] for r in prows if r)).decode("utf-8"))
+        names = cat.get("suppliers", {})
+        enriched = 0
+        for code in list(obj.get("suppliers", {})):
+            if code in names and names[code]:
+                obj["suppliers"][code] = names[code]
+                enriched += 1
+        print(f"שמות ספקים שהועשרו מהקטלוג: {enriched}/{len(obj.get('suppliers', {}))}")
+    except Exception as e:
+        print(f"אזהרה: לא ניתן היה להעשיר שמות ספקים מהקטלוג ({e}); נשמרים קודים.")
+
     json_str = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     b64 = base64.b64encode(json_str.encode("utf-8")).decode("ascii")
     chunks = [b64[i:i + CHUNK] for i in range(0, len(b64), CHUNK)]
