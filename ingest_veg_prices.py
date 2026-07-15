@@ -28,17 +28,18 @@ import sys
 
 # גיליון הרכש הייעודי — זהה למזהה ב-purchasing.html / orders_report.html
 SHEET_ID = "1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q"
-TAB = "VEG_PRICES"
 CHUNK = 40000  # תווי base64 לכל תא (מתחת למגבלת 50,000 של גוגל שיטס)
 
 
 def main():
     global SHEET_ID
     ap = argparse.ArgumentParser()
-    ap.add_argument("payload", help="veg_prices.json (פלט build_veg_prices.py)")
+    ap.add_argument("payload", help="veg_prices.json / mat_prices.json (פלט build_veg_prices.py)")
     ap.add_argument("--key", default=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
                     help="נתיב למפתח חשבון השירות (JSON)")
     ap.add_argument("--sheet", default=SHEET_ID, help="מזהה גיליון יעד (ברירת מחדל: גיליון הרכש)")
+    ap.add_argument("--tab", default=None,
+                    help="לשונית יעד; ברירת מחדל לפי סוג הקובץ: veg->VEG_PRICES, items->MAT_PRICES")
     args = ap.parse_args()
     if not args.key:
         sys.exit("חסר מפתח חשבון שירות: --key או GOOGLE_APPLICATION_CREDENTIALS")
@@ -48,15 +49,16 @@ def main():
     from googleapiclient.discovery import build
 
     obj = json.loads(open(args.payload, "r", encoding="utf-8").read())
-    if "veg" not in obj or "returns" not in obj:
-        sys.exit("הקובץ אינו ניתוח מחירי ירקות תקין (חסר veg/returns).")
+    if "returns" not in obj or ("veg" not in obj and "items" not in obj):
+        sys.exit("הקובץ אינו ניתוח מחירים תקין (חסר veg/items/returns).")
+    TAB = args.tab or ("VEG_PRICES" if "veg" in obj else "MAT_PRICES")
 
     creds = Credentials.from_service_account_file(
         args.key, scopes=["https://www.googleapis.com/auth/spreadsheets"])
     sh = build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
 
-    # העשרת שמות הספקים מקטלוג הרכש (לשונית PURCHASING) — כדי ששמות הספקים לא
-    # יישמרו בקוד הציבורי אלא ייגזרו בזמן הקליטה ממיפוי קוד->שם שכבר בגיליון.
+    # העשרת שמות ספקים + תוויות קבוצות מקטלוג הרכש (לשונית PURCHASING) — כדי
+    # שהשמות לא יישמרו בקוד הציבורי אלא ייגזרו בזמן הקליטה מהגיליון עצמו.
     try:
         prows = sh.values().get(spreadsheetId=SHEET_ID, range="PURCHASING!A:A").execute().get("values", [])
         cat = json.loads(base64.b64decode("".join(r[0] for r in prows if r)).decode("utf-8"))
@@ -67,8 +69,16 @@ def main():
                 obj["suppliers"][code] = names[code]
                 enriched += 1
         print(f"שמות ספקים שהועשרו מהקטלוג: {enriched}/{len(obj.get('suppliers', {}))}")
+        if "groups" in obj:
+            cats = cat.get("cats", {})
+            g_en = 0
+            for g in list(obj["groups"]):
+                if g in cats and cats[g]:
+                    obj["groups"][g] = cats[g]
+                    g_en += 1
+            print(f"תוויות קבוצות שהועשרו מהקטלוג: {g_en}/{len(obj['groups'])}")
     except Exception as e:
-        print(f"אזהרה: לא ניתן היה להעשיר שמות ספקים מהקטלוג ({e}); נשמרים קודים.")
+        print(f"אזהרה: לא ניתן היה להעשיר שמות מהקטלוג ({e}); נשמרים קודים.")
 
     json_str = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
     b64 = base64.b64encode(json_str.encode("utf-8")).decode("ascii")
@@ -89,7 +99,8 @@ def main():
     rows = sh.values().get(spreadsheetId=SHEET_ID, range=f"{TAB}!A:A").execute().get("values", [])
     back = base64.b64decode("".join(r[0] for r in rows if r)).decode("utf-8")
     ok = json.loads(back) == obj
-    print(f"נכתבו {len(chunks)} שורות ללשונית {TAB} | ירקות: {len(obj['veg'])} | "
+    n = len(obj.get("veg") or obj.get("items") or [])
+    print(f"נכתבו {len(chunks)} שורות ללשונית {TAB} | פריטים: {n} | "
           f"חודשים: {len(obj.get('months', []))} | החזרות: {obj['returns']['totalKg']} ק\"ג | "
           f"אימות זהות: {'תקין' if ok else 'נכשל'}")
     if not ok:
