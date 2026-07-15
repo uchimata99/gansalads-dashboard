@@ -56,6 +56,42 @@ TOMATO_FAMILY = {"70009": "70527",    # קוביות עגבניות -> בסיס 
 
 SUPPLIER_LABELS = {}   # שמות ספקים/קבוצות מועשרים בקליטה מקטלוג הרכש — לא בקוד
 
+# נרמול יחידות מידה — פריטים שהיחידה שלהם השתנתה במחשבשבת באמצע התקופה.
+# מפתח פריט -> רשימת כללים: תנועה לפני before (YYYY-MM-DD) מוכפלת: מחיר ÷ factor,
+# כמות × factor. כל כלל מגיע מהסבר מפורש של מיכל — לא מנחשים.
+UNIT_FIXES = {
+    "70401": [{"before": "2025-08-01", "factor": 5.0,
+               "why": "שמן קנולה נקנה בבקבוקי 5 ליטר עד אמצע 2025 (₪29–30 לבקבוק); "
+                      "מאז נקנה בתפזורת לליטר. מיכל, 15/07/26 — המחיר לליטר כמעט זהה."}],
+}
+
+
+def _apply_unit_fixes(it):
+    """מנרמל תנועות לפי UNIT_FIXES; מחזיר את מספר התנועות שתוקנו."""
+    rules = UNIT_FIXES.get(str(it['key']))
+    if not rules:
+        return 0
+    fixed = 0
+    for t in it['txns']:
+        m = _month(t['date'])
+        day = None
+        if isinstance(t['date'], (datetime, date)):
+            day = t['date'].strftime('%Y-%m-%d')
+        elif m:
+            mm = re.match(r'\s*(\d{1,2})/(\d{1,2})/(\d{2,4})', str(t['date']))
+            if mm:
+                yy = int(mm.group(3)); yy = yy + 2000 if yy < 100 else yy
+                day = f"{yy:04d}-{int(mm.group(2)):02d}-{int(mm.group(1)):02d}"
+        if day is None:
+            continue
+        for r in rules:
+            if day < r['before']:
+                t['price'] = t['price'] / r['factor']
+                t['inn'] = t['inn'] * r['factor']
+                t['out'] = t['out'] * r['factor']
+                fixed += 1
+    return fixed
+
 
 def _num(x):
     if x is None:
@@ -268,10 +304,13 @@ def main():
     all_nodes, all_rets = [], []
     bad = 0
     for it in by_key.values():
-        ok, msg = integrity(it)
+        ok, msg = integrity(it)          # בדיקת שלמות מול הסה"כ ביחידות המקור
         if not ok:
             bad += 1
             print(f"⚠️  {it['name']} ({it['key']}): {msg}")
+        nfix = _apply_unit_fixes(it)     # נרמול יחידות (אחרי הבדיקה, לפני האגרגציה)
+        if nfix:
+            print(f"🔧 {it['name']} ({it['key']}): נורמלו {nfix} תנועות לפי UNIT_FIXES")
         node, rets = build_item(it)
         if node['nTxn'] > 0 or rets:
             all_nodes.append(node)
