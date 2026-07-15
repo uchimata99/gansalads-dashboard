@@ -130,7 +130,7 @@ html.locked #gsLock{display:flex!important}
    <div class="card"><div class="card-t">הוצאת רכש לפי ירק</div><div class="cw s"><canvas id="vpSpend"></canvas></div></div>
    <div class="card"><div class="card-t">כמות חודשית לפי ירק (ק"ג)</div><div class="cw s"><canvas id="vpVol"></canvas></div></div>
   </div>
-  <div class="card" style="margin-top:18px"><div class="card-t"><span>השוואה בין שנים — <span id="vpCmpLbl" style="font-weight:800"></span></span><span class="ychips" id="vpCmpMetric"></span></div><div class="ynav" id="vpCmpVeg" style="margin-bottom:12px"></div><div class="cw"><canvas id="vpCmp"></canvas></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>השוואה בין שנים — <span id="vpCmpLbl" style="font-weight:800"></span></span><span class="ychips" id="vpCmpMetric"></span></div><div class="ynav" id="vpCmpVeg" style="margin-bottom:12px"></div><div class="cw"><canvas id="vpCmp"></canvas></div><div class="scroll" id="vpCmpTab" style="margin-top:14px"></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט לפי ירק</span><span class="lbl" id="vpTabLbl"></span></div><div class="scroll" id="vpTab"><div class="empty">טוען…</div></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t">החזרות</div><div id="vpReturns"></div></div>
  </div>
@@ -153,7 +153,15 @@ const P2=n=>(n==null||n===''||isNaN(n))?'—':'₪'+Number(n).toLocaleString('en
 const NUM=n=>Math.round(n||0).toLocaleString('en-US');
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const COL={green:'#2d6a3f',gold:'#b8890e',blue:'#2a5a88',purple:'#6b3fa0',red:'#b03030'};
-Chart.defaults.font.family='Heebo';Chart.defaults.font.size=11;Chart.defaults.color='#7a7460';Chart.defaults.maintainAspectRatio=false;
+Chart.defaults.font.family='Heebo';Chart.defaults.font.size=12;Chart.defaults.color='#7a7460';Chart.defaults.maintainAspectRatio=false;
+// tooltip גדול וברור לצפייה במסך גדול (טלוויזיה)
+Chart.defaults.plugins.tooltip.titleFont={size:18,weight:'700',family:'Heebo'};
+Chart.defaults.plugins.tooltip.bodyFont={size:17,weight:'600',family:'Heebo'};
+Chart.defaults.plugins.tooltip.padding=14;Chart.defaults.plugins.tooltip.boxPadding=8;
+Chart.defaults.plugins.tooltip.caretSize=9;Chart.defaults.plugins.tooltip.cornerRadius=8;
+Chart.defaults.plugins.tooltip.backgroundColor='rgba(20,30,20,.94)';
+Chart.defaults.plugins.legend.labels.font={size:15,family:'Heebo'};
+Chart.defaults.plugins.legend.labels.padding=14;
 const charts={};function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg);}
 function kpi(cls,l,n,s){return '<div class="kpi '+cls+'"><div class="kpi-l">'+l+'</div><div class="kpi-n">'+n+'</div><div class="kpi-s">'+s+'</div></div>';}
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
@@ -347,20 +355,38 @@ function renderVegPrices(){
  mk('vpCmp',{type:'line',data:{labels:MON,datasets:cmpDs},
    options:{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(cQty?NUM(c.parsed.y)+' ק"ג':P2(c.parsed.y))}}},
    scales:{y:{ticks:{callback:v=>cQty?NUM(v):'₪'+v}}}}});
+ // טבלת השוואה — אותו חודש בשנים שונות (מדד לפי הבורר: מחיר משוקלל / כמות)
+ const cyrs=vpYearsAll(), lastY=cyrs[cyrs.length-1], prevY=cyrs.length>1?cyrs[cyrs.length-2]:null;
+ const fmt=v=>v==null?'—':(cQty?NUM(v)+' ק"ג':P2(v));
+ let ch='<table><thead><tr><th>חודש</th>'+cyrs.map(y=>'<th>'+y+'</th>').join('')+(prevY?'<th>'+lastY+' מול '+prevY+'</th>':'')+'</tr></thead><tbody>';
+ for(let mo=0;mo<12;mo++){const key='-'+String(mo+1).padStart(2,'0');
+  const vals=cyrs.map(y=>{const k=y+key;return k in cby?cby[k]:null;});
+  if(vals.every(v=>v==null))continue;
+  ch+='<tr><td><b>'+MON[mo]+'</b></td>'+vals.map(v=>'<td class="num">'+fmt(v)+'</td>').join('');
+  if(prevY){const a=cby[prevY+key],b=cby[lastY+key];let d=(a!=null&&b!=null&&a)?(b-a)/a*100:null;
+   const dt=d==null?'—':(d>=0?'▲ ':'▼ ')+Math.abs(d).toFixed(0)+'%';
+   const ds=d==null?'':(cQty?'style="font-weight:700"':(d>=0?'style="color:var(--red);font-weight:700"':'style="color:var(--green);font-weight:700"'));
+   ch+='<td class="num" '+ds+'>'+dt+'</td>';}
+  ch+='</tr>';}
+ const cvSet=e=>{const el=document.getElementById('vpCmpTab');if(el)el.innerHTML=e;};
+ cvSet(ch+'</tbody></table>');
  // עמודת שינוי: מול השנה הקודמת ב**תקופה זהה** (ממוצע משוקלל, אותם חודשי-לוח); ב"כל השנים" — חודש אחרון מול ראשון
  const selMoSet=new Set(months.map(m=>m.split('-')[1]));
  const prevHas=!!prevYear&&VP.veg.some(v=>vegAvgForMonths(v,prevYear,selMoSet)!=null);
  const chHdr=prevHas?('מול '+prevYear):'שינוי';
+ const show25=VP.veg.some(v=>vegAnnual(v,'2025'));   // עמודת ממוצע 2025 מלא (בסיס השוואה)
  setTxt('vpTabLbl',prevHas?('"מול '+prevYear+'" = ממוצע משוקלל באותם חודשים'):(vpYear==='all'?'שינוי = חודש אחרון מול ראשון':''));
- let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע משוקלל</th><th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע משוקלל)</th></tr></thead><tbody>';
+ let h='<table><thead><tr><th>ירק</th><th>מחיר ממוצע משוקלל</th>'+(show25?'<th>ממוצע 2025 (שנה מלאה)</th>':'')+'<th>טווח</th><th>'+chHdr+'</th><th>כמות ק"ג</th><th>הוצאה</th><th>ספקים (ממוצע משוקלל)</th></tr></thead><tbody>';
  scoped.forEach((o,i)=>{
   const s=o.s;let delta=null;
+  const a25=vegAnnual(o.v,'2025');
   if(prevHas){const pa=vegAvgForMonths(o.v,prevYear,selMoSet);if(pa&&s.avg)delta=(s.avg-pa)/pa*100;}
   else{const ms=(o.v.monthly||[]).filter(x=>mset.has(x.m));const f=ms[0],l=ms[ms.length-1];if(f&&l&&f.avg)delta=(l.avg-f.avg)/f.avg*100;}
   const dtxt=delta==null?'—':(delta>=0?'▲ ':'▼ ')+Math.abs(delta).toFixed(0)+'%';
   const dsty=delta==null?'':(delta>=0?'style="color:var(--red);font-weight:700"':'style="color:var(--green);font-weight:700"');
   const sup=(s.bySupplier||[]).map(x=>esc((VP.suppliers&&VP.suppliers[x.code])||x.code)+' '+P2(x.avg)).join(' · ');
   h+='<tr><td><b style="color:'+VEGCOL[i%VEGCOL.length]+'">'+esc(o.v.name)+'</b></td><td class="num">'+P2(s.avg)+'</td>'+
+     (show25?('<td class="num">'+(a25?P2(a25.avg):'—')+'</td>'):'')+
      '<td class="num">'+P2(s.min)+'–'+P2(s.max)+'</td><td class="num" '+dsty+'>'+dtxt+'</td><td class="num">'+NUM(s.kg)+'</td>'+
      '<td class="num">'+ILS(s.spend)+'</td><td style="font-size:11px">'+sup+'</td></tr>';
  });
