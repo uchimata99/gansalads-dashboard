@@ -1,37 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-בניית ניתוח מחירי ירקות מכרטסות המלאי של מחשבשבת (קוד מחויב, לא צ'אט).
+בניית ניתוח מחירי חומרי גלם וירקות מכרטסות המלאי של מחשבשבת (קוד מחויב, לא צ'אט).
 
 מקור הנתונים
 ------------
-תיקיית דרייב "קניית ירקות" — כרטסת מלאי לכל ירק (פורמט מחשבשבת: כרטסת מלאי
-לפי תאריכי רישום). כל שורה = תנועת מלאי; אותנו מעניינות שורות "חשבונית רכש":
-מחיר נטו (₪ לק"ג), כניסה (ק"ג), תאריך. שורת "החזרת רכש" / ערך ב"יציאה" = החזרה.
+תיקיית דרייב "קניית ירקות":
+- "כרטסת מלאי חומרי גלם 25_26.xlsx" — כרטסת רב-פריטים אחת לכל חומרי הגלם
+  (פורמט מחשבשבת: כרטסת מלאי לפי תאריכי רישום; בלוק לכל פריט: שורת כותרת
+  [שם, מפתח, קוד מיון], תנועות, ושורת "סה\"כ מפתח פריט").
+- נתמכות גם כרטסות של פריט בודד (הפורמט הישן) וייצוא טקסט/CSV.
+
+סוגי מסמך: לניתוח הרכש נספרות שורות "חשבונית רכש" בלבד (מחיר נטו ₪ לק"ג,
+כניסה בק"ג). "חשבונית מס"/"ריכוז"/"קבלה" = מכירת חומר גלם החוצה — לא רכש.
+"החזרה" = החזרת רכש (נאספת לקטע returns). בדיקת שלמות: סכום כל הכניסות/יציאות
+(מכל סוגי המסמכים) מול שורת הסה"כ של הפריט.
 
 מה זה מייצר
 -----------
-veg_prices.json — אובייקט הניתוח שהדשבורד קורא (אחרי כניסת גוגל, מהגיליון):
-  { generatedAt, currency, period:{from,to}, months:[...],
-    suppliers:{code:label},
-    veg:[ {key,name,totalKg,totalSpend,avgPrice,minPrice,maxPrice,nTxn,
-           firstMonth,lastMonth,
-           monthly:[{m,kg,spend,avg,min,max,n}],
-           bySupplier:[{code,kg,spend,avg,n}]} ],
-    returns:{totalKg, rows:[{veg,date,code,kg,price}]},
-    totals:{kg,spend,txns,nVeg} }
+--out veg_prices.json — ניתוח הירקות (טאב "מחירי ירקות"): הירקות הטריים
+  שברשימת VEG_FRESH + מוצרי משפחת העגבניות (TOMATO_FAMILY, מסומנים fam).
+--mat-out mat_prices.json — ניתוח כל חומרי הגלם (טאב "חומרי גלם"): כל פריט
+  עם רכש, כולל קוד קבוצה (קוד מיון). תוויות הקבוצות והספקים מועשרות בקליטה
+  מקטלוג הרכש (לא נשמרות בקוד).
 
-מחיר חודשי = ממוצע משוקלל בק"ג (spend/kg) — עמיד לקניות קטנות/גדולות.
+מבנה פריט (זהה בשניהם): {key,name,grp,totalKg,totalSpend,avgPrice,minPrice,
+  maxPrice,nTxn,firstMonth,lastMonth,monthly:[{m,kg,spend,avg,min,max,n}],
+  annual:[{year,kg,spend,avg,min,max,n,bySupplier}],bySupplier,fam?}
+מחיר = ממוצע משוקלל בק"ג: Σ(מחיר×ק"ג)÷Σק"ג.
 
-אבטחה: מחירי הקנייה הם נתון רגיש. veg_prices.json **אינו מחויב למאגר** (מכיל
-מחירים) — נבנה ונקלט לגיליון בלבד, בדיוק כמו purchasing_catalog.json.
+אבטחה: מחירי הקנייה רגישים. veg_prices.json / mat_prices.json **אינם מחויבים
+למאגר** — נבנים ונקלטים לגיליון בלבד (שניהם ב-.gitignore).
 
 הרצה
 ----
-  # xlsx ישירות מהתיקייה:
-  python3 build_veg_prices.py "כרטסת מלאי *.xlsx" --out veg_prices.json
-  # או ייצוא טקסט/CSV של אותה כרטסת:
-  python3 build_veg_prices.py veg/*.txt --out veg_prices.json
+  python3 build_veg_prices.py "כרטסת מלאי חומרי גלם *.xlsx" \
+      --out veg_prices.json --mat-out mat_prices.json
 """
 import argparse
 import glob
@@ -41,23 +45,25 @@ import sys
 from datetime import date, datetime
 
 DOC_PURCHASE = "חשבונית רכש"
-RETURN_HINT = "החזר"   # "החזרת רכש" וכו'
+RETURN_HINT = "החזר"   # "החזרה" / "החזרת רכש"
 
-# תוויות ידועות לחשבונות ספק (קוד -> שם). אם קוד לא ידוע — מוצג הקוד עצמו.
-SUPPLIER_LABELS = {
-    "20615": "ספק 20615",
-    "20100": "ספק 20100",
-}
+# הירקות הטריים של טאב "מחירי ירקות" (מפתח פריט, קבוצה 206)
+VEG_FRESH = ["70527", "70526", "70523", "70520",      # עגבניות, חציל, פלפל חריף, פלפל אדום
+             "70522", "70521", "70528", "70538"]      # פלפל ירוק, פלפל צהוב, מלפפון, קישואים
+# משפחת העגבניות — מוצרי צ'אם שמצטרפים להשוואת הכמויות של עגבניות (בהפרדה)
+TOMATO_FAMILY = {"70009": "70527",    # קוביות עגבניות -> בסיס עגבניות
+                 "70611": "70527"}    # עגבניות מרוסקות -> בסיס עגבניות
+
+SUPPLIER_LABELS = {}   # שמות ספקים/קבוצות מועשרים בקליטה מקטלוג הרכש — לא בקוד
 
 
 def _num(x):
-    """מחרוזת/מספר -> float, כולל הסרת מפרידי אלפים ומרכאות."""
     if x is None:
         return 0.0
     if isinstance(x, (int, float)):
         return float(x)
     s = str(x).strip().replace('"', '').replace(',', '')
-    if s == '' or s == '—':
+    if s in ('', '—'):
         return 0.0
     try:
         return float(s)
@@ -65,126 +71,114 @@ def _num(x):
         return 0.0
 
 
-def _month(datestr):
-    """DD/MM/YY (או datetime) -> 'YYYY-MM'. מחזיר None אם לא ניתן לפענח."""
-    if isinstance(datestr, (datetime, date)):
-        return f"{datestr.year:04d}-{datestr.month:02d}"
-    m = re.match(r'\s*(\d{1,2})/(\d{1,2})/(\d{2,4})', str(datestr or ''))
+def _month(d):
+    """תאריך (datetime או DD/MM/YY) -> 'YYYY-MM'."""
+    if isinstance(d, (datetime, date)):
+        return f"{d.year:04d}-{d.month:02d}"
+    m = re.match(r'\s*(\d{1,2})/(\d{1,2})/(\d{2,4})', str(d or ''))
     if not m:
         return None
     yy = int(m.group(3))
-    year = yy + 2000 if yy < 100 else yy
-    return f"{year:04d}-{int(m.group(2)):02d}"
+    return f"{(yy + 2000 if yy < 100 else yy):04d}-{int(m.group(2)):02d}"
 
 
-# ------------------------- קריאת מקור -------------------------
-def rows_from_text(path):
-    """ייצוא טקסט/CSV של הכרטסת -> (key, name, [ {doc,code,date,price,inn,out} ], total_kg)."""
+def _datestr(d):
+    """תאריך -> 'DD/MM/YY' לתצוגה."""
+    if isinstance(d, (datetime, date)):
+        return f"{d.day:02d}/{d.month:02d}/{d.year % 100:02d}"
+    return str(d or '')
+
+
+# ------------------------- קריאת כרטסת -------------------------
+def read_ledger_xlsx(path):
+    """כרטסת מחשבשבת (פריט בודד או רב-פריטים) -> רשימת פריטים.
+    פריט: {key,name,grp,txns:[{doc,code,date,price,inn,out}],total_in,total_out}"""
+    from openpyxl import load_workbook
+    ws = load_workbook(path, read_only=True, data_only=True).active
+    items, cur = [], None
+    ci = None   # מפת עמודות לפי שורת הכותרת
+    for row in ws.iter_rows(values_only=True):
+        vals = [c for c in row]
+        s0 = str(vals[0] or '').strip()
+        s1 = str(vals[1] or '').strip() if len(vals) > 1 else ''
+        s2 = str(vals[2] or '').strip() if len(vals) > 2 else ''
+        if ci is None:
+            svals = [str(c).strip() if c is not None else '' for c in vals]
+            if 'מחיר נטו' in svals and 'כניסה' in svals:
+                ci = {k: svals.index(k) for k in
+                      ['סוג מסמך', 'לקוח/ספק', 'תאריך', 'מחיר נטו', 'כניסה', 'יציאה'] if k in svals}
+            continue
+        if s0.startswith('סה'):                                  # שורות סיכום
+            if 'מפתח פריט' in s0 and cur is not None:
+                cur['total_in'] = _num(vals[ci['כניסה']])
+                cur['total_out'] = _num(vals[ci['יציאה']]) if 'יציאה' in ci else 0.0
+            continue
+        if s0 and re.match(r'^\d{4,6}$', s1) and re.match(r'^\d{3}$', s2):   # כותרת פריט
+            cur = {'key': s1, 'name': s0, 'grp': s2, 'txns': [],
+                   'total_in': None, 'total_out': None}
+            items.append(cur)
+            continue
+        doc = str(vals[ci['סוג מסמך']] or '').strip() if len(vals) > ci['סוג מסמך'] else ''
+        if doc and cur is not None:
+            cur['txns'].append({
+                'doc': doc,
+                'code': str(vals[ci['לקוח/ספק']] or '').strip(),
+                'date': vals[ci['תאריך']],
+                'price': _num(vals[ci['מחיר נטו']]),
+                'inn': _num(vals[ci['כניסה']]),
+                'out': _num(vals[ci['יציאה']]) if 'יציאה' in ci else 0.0})
+    return items
+
+
+def read_ledger_text(path):
+    """ייצוא טקסט/CSV של כרטסת פריט בודד (הפורמט הישן) -> רשימת פריט אחד."""
     key = name = None
     total_kg = None
-    out = []
+    txns = []
     for line in open(path, encoding='utf-8'):
         f = [c.strip() for c in line.rstrip('\n').split(',')]
         if not f:
             continue
-        head = f[0]
-        # שורת סיכום פריט (סמכותית לשם/מפתח): "סהכ מפתח פריט", key, name, ... , total_kg, ...
-        if head.startswith('סהכ מפתח פריט') or head.startswith('סה"כ מפתח פריט'):
-            if len(f) > 1:
-                key = f[1]
-            if len(f) > 2:
-                name = f[2]
+        if f[0].startswith('סהכ מפתח פריט') or f[0].startswith('סה"כ מפתח פריט'):
+            key = key or (f[1] if len(f) > 1 else None)
+            name = name or (f[2] if len(f) > 2 else None)
             nums = [c for c in f if re.match(r'^-?\d+(\.\d+)?$', c or '')]
             if len(nums) >= 3:
                 total_kg = _num(nums[-3])
             continue
-        # שורת תנועה: 3 עמודות ריקות ואז מזהה + סוג מסמך
         if len(f) >= 15 and f[0] == '' and f[1] == '' and f[2] == '' and f[4]:
-            out.append({'doc': f[4], 'code': f[5], 'date': f[10],
-                        'price': _num(f[12]), 'inn': _num(f[14]),
-                        'out': _num(f[15]) if len(f) > 15 else 0.0})
-    return key, name, out, total_kg
-
-
-def rows_from_xlsx(path):
-    """כרטסת xlsx של מחשבשבת -> אותו מבנה כמו rows_from_text (זיהוי עמודות לפי כותרת)."""
-    from openpyxl import load_workbook
-    ws = load_workbook(path, read_only=True, data_only=True).active
-    rows = [list(r) for r in ws.iter_rows(values_only=True)]
-
-    def cell(r, i):
-        return r[i] if (i is not None and i < len(r)) else None
-
-    # מפת עמודות מתוך שורת הכותרת (המכילה "מחיר נטו")
-    col = {}
-    for r in rows:
-        vals = [str(c).strip() if c is not None else '' for c in r]
-        if 'מחיר נטו' in vals and 'כניסה' in vals:
-            for i, v in enumerate(vals):
-                if v:
-                    col[v] = i
-            break
-    need = ['סוג מסמך', 'לקוח/ספק', 'תאריך', 'מחיר נטו', 'כניסה']
-    if not all(k in col for k in need):
-        sys.exit(f"{path}: לא נמצאה שורת כותרת תקינה של כרטסת מחשבשבת")
-    ci = {k: col.get(k) for k in
-          ['מזהה', 'סוג מסמך', 'לקוח/ספק', 'תאריך', 'מחיר נטו', 'כניסה', 'יציאה']}
-
-    key = name = None
-    total_kg = None
-    out = []
-    for r in rows:
-        c0 = str(cell(r, 0) or '').strip()
-        if c0.startswith('סה') and 'מפתח פריט' in c0:      # שורת סיכום
-            key = key or (str(cell(r, 1)).strip() if cell(r, 1) is not None else None)
-            name = name or (str(cell(r, 2)).strip() if cell(r, 2) is not None else None)
-            total_kg = _num(cell(r, ci['כניסה']))
-            continue
-        doc = cell(r, ci['סוג מסמך'])
-        if not doc or not str(doc).strip():
-            continue
-        idv = cell(r, ci['מזהה']) if ci['מזהה'] is not None else None
-        if idv is None or not re.match(r'^\d+$', str(idv).strip()):
-            continue
-        out.append({'doc': str(doc).strip(), 'code': str(cell(r, ci['לקוח/ספק']) or '').strip(),
-                    'date': cell(r, ci['תאריך']), 'price': _num(cell(r, ci['מחיר נטו'])),
-                    'inn': _num(cell(r, ci['כניסה'])),
-                    'out': _num(cell(r, ci['יציאה'])) if ci['יציאה'] is not None else 0.0})
-    return key, name, out, total_kg
+            txns.append({'doc': f[4], 'code': f[5], 'date': f[10], 'price': _num(f[12]),
+                         'inn': _num(f[14]), 'out': _num(f[15]) if len(f) > 15 else 0.0})
+    return [{'key': str(key), 'name': name, 'grp': '206', 'txns': txns,
+             'total_in': total_kg, 'total_out': 0.0}]
 
 
 # ------------------------- אגרגציה -------------------------
-def build_veg(key, name, txns):
-    """מבנה ניתוח לירק אחד + רשומות החזרה שנמצאו."""
-    purch = [t for t in txns if RETURN_HINT not in t['doc'] and t['out'] == 0 and t['inn'] > 0]
-    returns = [t for t in txns if RETURN_HINT in t['doc'] or t['out'] > 0]
+def build_item(it):
+    """פריט כרטסת -> מבנה ניתוח + שורות החזרה. רכש = 'חשבונית רכש' בלבד."""
+    purch = [t for t in it['txns'] if t['doc'] == DOC_PURCHASE and t['inn'] > 0]
+    returns = [t for t in it['txns'] if RETURN_HINT in t['doc']]
 
-    by_month = {}
-    by_sup = {}
-    by_year = {}          # שנה -> {kg,spend,min,max,n}
-    by_year_sup = {}      # (שנה,קוד ספק) -> {kg,spend,n}
+    by_month, by_sup, by_year, by_ys = {}, {}, {}, {}
     tot_kg = tot_spend = 0.0
     pmin = pmax = None
     for t in purch:
         m = _month(t['date'])
         yr = (m or '?').split('-')[0]
-        kg = t['inn']
-        sp = t['price'] * kg
+        kg, sp = t['inn'], t['price'] * t['inn']
         tot_kg += kg
         tot_spend += sp
         pmin = t['price'] if pmin is None else min(pmin, t['price'])
         pmax = t['price'] if pmax is None else max(pmax, t['price'])
-        d = by_month.setdefault(m, {'kg': 0.0, 'spend': 0.0, 'min': t['price'],
-                                    'max': t['price'], 'n': 0})
+        d = by_month.setdefault(m, {'kg': 0.0, 'spend': 0.0, 'min': t['price'], 'max': t['price'], 'n': 0})
         d['kg'] += kg; d['spend'] += sp; d['n'] += 1
         d['min'] = min(d['min'], t['price']); d['max'] = max(d['max'], t['price'])
         s = by_sup.setdefault(t['code'], {'kg': 0.0, 'spend': 0.0, 'n': 0})
         s['kg'] += kg; s['spend'] += sp; s['n'] += 1
-        yd = by_year.setdefault(yr, {'kg': 0.0, 'spend': 0.0, 'min': t['price'],
-                                     'max': t['price'], 'n': 0})
-        yd['kg'] += kg; yd['spend'] += sp; yd['n'] += 1
-        yd['min'] = min(yd['min'], t['price']); yd['max'] = max(yd['max'], t['price'])
-        ys = by_year_sup.setdefault((yr, t['code']), {'kg': 0.0, 'spend': 0.0, 'n': 0})
+        y = by_year.setdefault(yr, {'kg': 0.0, 'spend': 0.0, 'min': t['price'], 'max': t['price'], 'n': 0})
+        y['kg'] += kg; y['spend'] += sp; y['n'] += 1
+        y['min'] = min(y['min'], t['price']); y['max'] = max(y['max'], t['price'])
+        ys = by_ys.setdefault((yr, t['code']), {'kg': 0.0, 'spend': 0.0, 'n': 0})
         ys['kg'] += kg; ys['spend'] += sp; ys['n'] += 1
 
     monthly = [{'m': m, 'kg': round(v['kg'], 1), 'spend': round(v['spend'], 1),
@@ -199,93 +193,128 @@ def build_veg(key, name, txns):
         v = by_year[y]
         ysup = [{'code': c, 'kg': round(d['kg'], 1), 'spend': round(d['spend'], 1),
                  'avg': round(d['spend'] / d['kg'], 3) if d['kg'] else None, 'n': d['n']}
-                for (yy, c), d in sorted(by_year_sup.items(), key=lambda kv: -kv[1]['kg']) if yy == y]
+                for (yy, c), d in sorted(by_ys.items(), key=lambda kv: -kv[1]['kg']) if yy == y]
         annual.append({'year': y, 'kg': round(v['kg'], 1), 'spend': round(v['spend'], 1),
                        'avg': round(v['spend'] / v['kg'], 3) if v['kg'] else None,
                        'min': round(v['min'], 3), 'max': round(v['max'], 3),
                        'n': v['n'], 'bySupplier': ysup})
 
-    veg = {
-        'key': str(key), 'name': name,
-        'totalKg': round(tot_kg, 1), 'totalSpend': round(tot_spend, 1),
-        'avgPrice': round(tot_spend / tot_kg, 3) if tot_kg else None,
-        'minPrice': round(pmin, 3) if pmin is not None else None,
-        'maxPrice': round(pmax, 3) if pmax is not None else None,
-        'nTxn': len(purch),
-        'firstMonth': monthly[0]['m'] if monthly else None,
-        'lastMonth': monthly[-1]['m'] if monthly else None,
-        'monthly': monthly, 'bySupplier': bysup, 'annual': annual,
-    }
-    ret_rows = [{'veg': name, 'date': str(t['date']), 'code': t['code'],
-                 'kg': round(t['out'] or t['inn'], 1), 'price': round(t['price'], 3)}
+    node = {'key': str(it['key']), 'name': it['name'], 'grp': it.get('grp'),
+            'totalKg': round(tot_kg, 1), 'totalSpend': round(tot_spend, 1),
+            'avgPrice': round(tot_spend / tot_kg, 3) if tot_kg else None,
+            'minPrice': round(pmin, 3) if pmin is not None else None,
+            'maxPrice': round(pmax, 3) if pmax is not None else None,
+            'nTxn': len(purch),
+            'firstMonth': monthly[0]['m'] if monthly else None,
+            'lastMonth': monthly[-1]['m'] if monthly else None,
+            'monthly': monthly, 'bySupplier': bysup, 'annual': annual}
+    ret_rows = [{'veg': it['name'], 'date': _datestr(t['date']), 'code': t['code'],
+                 'kg': round(t['inn'] or t['out'], 1), 'price': round(t['price'], 3)}
                 for t in returns]
-    return veg, ret_rows
+    return node, ret_rows
+
+
+def integrity(it):
+    """בדיקת שלמות: סכום כל הכניסות/יציאות (כל המסמכים) מול שורת הסה\"כ."""
+    if it['total_in'] is None:
+        return True, '— (אין שורת סה"כ)'
+    s_in = sum(t['inn'] for t in it['txns'])
+    s_out = sum(t['out'] for t in it['txns'])
+    d_in = abs(s_in - it['total_in'])
+    d_out = abs(s_out - (it['total_out'] or 0.0))
+    ok = d_in < 0.5 and d_out < 0.5
+    return ok, 'תקין' if ok else f'סטייה כניסה {d_in:.1f} / יציאה {d_out:.1f}'
+
+
+def payload_from(nodes, rets, gen, extra=None):
+    months = sorted({m['m'] for v in nodes for m in v['monthly'] if m['m']})
+    years = sorted({a['year'] for v in nodes for a in v['annual']})
+    sup = sorted({s['code'] for v in nodes for s in v['bySupplier']})
+    p = {'generatedAt': gen, 'currency': '₪ לק"ג',
+         'period': {'from': months[0] if months else None, 'to': months[-1] if months else None},
+         'months': months, 'years': years,
+         'suppliers': {c: SUPPLIER_LABELS.get(c, f'ספק {c}') for c in sup},
+         'returns': {'totalKg': round(sum(r['kg'] for r in rets), 1), 'rows': rets},
+         'totals': {'kg': round(sum(v['totalKg'] for v in nodes), 1),
+                    'spend': round(sum(v['totalSpend'] for v in nodes), 1),
+                    'txns': sum(v['nTxn'] for v in nodes), 'nVeg': len(nodes)}}
+    if extra:
+        p.update(extra)
+    return p
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('inputs', nargs='+', help='קבצי כרטסת (xlsx או ייצוא טקסט/csv); תומך בתבניות')
-    ap.add_argument('--out', default='veg_prices.json')
-    ap.add_argument('--date', default=None, help="חותמת generatedAt (YYYY-MM-DD); ברירת מחדל: היום")
+    ap.add_argument('inputs', nargs='+', help='כרטסות מלאי (xlsx רב-פריטים / פריט בודד / טקסט)')
+    ap.add_argument('--out', default='veg_prices.json', help='פלט טאב הירקות')
+    ap.add_argument('--mat-out', default=None, help='פלט טאב חומרי הגלם (כל הפריטים עם רכש)')
+    ap.add_argument('--date', default=None, help="generatedAt (YYYY-MM-DD); ברירת מחדל: היום")
     args = ap.parse_args()
 
     paths = []
     for pat in args.inputs:
         paths.extend(sorted(glob.glob(pat)) or [pat])
 
-    vegs = []
-    ret_all = []
-    sup_codes = set()
-    ok = True
+    raw = []
     for p in paths:
-        reader = rows_from_xlsx if p.lower().endswith(('.xlsx', '.xlsm')) else rows_from_text
-        key, name, txns, total_kg = reader(p)
-        if not txns:
-            print(f"⚠️  {p}: לא נמצאו תנועות — מדלגים")
-            continue
-        veg, rets = build_veg(key, name, txns)
-        vegs.append(veg)
-        ret_all.extend(rets)
-        sup_codes.update(s['code'] for s in veg['bySupplier'])
-        # בדיקת הצטלבות מול שורת הסיכום של הכרטסת
-        chk = '—'
-        if total_kg is not None:
-            diff = abs(total_kg - veg['totalKg'])
-            chk = 'תקין' if diff < 0.5 else f'סטייה {diff:.1f} ק"ג (דוח {total_kg})'
-            ok = ok and diff < 0.5
-        print(f"  {veg['name']:<14} | {veg['nTxn']:>3} תנועות | "
-              f"{veg['totalKg']:>10.1f} ק\"ג | ממוצע {veg['avgPrice']} ₪ | "
-              f"טווח {veg['minPrice']}–{veg['maxPrice']} | הצטלבות: {chk}")
+        rdr = read_ledger_xlsx if p.lower().endswith(('.xlsx', '.xlsm')) else read_ledger_text
+        raw.extend(rdr(p))
+    # פריט שמופיע ביותר מקובץ אחד — האחרון גובר (לפי מפתח)
+    by_key = {}
+    for it in raw:
+        by_key[str(it['key'])] = it
+    print(f"נקראו {len(by_key)} פריטים מ-{len(paths)} קבצים")
 
-    if not vegs:
-        sys.exit("לא נבנה דבר — אין תנועות בקבצים.")
+    all_nodes, all_rets = [], []
+    bad = 0
+    for it in by_key.values():
+        ok, msg = integrity(it)
+        if not ok:
+            bad += 1
+            print(f"⚠️  {it['name']} ({it['key']}): {msg}")
+        node, rets = build_item(it)
+        if node['nTxn'] > 0 or rets:
+            all_nodes.append(node)
+            all_rets.extend(rets)
+    gen = args.date or date.today().isoformat()
 
-    months = sorted({m['m'] for v in vegs for m in v['monthly'] if m['m']})
-    years = sorted({a['year'] for v in vegs for a in v['annual']})
-    suppliers = {c: SUPPLIER_LABELS.get(c, f'ספק {c}') for c in sorted(sup_codes)}
-    payload = {
-        'generatedAt': args.date or date.today().isoformat(),
-        'currency': '₪ לק"ג',
-        'period': {'from': months[0] if months else None, 'to': months[-1] if months else None},
-        'months': months,
-        'years': years,
-        'suppliers': suppliers,
-        'veg': sorted(vegs, key=lambda v: -v['totalSpend']),
-        'returns': {'totalKg': round(sum(r['kg'] for r in ret_all), 1), 'rows': ret_all},
-        'totals': {
-            'kg': round(sum(v['totalKg'] for v in vegs), 1),
-            'spend': round(sum(v['totalSpend'] for v in vegs), 1),
-            'txns': sum(v['nTxn'] for v in vegs),
-            'nVeg': len(vegs),
-        },
-    }
-    json.dump(payload, open(args.out, 'w', encoding='utf-8'),
-              ensure_ascii=False, separators=(',', ':'))
-    print(f"\nנכתב {args.out} | ירקות: {len(vegs)} | חודשים: {len(months)} | "
-          f'סה"כ {payload["totals"]["kg"]:.0f} ק"ג · ₪{payload["totals"]["spend"]:.0f} | '
-          f"החזרות: {len(ret_all)} ({payload['returns']['totalKg']} ק\"ג)")
-    if not ok:
-        print("⚠️  אזהרה: בדיקת ההצטלבות נכשלה לפחות לירק אחד — לבדוק לפני קליטה.")
+    # --- טאב הירקות: הטריים + משפחת העגבניות ---
+    veg_nodes = []
+    for n in all_nodes:
+        if n['key'] in VEG_FRESH:
+            veg_nodes.append(dict(n))
+        elif n['key'] in TOMATO_FAMILY:
+            fn = dict(n)
+            fn['fam'] = TOMATO_FAMILY[n['key']]
+            veg_nodes.append(fn)
+    veg_nodes.sort(key=lambda v: (0 if v['key'] in VEG_FRESH else 1, -v['totalSpend']))
+    veg_names = {v['name'] for v in veg_nodes}
+    veg_rets = [r for r in all_rets if r['veg'] in veg_names]
+    vp = payload_from(veg_nodes, veg_rets, gen, extra={'veg': veg_nodes})
+    json.dump(vp, open(args.out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    print(f"\nירקות ({args.out}): {len(veg_nodes)} פריטים | "
+          f'{vp["totals"]["kg"]:,.0f} ק"ג | ₪{vp["totals"]["spend"]:,.0f} | החזרות: {len(veg_rets)}')
+    for v in veg_nodes:
+        tag = ' [משפחת עגבניות]' if v.get('fam') else ''
+        print(f"   {v['name']:<24} {v['nTxn']:>4} קניות | {v['totalKg']:>11,.1f} ק\"ג | "
+              f"ממוצע {v['avgPrice']}{tag}")
+
+    # --- טאב חומרי הגלם: כל פריט עם רכש ---
+    if args.mat_out:
+        mat_nodes = sorted([n for n in all_nodes if n['nTxn'] > 0],
+                           key=lambda v: -v['totalSpend'])
+        groups = sorted({n['grp'] for n in mat_nodes if n['grp']})
+        mp = payload_from(mat_nodes, all_rets, gen,
+                          extra={'items': mat_nodes,
+                                 'groups': {g: f'קבוצה {g}' for g in groups}})
+        mp['totals']['nItems'] = len(mat_nodes)
+        json.dump(mp, open(args.mat_out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+        print(f"\nחומרי גלם ({args.mat_out}): {len(mat_nodes)} פריטים | {len(groups)} קבוצות | "
+              f'{mp["totals"]["kg"]:,.0f} יח\' | ₪{mp["totals"]["spend"]:,.0f} | '
+              f"החזרות: {len(all_rets)} ({mp['returns']['totalKg']})")
+
+    if bad:
+        print(f"\n⚠️  {bad} פריטים נכשלו בבדיקת השלמות — לבדוק לפני קליטה.")
         sys.exit(2)
 
 
