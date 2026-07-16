@@ -92,6 +92,7 @@ html.locked #gsLock{display:flex!important}
  <div class="tab" data-p="veg">מכרזי ירקות</div>
  <div class="tab" data-p="vp">מחירי ירקות</div>
  <div class="tab" data-p="mat">חומרי גלם</div>
+ <div class="tab" data-p="rec">קניות מול ייצור</div>
 </div>
 
 <div class="main">
@@ -149,6 +150,19 @@ html.locked #gsLock{display:flex!important}
   <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט פריטים</span><span class="lbl" id="matTabLbl"></span></div><div class="scroll" id="matTab"><div class="empty">טוען…</div></div></div>
   <div class="card" style="margin-top:18px"><div class="card-t">החזרות</div><div id="matReturns"></div></div>
  </div>
+
+ <div class="page" id="rec">
+  <div class="note" id="recNote">מצליב לכל חומר גלם את ה<b>צריכה התאורטית</b> (ייצור בפועל × עץ המוצר) מול ה<b>קנייה בפועל</b> באותה תקופה. יחס קרוב ל-100% = התאמה טובה; חריגה = מלאי/פחת, מעבר לתחליף, או עץ מוצר לא מעודכן. הנתונים מלשונית RECON.</div>
+  <div class="kpi-row" id="recKpi"></div>
+  <div class="card"><div class="card-t"><span>סינון לפי קבוצה</span><span class="lbl" id="recCount"></span></div>
+   <div class="ynav" id="recGroups" style="margin-bottom:10px"></div>
+   <div class="ctrl">
+    <input id="recSearch" placeholder="🔍 חיפוש פריט…" style="min-width:220px" autocomplete="off" oninput="renderRec()">
+    <label class="lbl" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="recAnom" onchange="renderRec()" style="width:auto"> רק חריגות (יחס &lt;70% או &gt;150%)</label>
+   </div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט — צריכה תאורטית מול קנייה</span><span class="lbl">לחיצה על שורה מציגה את המוצרים הצורכים</span></div><div class="scroll" id="recTab"><div class="empty">טוען…</div></div></div>
+ </div>
 </div>
 
 <script>
@@ -160,7 +174,7 @@ const RPT_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גילי
 const RPT_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const RPT_TOKEN_KEY='gsGoogleToken';
 let rptToken=null, rptClient=null;
-let PO=[], VEG=[], VP=null, MAT=null;
+let PO=[], VEG=[], VP=null, MAT=null, REC=null;
 const VEGCOL=['#2d6a3f','#b03030','#b8890e','#2a5a88','#6b3fa0','#2a8a8a','#c2185b','#5d4037','#e65100','#33691e','#455a64','#4527a0'];
 const YEARCOL=['#b8890e','#2d6a3f','#2a5a88','#b03030','#6b3fa0'];  // צבע לכל שנה בגרף ההשוואה
 const ILS=n=>'₪'+Math.round(n||0).toLocaleString('en-US');
@@ -183,7 +197,7 @@ function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 
 function tab(p){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id===p));
- if(p==='ov')renderOverview();if(p==='hist')renderHist();if(p==='veg')renderVeg();if(p==='vp')renderVegPrices();if(p==='mat')renderMat();}
+ if(p==='ov')renderOverview();if(p==='hist')renderHist();if(p==='veg')renderVeg();if(p==='vp')renderVegPrices();if(p==='mat')renderMat();if(p==='rec')renderRec();}
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
 
 // ---------- טעינה ----------
@@ -201,8 +215,8 @@ function b64json(rows){
 }
 async function loadAll(force){
  try{
-  const [po,veg,vp,mat]=await Promise.all([readRange('PO_HISTORY!A:I'),readRange('VEG_AUCTION!A:H'),readRange('VEG_PRICES!A:A'),readRange('MAT_PRICES!A:A')]);
-  VP=b64json(vp);MAT=b64json(mat);
+  const [po,veg,vp,mat,rec]=await Promise.all([readRange('PO_HISTORY!A:I'),readRange('VEG_AUCTION!A:H'),readRange('VEG_PRICES!A:A'),readRange('MAT_PRICES!A:A'),readRange('RECON!A:A')]);
+  VP=b64json(vp);MAT=b64json(mat);REC=b64json(rec);
   // PO: תאריך,מזהה,מפתח ספק,שם ספק,מפתח פריט,שם פריט,כמות,מחיר אחרון,הערכת עלות
   PO=po.filter(r=>r&&r.length>=7&&!isNaN(parseFloat(r[6]))).map(r=>({date:r[0]||'',oid:r[1]||'',supK:r[2]||'',sup:r[3]||'',itemK:r[4]||'',item:r[5]||'',qty:parseFloat(r[6])||0,price:(r[7]===''||r[7]==null)?null:parseFloat(r[7]),cost:(r[8]===''||r[8]==null)?0:parseFloat(r[8])||0}));
   // VEG: תאריך,מפתח ירק,שם ירק,מפתח ספק,שם ספק,מחיר,כמות,נבחר
@@ -210,7 +224,7 @@ async function loadAll(force){
   const sup=[...new Set(PO.map(r=>r.sup).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he'));
   const sel=document.getElementById('hSup');sel.innerHTML='<option value="">הכל</option>'+sup.map(s=>'<option>'+esc(s)+'</option>').join('');
   setTxt('hdrRange',(new Set(PO.map(r=>r.oid))).size+' הזמנות · '+VEG.length+' רשומות מכרז');
-  renderOverview();renderHist();renderVeg();renderVegPrices();renderMat();
+  renderOverview();renderHist();renderVeg();renderVegPrices();renderMat();renderRec();
  }catch(e){console.error(e);document.getElementById('histTab').innerHTML='<div class="empty">שגיאה בטעינה: '+esc(e.message)+'</div>';}
 }
 
@@ -550,6 +564,61 @@ function renderMat(){
   rrows.forEach(r=>{rh+='<tr><td>'+esc(r.veg)+'</td><td class="num">'+esc(r.date)+'</td><td>'+esc((MAT.suppliers&&MAT.suppliers[r.code])||r.code)+'</td><td class="num">'+NUM(r.kg)+'</td><td class="num">'+P2(r.price)+'</td></tr>';});
   rEl.innerHTML=rh+'</tbody></table>';
  }
+}
+
+// ---------- קניות מול ייצור (הצלבה) ----------
+let recGrp='all';
+function recSetGrp(g){recGrp=g;renderRec();}
+function recToggle(k){const el=document.getElementById('recSub_'+k);if(el)el.style.display=el.style.display==='none'?'':'none';}
+function renderRecGroups(){
+ const el=document.getElementById('recGroups');if(!el)return;
+ const gs=[...new Set(REC.items.map(i=>i.grp).filter(Boolean))].sort();
+ el.innerHTML='<span class="ychips"><span class="ychip'+(recGrp==='all'?' on':'')+'" onclick="recSetGrp(\'all\')">הכל</span>'+
+  gs.map(g=>'<span class="ychip'+(recGrp===g?' on':'')+'" onclick="recSetGrp(\''+g+'\')">'+esc((REC.groups&&REC.groups[g])||('קבוצה '+g))+'</span>').join('')+'</span>';
+}
+function renderRec(){
+ const kEl=document.getElementById('recKpi'),tEl=document.getElementById('recTab');
+ if(!kEl)return;
+ if(!REC||!REC.items||!REC.items.length){
+  kEl.innerHTML='';const g=document.getElementById('recGroups');if(g)g.innerHTML='';
+  tEl.innerHTML='<div class="empty">לשונית RECON ריקה. יש להריץ build_recon.py ואז ingest_veg_prices.py.</div>';
+  return;
+ }
+ renderRecGroups();
+ setTxt('recNote','מצליב לכל חומר גלם את הצריכה התאורטית (ייצור '+esc(REC.year)+' × עץ המוצר) מול הקנייה בפועל באותה תקופה. יחס ~100% = התאמה. חריגה = מלאי/פחת, מעבר לתחליף, או עץ מוצר לא מעודכן. ⚠️ '+NUM(REC.totals.nBatch)+' עצים מוזנים באצווה (מוחרגים), ו-'+NUM(REC.totals.nUnmapped)+' מוצרים שיוצרו ללא עץ — לכן הצריכה התאורטית חלקית לחלק מהחומרים.');
+ const q=(document.getElementById('recSearch')||{value:''}).value.trim();
+ const anom=(document.getElementById('recAnom')||{}).checked;
+ let list=REC.items.filter(i=>recGrp==='all'||i.grp===recGrp);
+ if(q)list=list.filter(i=>(i.name+' '+i.key).indexOf(q)>=0);
+ if(anom)list=list.filter(i=>i.ratio!=null&&(i.ratio<0.7||i.ratio>1.5));
+ setTxt('recCount',list.length+' פריטים');
+ // KPI: כמה תואמים / חריגים
+ const withRatio=REC.items.filter(i=>i.ratio!=null&&i.theo>=100);
+ const ok=withRatio.filter(i=>i.ratio>=0.7&&i.ratio<=1.5).length;
+ kEl.innerHTML=
+  kpi('g','תקופה',esc(REC.year),REC.weeks+' שבועות ייצור')+
+  kpi('b','חומרים בהצלבה',NUM(withRatio.length),'עם צריכה + קנייה')+
+  kpi('y','התאמה טובה',NUM(ok),'יחס 70%–150%')+
+  kpi('p','חריגות',NUM(withRatio.length-ok),'לבדיקה');
+ // טבלה
+ let h='<table><thead><tr><th>חומר גלם</th><th>קבוצה</th><th>צריכה תאורטית</th><th>נקנה בפועל</th><th>יחס קנייה/צריכה</th><th></th></tr></thead><tbody>';
+ list.forEach(i=>{
+  let rtxt='—',rcls='';
+  if(i.ratio!=null){
+   const pct=Math.round(i.ratio*100);
+   rcls=(i.ratio>=0.7&&i.ratio<=1.5)?'pg':(i.ratio<0.7?'pb':'po');
+   rtxt=pct+'%';
+  } else if(i.theo>0 && (i.purch==null||i.purch===0)) rtxt='לא נקנה';
+  const bt=i.nBatch?' <span class="pill po" title="עצי אצווה שמשתמשים בחומר הוחרגו">⚠️ '+i.nBatch+' אצווה</span>':'';
+  const top=(i.top||[]).map(t=>esc(t.name)+' <span class="num" style="color:var(--muted)">'+NUM(t.kg)+' ק"ג</span>').join('<br>');
+  h+='<tr style="cursor:pointer" onclick="recToggle('+"'"+esc(i.key)+"'"+')"><td><b>'+esc(i.name)+'</b>'+bt+'</td>'+
+     '<td><span class="pill pb">'+esc((REC.groups&&REC.groups[i.grp])||i.grp||'—')+'</span></td>'+
+     '<td class="num">'+(i.theo?NUM(i.theo)+' ק"ג':'—')+'</td>'+
+     '<td class="num">'+(i.purch!=null?NUM(i.purch)+' ק"ג':'—')+'</td>'+
+     '<td class="num"><span class="pill '+rcls+'">'+rtxt+'</span></td><td class="lbl">'+(top?'▾':'')+'</td></tr>';
+  if(top)h+='<tr id="recSub_'+esc(i.key)+'" style="display:none"><td colspan="6" style="background:var(--surface2);font-size:12px"><b>המוצרים שצורכים '+esc(i.name)+':</b><br>'+top+'</td></tr>';
+ });
+ tEl.innerHTML=list.length?h+'</tbody></table>':'<div class="empty">אין פריטים בסינון.</div>';
 }
 
 // ================= התחברות גוגל (קריאה בלבד) =================

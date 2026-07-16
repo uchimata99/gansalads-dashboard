@@ -49,9 +49,14 @@ def main():
     from googleapiclient.discovery import build
 
     obj = json.loads(open(args.payload, "r", encoding="utf-8").read())
-    if "returns" not in obj or ("veg" not in obj and "items" not in obj):
-        sys.exit("הקובץ אינו ניתוח מחירים תקין (חסר veg/items/returns).")
-    TAB = args.tab or ("VEG_PRICES" if "veg" in obj else "MAT_PRICES")
+    if "veg" not in obj and "items" not in obj:
+        sys.exit("הקובץ אינו ניתוח תקין (חסר veg/items).")
+    if "veg" in obj:
+        TAB = args.tab or "VEG_PRICES"
+    elif "batchProducts" in obj:          # פלט build_recon.py
+        TAB = args.tab or "RECON"
+    else:
+        TAB = args.tab or "MAT_PRICES"
 
     creds = Credentials.from_service_account_file(
         args.key, scopes=["https://www.googleapis.com/auth/spreadsheets"])
@@ -100,8 +105,9 @@ def main():
     back = base64.b64decode("".join(r[0] for r in rows if r)).decode("utf-8")
     ok = json.loads(back) == obj
     n = len(obj.get("veg") or obj.get("items") or [])
+    ret = obj.get("returns", {}).get("totalKg", "—")
     print(f"נכתבו {len(chunks)} שורות ללשונית {TAB} | פריטים: {n} | "
-          f"חודשים: {len(obj.get('months', []))} | החזרות: {obj['returns']['totalKg']} ק\"ג | "
+          f"חודשים: {len(obj.get('months', []))} | החזרות: {ret} | "
           f"אימות זהות: {'תקין' if ok else 'נכשל'}")
     if not ok:
         sys.exit(1)
