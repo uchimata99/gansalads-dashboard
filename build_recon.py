@@ -105,7 +105,7 @@ def cross_expand(flat, key, seen=None):
 
 
 def read_production(key_json, sheet_id, max_week):
-    """PROD_DETAIL מלשונית DATA -> {product_name: units} עד max_week (כולל)."""
+    """PROD_DETAIL מלשונית DATA -> {product_name: {'units','kg'}} עד max_week (כולל)."""
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
     creds = Credentials.from_service_account_file(
@@ -113,13 +113,15 @@ def read_production(key_json, sheet_id, max_week):
     sh = build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
     rows = sh.values().get(spreadsheetId=sheet_id, range="DATA!A:A").execute().get("values", [])
     D = json.loads("".join(r[0] for r in rows if r))
-    units = {}
+    prod = {}
     for name, wk in D.get("PROD_DETAIL", {}).items():
         for w, days in wk.items():
             if int(w) <= max_week:
                 for _, t in days.items():
-                    units[name] = units.get(name, 0.0) + t[0]
-    return units
+                    d = prod.setdefault(name, {'units': 0.0, 'kg': 0.0})
+                    d['units'] += t[0]
+                    d['kg'] += t[1]
+    return prod
 
 
 def main():
@@ -151,12 +153,17 @@ def main():
     # שמות מוצרים מוגמרים (מהעצים) לצורך מיפוי הייצור
     fp_name2key = {t['name']: k for k, t in trees.items()}
 
-    units = read_production(args.key, args.prod_sheet, args.weeks)
-    unmapped = sorted([n for n in units if n not in fp_name2key and units[n] > 30])
+    prod = read_production(args.key, args.prod_sheet, args.weeks)
+    # מוצרים שיוצרו ללא עץ מוצר — מוחרגים מהניתוח (רשימה מלאה למיכל)
+    unmapped = sorted(
+        [{'name': n, 'units': round(d['units']), 'kg': round(d['kg'], 1)}
+         for n, d in prod.items() if n not in fp_name2key and d['units'] > 0],
+        key=lambda x: -x['units'])
 
-    # צריכה תאורטית פר חומר גלם (רק ממוצרים לא-אצווה שמופו)
+    # צריכה תאורטית פר חומר גלם (רק ממוצרים לא-אצווה שמופו לעץ)
     theo, contrib, nbatch = {}, {}, {}
-    for pname, u in units.items():
+    for pname, d in prod.items():
+        u = d['units']
         pk = fp_name2key.get(pname)
         if not pk:
             continue
