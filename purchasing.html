@@ -325,6 +325,9 @@ body{background:#f5f2ec}
  <div class="tab" data-p="veg">🥬 מכרז ירקות</div>
  <div class="tab" data-p="peel">🥔 ירקות קלופים</div>
  <div class="tab" data-p="pack">📦 אריזות</div>
+ <div class="tab" data-p="spice">🌶️ תבלינים</div>
+ <div class="tab" data-p="canned">🥫 שימורים</div>
+ <div class="tab" data-p="cold">❄️ חומרי גלם בקירור</div>
  <div class="tab" data-p="map">🔗 שיוך ספקים</div>
  <div class="tab" data-p="cart">סל ההזמנה</div>
  <div class="tab" data-p="hist">היסטוריית הזמנות</div>
@@ -344,7 +347,7 @@ body{background:#f5f2ec}
    <div class="chips" id="catChips"></div>
    <div class="scroll" id="itemsTab"></div>
    <div class="cartbar">
-    <span>בהזמנה: <b id="cbCount">0</b> פריטים · <b id="cbSup">0</b> ספקים</span>
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
     <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
     <button class="btn ghost sm" onclick="clearOrder()">נקה הכול</button>
    </div>
@@ -382,7 +385,46 @@ body{background:#f5f2ec}
    <div class="ctrl"><input id="pkSearch" placeholder="🔍 חיפוש אריזה (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
    <div class="scroll" id="packTab"></div>
    <div class="cartbar">
-    <span>בהזמנה: <b id="cbCount2">0</b> פריטים · <b id="cbSup2">0</b> ספקים</span>
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
+    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- ============ תבלינים ============ -->
+ <div class="page" id="spice">
+  <div class="card">
+   <div class="card-t"><span>תבלינים — הזיני כמות ליד כל פריט</span><span class="lbl" id="spiceCount"></span></div>
+   <div class="ctrl"><input id="scSearch" placeholder="🔍 חיפוש תבלין (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="scroll" id="spiceTab"></div>
+   <div class="cartbar">
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
+    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- ============ שימורים ============ -->
+ <div class="page" id="canned">
+  <div class="card">
+   <div class="card-t"><span>שימורים וירקות מעובדים — הזיני כמות ליד כל פריט</span><span class="lbl" id="cannedCount"></span></div>
+   <div class="ctrl"><input id="cnSearch" placeholder="🔍 חיפוש שימור (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="scroll" id="cannedTab"></div>
+   <div class="cartbar">
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
+    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- ============ חומרי גלם בקירור ============ -->
+ <div class="page" id="cold">
+  <div class="card">
+   <div class="card-t"><span>חומרי גלם בקירור — הזיני כמות ליד כל פריט</span><span class="lbl" id="coldCount"></span></div>
+   <div class="ctrl"><input id="cdSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="scroll" id="coldTab"></div>
+   <div class="cartbar">
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
     <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
    </div>
   </div>
@@ -398,7 +440,7 @@ body{background:#f5f2ec}
 
  <!-- ============ סל ההזמנה ============ -->
  <div class="page" id="cart">
-  <div class="note" id="cartNote">הפריטים מקובצים אוטומטית <b>לפי ספק</b>. לכל ספק אפשר להפיק דף הזמנה (הדפסה/PDF), להעתיק טקסט לוואטסאפ, ולשמור להיסטוריה. פריט עם כמה ספקים — בחרי את הספק בשורת הפריט (בלשונית "בניית הזמנה").</div>
+  <div class="note" id="cartNote">הפריטים מקובצים אוטומטית <b>לפי ספק</b>. לכל ספק אפשר <b>לשלוח בוואטסאפ</b> (📲), להעתיק טקסט, להפיק דף הזמנה (הדפסה/PDF), ולשמור להיסטוריה. כדי שהשליחה תפתח ישירות את הצ׳אט של הספק — לחצי "☎️ מספר" והזיני את מספרו פעם אחת (נשמר במכשיר). בלי מספר, וואטסאפ ייפתח עם ההודעה המוכנה ותבחרי את איש הקשר. פריט עם כמה ספקים — בחרי את הספק בשורת הפריט.</div>
   <div id="cartWrap"></div>
  </div>
 
@@ -437,6 +479,13 @@ const CAT_TAB='PURCHASING';
 const HIST_TAB='PO_HISTORY';
 const VEG_TAB='VEG_AUCTION';
 const VEG_CAT='206';                     // קטגוריית הירקות למכרז
+// טאבי קטגוריה נפרדים (כמו אריזות) — מוצאים מבניית ההזמנה ל"הכל" ומקבלים טאב עליון משלהם
+const CAT_TABS=[
+ {p:'spice', c:'204', box:'spiceTab',  cnt:'spiceCount',  srch:'scSearch'},
+ {p:'canned',c:'203', box:'cannedTab', cnt:'cannedCount', srch:'cnSearch'},
+ {p:'cold',  c:'200', box:'coldTab',   cnt:'coldCount',   srch:'cdSearch'}
+];
+const CAT_TAB_CODES=new Set(CAT_TABS.map(t=>t.c));
 const VEG_SEL_KEY='gsVegSuppliers';      // 4 הספקים הנבחרים (נשמר במכשיר, נזכר למחר)
 const PO_HEADER=['תאריך','מזהה הזמנה','מפתח ספק','שם ספק','מפתח פריט','שם פריט','כמות','מחיר אחרון','הערכת עלות'];
 const VEG_HEADER=['תאריך','מפתח ירק','שם ירק','מפתח ספק','שם ספק','מחיר מוצע','כמות','נבחר'];
@@ -448,7 +497,7 @@ let ORDER={};            // מפתח פריט -> {qty:Number, sup:supplierKey}
 let HIST=null;           // שורות היסטוריה (מערך אובייקטים)
 let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משותף)
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
-let ITEMS_VEG=[], ITEMS_PEEL=[], ITEMS_PACK=[];
+let ITEMS_VEG=[], ITEMS_PEEL=[], ITEMS_PACK=[], ITEMS_ALL=[];
 // שני מכרזים (טרי + קלופים) — אותו מנגנון, קונפיג נפרד לכל אחד
 const AUC={
  veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
@@ -475,6 +524,7 @@ function tab(p){
  if(p==='veg'){renderVeg();loadVegHist(false).then(renderVeg);}
  if(p==='peel'){renderPeel();loadPeelHist(false).then(renderPeel);}
  if(p==='pack')renderPack();
+ {const ct=CAT_TABS.find(x=>x.p===p);if(ct)renderCatTab(ct);}
  if(p==='map')renderMap();
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(t.dataset.p)));
@@ -482,8 +532,10 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(
 /* ---------- אתחול הקטלוג ---------- */
 function startApp(){
  const ALL=(CAT.items||[]).slice();
+ ITEMS_ALL=ALL;
  ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
- ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT&&String(it.c)!=='201');   // בניית הזמנה — בלי ירקות ובלי אריזות
+ // בניית הזמנה "הכל" — בלי ירקות, בלי אריזות, ובלי הקטגוריות שקיבלו טאב משלהן (תבלינים/שימורים/קירור)
+ ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT&&String(it.c)!=='201'&&!CAT_TAB_CODES.has(String(it.c)));
  ITEMS_PACK=ALL.filter(it=>String(it.c)==='201');                       // טאב אריזות נפרד
  // סדר אריזות לפי מיכל: קופסה+מכסה של כל גודל יחד — 4.5 (כולל מכסה 2.5/4.5), 2.5, 2, 3, 1, 500, 250, מכסי 250/500; השאר אחריהם לפי א"ב
  const PACK_ORDER=['70206','70207','70208','70025','70026','70020','70023','70027','70028','70070','70089','70041','70149','70151','70042'];
@@ -503,6 +555,7 @@ function startApp(){
  setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
  ['fSearch','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('pkSearch').addEventListener('input',renderPack);
+ CAT_TABS.forEach(t=>{const el=document.getElementById(t.srch);if(el)el.addEventListener('input',()=>renderCatTab(t));});
  initMapSel();
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
@@ -541,6 +594,13 @@ function renderPack(){
  const q=(document.getElementById('pkSearch').value||'').trim();
  const arr=ITEMS_PACK.filter(it=>!q||((it.n+' '+it.k).indexOf(q)>=0));
  renderItemCards(arr,'packTab','packCount');
+}
+// טאבי קטגוריה (תבלינים/שימורים/קירור) — אותם כרטיסים, מסוננים לפי קטגוריה + חיפוש
+function renderCatTab(t){
+ const el=document.getElementById(t.srch);const q=(el&&el.value||'').trim();
+ const arr=(ITEMS_ALL||[]).filter(it=>String(it.c)===t.c&&(!q||((it.n+' '+it.k).indexOf(q)>=0)))
+   .sort((a,b)=>a.n.localeCompare(b.n,'he'));
+ renderItemCards(arr,t.box,t.cnt);
 }
 function renderItemCards(arr,boxId,countId){
  setTxt(countId,arr.length+' פריטים');
@@ -598,8 +658,8 @@ function onSup(e){
 function updateCartBar(){
  const lines=Object.keys(ORDER).filter(k=>ORDER[k].qty>0);
  const sups=new Set(lines.map(k=>ORDER[k].sup||''));
- setTxt('cbCount',lines.length);setTxt('cbSup',sups.size);
- setTxt('cbCount2',lines.length);setTxt('cbSup2',sups.size);
+ document.querySelectorAll('.cbc').forEach(e=>e.textContent=lines.length);
+ document.querySelectorAll('.cbs').forEach(e=>e.textContent=sups.size);
 }
 function clearOrder(){
  if(Object.keys(ORDER).length && !confirm('לנקות את כל ההזמנה הנוכחית?'))return;
@@ -632,8 +692,10 @@ function renderCart(){
   h+='<div class="sup-card">'+
      '<div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span>'+
      '<span class="sup-actions noprint">'+
-       '<button class="btn sm" onclick="printSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">🖨️ הדפס / PDF</button>'+
-       '<button class="btn gold sm" onclick="waSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">💬 טקסט לוואטסאפ</button>'+
+       '<button class="btn sm" onclick="waSend(\''+esc(sk).replace(/'/g,"\\'")+'\')">📲 שלח בוואטסאפ'+(waPhone(sk)?' ✓':'')+'</button>'+
+       '<button class="btn gold sm" onclick="waSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">💬 העתק טקסט</button>'+
+       '<button class="btn ghost sm" onclick="setWaPhone(\''+esc(sk).replace(/'/g,"\\'")+'\')">☎️ מספר</button>'+
+       '<button class="btn ghost sm" onclick="printSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">🖨️ הדפס / PDF</button>'+
        '<button class="btn blue sm" onclick="saveSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">💾 שמור להיסטוריה</button>'+
      '</span></div>'+
      '<table><thead><tr><th>פריט</th><th>מפתח</th><th>כמות</th>'+(anyPrice?'<th>מחיר אחרון</th><th>הערכת עלות</th>':'')+'</tr></thead><tbody>';
@@ -654,14 +716,36 @@ function orderTextLines(sk){
  const map=orderBySupplier();const lines=(map[sk]||[]).slice().sort((a,b)=>a.n.localeCompare(b.n,'he'));
  return lines;
 }
-function waSupplier(sk){
- const lines=orderTextLines(sk);if(!lines.length)return;
+// ----- וואטסאפ: טקסט ההזמנה + פנקס מספרים (localStorage) + שליחה בפועל -----
+function waText(sk){
+ const lines=orderTextLines(sk);if(!lines.length)return '';
  const nm=sk==='__none__'?'ללא ספק':supName(sk);
- const d=new Date();const ds=d.toLocaleDateString('he-IL');
+ const ds=new Date().toLocaleDateString('he-IL');
  let txt='*הזמנת רכש — סלטי גן*\nספק: '+nm+'\nתאריך: '+ds+'\n\n';
  lines.forEach((l,i)=>{txt+=(i+1)+'. '+l.n+' — '+fmtQty(l.qty)+'\n';});
  txt+='\nסה"כ '+lines.length+' פריטים.';
- copyText(txt);
+ return txt;
+}
+function waSupplier(sk){const txt=waText(sk);if(txt)copyText(txt);}
+let WA_PHONES={};try{WA_PHONES=JSON.parse(localStorage.getItem('gsWaPhones')||'{}');}catch(e){}
+function waPhone(sk){return WA_PHONES[sk]||'';}
+function normPhone(p){p=String(p||'').replace(/\D/g,'');if(!p)return '';if(p.slice(0,3)==='972')return p;if(p[0]==='0')return '972'+p.slice(1);return p;}
+function setWaPhone(sk){
+ const cur=waPhone(sk);
+ const v=prompt('מספר וואטסאפ של "'+(sk==='__none__'?'':supName(sk))+'" (למשל 050-1234567). ריק = מחיקה:',cur);
+ if(v===null)return;
+ const n=normPhone(v);
+ if(n)WA_PHONES[sk]=n;else delete WA_PHONES[sk];
+ try{localStorage.setItem('gsWaPhones',JSON.stringify(WA_PHONES));}catch(e){}
+ toast(n?'המספר נשמר — עכשיו "שלח בוואטסאפ" יפתח ישירות את הצ׳אט':'המספר נמחק');
+ renderCart();
+}
+function waSend(sk){
+ const txt=waText(sk);if(!txt)return;
+ const ph=waPhone(sk);
+ const url=ph?('https://wa.me/'+ph+'?text='+encodeURIComponent(txt))
+             :('https://api.whatsapp.com/send?text='+encodeURIComponent(txt));
+ window.open(url,'_blank');
 }
 function copyText(txt){
  if(navigator.clipboard&&navigator.clipboard.writeText){
