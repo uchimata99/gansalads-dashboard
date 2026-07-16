@@ -162,6 +162,7 @@ html.locked #gsLock{display:flex!important}
    </div>
   </div>
   <div class="card" style="margin-top:18px"><div class="card-t"><span>פירוט — צריכה תאורטית מול קנייה</span><span class="lbl">לחיצה על שורה מציגה את המוצרים הצורכים</span></div><div class="scroll" id="recTab"><div class="empty">טוען…</div></div></div>
+  <div class="card" style="margin-top:18px"><div class="card-t" style="cursor:pointer" onclick="var e=document.getElementById('recUnmap');e.style.display=e.style.display==='none'?'':'none'"><span id="recUnmapTitle">מוצרים שיוצרו ללא עץ מוצר</span><span class="lbl">מוחרגים מהניתוח · לחצי להצגה/הסתרה</span></div><div class="scroll" id="recUnmap" style="display:none"></div></div>
  </div>
 </div>
 
@@ -619,6 +620,17 @@ function renderRec(){
   if(top)h+='<tr id="recSub_'+esc(i.key)+'" style="display:none"><td colspan="6" style="background:var(--surface2);font-size:12px"><b>המוצרים שצורכים '+esc(i.name)+':</b><br>'+top+'</td></tr>';
  });
  tEl.innerHTML=list.length?h+'</tbody></table>':'<div class="empty">אין פריטים בסינון.</div>';
+ // מוצרים ללא עץ מוצר
+ const um=REC.unmappedProduction||[];
+ setTxt('recUnmapTitle','מוצרים שיוצרו ללא עץ מוצר ('+NUM(um.length)+')');
+ const ue=document.getElementById('recUnmap');
+ if(ue){
+  if(!um.length){ue.innerHTML='<div class="empty">כל המוצרים שיוצרו ממופים לעץ.</div>';}
+  else{let uh='<div class="note">מוצרים אלה יוצרו אך אין להם עץ מוצר, ולכן <b>לא נכללים</b> בצריכה התאורטית. אחרי שיתווסף להם עץ — בבנייה הבאה ייכנסו אוטומטית.</div>'+
+   '<table><thead><tr><th>מוצר</th><th>אריזות</th><th>ק"ג</th></tr></thead><tbody>';
+   um.forEach(u=>{uh+='<tr><td>'+esc(u.name)+'</td><td class="num">'+NUM(u.units)+'</td><td class="num">'+NUM(u.kg)+'</td></tr>';});
+   ue.innerHTML=uh+'</tbody></table>';}
+ }
 }
 
 // ================= התחברות גוגל (קריאה בלבד) =================
