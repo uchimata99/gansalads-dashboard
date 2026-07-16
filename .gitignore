@@ -8,3 +8,7 @@ service_account*.json
 C_*.xlsx
 I_*.xlsx
 customers_D.json
+# ניתוחי מחירי רכש — מכילים מחירי קנייה, נקלטים לגיליון בלבד (כמו purchasing_catalog.json)
+veg_prices.json
+mat_prices.json
+recon.json
