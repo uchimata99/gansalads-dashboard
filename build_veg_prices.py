@@ -291,14 +291,20 @@ def main():
     for pat in args.inputs:
         paths.extend(sorted(glob.glob(pat)) or [pat])
 
-    raw = []
+    # פריט שמופיע ביותר מקובץ אחד -> **מיזוג תנועות** (כרטסת מלאה + כרטסות שבועיות).
+    # התקופות לא אמורות לחפוף (מלאה עד חודש X, שבועיות אחריו) — אחרת כפילות.
+    by_key = {}
     for p in paths:
         rdr = read_ledger_xlsx if p.lower().endswith(('.xlsx', '.xlsm')) else read_ledger_text
-        raw.extend(rdr(p))
-    # פריט שמופיע ביותר מקובץ אחד — האחרון גובר (לפי מפתח)
-    by_key = {}
-    for it in raw:
-        by_key[str(it['key'])] = it
+        for it in rdr(p):
+            k = str(it['key'])
+            if k in by_key:
+                by_key[k]['txns'].extend(it['txns'])
+                if it['total_in'] is not None:
+                    by_key[k]['total_in'] = (by_key[k]['total_in'] or 0) + it['total_in']
+                    by_key[k]['total_out'] = (by_key[k]['total_out'] or 0) + (it['total_out'] or 0)
+            else:
+                by_key[k] = dict(it, txns=list(it['txns']))
     print(f"נקראו {len(by_key)} פריטים מ-{len(paths)} קבצים")
 
     all_nodes, all_rets = [], []
