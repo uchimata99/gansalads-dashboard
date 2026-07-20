@@ -57,7 +57,9 @@ function sendPendingOrders() {
       var date = String(row[0] || '');
       if (!phone) { setStatus(sh, r, 'failed', 'no-phone'); continue; }
 
-      var res = sendTemplate(PHONE_ID, TOKEN, TEMPLATE, LANG, phone, [name, body, date]);
+      // מטא אוסרת מעברי-שורה/טאבים/>4 רווחים בתוך משתנה תבנית — ממירים לרשימה עם מפריד "•"
+      var bodyParam = body.replace(/[\r\n\t]+/g, '  •  ').replace(/ {4,}/g, '   ').trim();
+      var res = sendTemplate(PHONE_ID, TOKEN, TEMPLATE, LANG, phone, [name, bodyParam, date]);
       if (res.ok) setStatus(sh, r, 'sent', res.id);
       else setStatus(sh, r, 'failed', res.err);
     }
