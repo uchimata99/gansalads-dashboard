@@ -39,7 +39,11 @@
    | `PHONE_NUMBER_ID` | מזהה מספר הטלפון |
    | `TEMPLATE_NAME` | שם התבנית (למשל `purchase_order`) |
    | `TEMPLATE_LANG` | `he` |
-3. הרצה ראשונה של `sendPendingOrders` ידנית — לאשר הרשאות (גישה לגיליון + רשת).
+   | `REGISTER_PIN` | PIN בן 6 ספרות לרישום המספר (רק לרישום החד-פעמי) |
+3. **רישום המספר (חד-פעמי, עוקף את כפתור ה-Register התקול):** לבחור בעורך את הפונקציה
+   `registerNumber` וללחוץ Run. לאשר הרשאות. לבדוק ב-Execution log שחזר `200`.
+   המספר יעבור מ-`Pending` ל-`Connected`. (אם השם עדיין בבדיקה — זה בסדר, המספר עובד.)
+4. הרצה ראשונה של `sendPendingOrders` ידנית — לאשר הרשאות (גישה לגיליון + רשת).
 4. **Triggers** (⏰) → Add trigger → `sendPendingOrders`, Time-driven, Every minute
    (או כל 5 דקות).
 

@@ -107,3 +107,28 @@ function setStatus(sh, rowIdx, status, note) {
   sh.getRange(rowIdx + 1, 6).setValue(status);              // F סטטוס
   sh.getRange(rowIdx + 1, 7).setValue(note || '');          // G מזהה הודעה / שגיאה
 }
+
+/**
+ * רישום חד-פעמי של המספר ל-Cloud API — עוקף את כפתור ה-Register התקול בממשק.
+ * להריץ פעם אחת מעורך ה-Apps Script (בחירת הפונקציה registerNumber ← Run).
+ * דורש Script Properties: META_TOKEN, PHONE_NUMBER_ID, REGISTER_PIN (6 ספרות).
+ * מעביר את המספר מ-Pending ל-Connected. אם מקבלים שגיאה על PIN קיים — להשתמש
+ * ב-PIN שכבר נקבע, או לאפס אימות דו-שלבי.
+ */
+function registerNumber() {
+  var props = PropertiesService.getScriptProperties();
+  var TOKEN = props.getProperty('META_TOKEN');
+  var PHONE_ID = props.getProperty('PHONE_NUMBER_ID');
+  var PIN = props.getProperty('REGISTER_PIN');
+  if (!TOKEN || !PHONE_ID || !PIN) { Logger.log('חסר META_TOKEN / PHONE_NUMBER_ID / REGISTER_PIN'); return; }
+  var url = 'https://graph.facebook.com/v21.0/' + PHONE_ID + '/register';
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + TOKEN },
+    payload: JSON.stringify({ messaging_product: 'whatsapp', pin: String(PIN) }),
+    muteHttpExceptions: true
+  };
+  var resp = UrlFetchApp.fetch(url, options);
+  Logger.log('register → ' + resp.getResponseCode() + ' ' + resp.getContentText());
+}
