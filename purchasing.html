@@ -733,6 +733,11 @@ function waText(sk){
  txt+='\nסה"כ '+lines.length+' פריטים.';
  return txt;
 }
+// רק שורות הפריטים (אחת לכל פריט) — נשלח כמשתנה {{2}} בתבנית האוטומטית
+function waItemsText(sk){
+ const lines=orderTextLines(sk);
+ return lines.map((l,i)=>(i+1)+'. '+l.n+' — '+fmtQty(l.qty)).join('\n');
+}
 function waSupplier(sk){const txt=waText(sk);if(txt)copyText(txt);}
 function normPhone(p){p=String(p||'').replace(/\D/g,'');if(!p)return '';if(p.slice(0,3)==='972')return p;if(p[0]==='0')return '972'+p.slice(1);return p;}
 // ספר טלפונים מרכזי (לשונית CONTACTS) + פנקס מקומי למכשיר כגיבוי/דריסה
@@ -790,7 +795,7 @@ async function waAuto(sk){
  try{
   const token=await ensureWriteToken();
   await ensureTab(WA_OUTBOX_TAB,['תאריך','מפתח ספק','שם ספק','טלפון','הודעה','סטטוס','מזהה הודעה'],token);
-  await appendRaw(WA_OUTBOX_TAB,[[ds,sk,nm,ph,waText(sk),'pending','']],token);
+  await appendRaw(WA_OUTBOX_TAB,[[ds,sk,nm,ph,waItemsText(sk),'pending','']],token);
   toast('ההזמנה נכנסה לתור — תישלח אוטומטית בוואטסאפ ל'+nm);
  }catch(e){console.error(e);toast('לא ניתן להכניס לתור (ייתכן שחסרה הרשאת עריכה)');}
 }
