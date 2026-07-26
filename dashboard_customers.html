@@ -171,6 +171,7 @@ html.locked #gsLock{display:flex!important}
   <div class="ctrl" id="wkCtrl" dir="rtl" style="flex-wrap:wrap;gap:8px">
    <button class="wkb" id="wkToggle" onclick="toggleWkPanel()">📅 בחר שבועות ▾</button>
    <span class="wkseg"><button id="wkm-avg" class="active" onclick="setWkMode('avg')">ממוצע שבועי</button><button id="wkm-tot" onclick="setWkMode('total')">סך התקופה</button></span>
+   <input id="wkSearch" list="wkList" placeholder="🔍 חיפוש לקוח…" autocomplete="off" oninput="wkSearchChange(this.value)" style="min-width:180px"><datalist id="wkList"></datalist>
    <span id="wkSelCount" class="lbl"></span>
    <div id="wkPanel" style="display:none;width:100%;margin-top:6px">
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
@@ -574,7 +575,8 @@ function redflags(){
 
 
 // ---------- WEEKLY ----------
-let selWk=new Set(), wkMode='avg', wkCustSel=null, curWC={};
+let selWk=new Set(), wkMode='avg', wkCustSel=null, curWC={}, wkSearch='';
+function wkSearchChange(v){wkSearch=(v||'').trim();renderWeek();}
 function pstdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length);}
 // בורר רב-שבועי: ברירת מחדל — השבוע האחרון בלבד; לחיצה על שבוע מוסיפה אותו לתצוגה
 // (שבועות שלוחצים עליהם = שבועות שרוצים לראות). כפתור "הכל" בוחר את כולם.
@@ -624,13 +626,16 @@ function renderWeek(){
    kpi('b fin','מחזור ממוצע ללקוח',ILS(mean),'± '+ILS(sd)+' סטיית תקן')+
    kpi('p fin','לקוח מוביל',entries.length?ILS(entries[0].m):'—',entries.length?entries[0].name.slice(0,22):'');
  }
- document.getElementById('wkCount').textContent=entries.length+' לקוחות';
+ document.getElementById('wkList').innerHTML=entries.map(e=>`<option value="${e.name}">`).join('');
+ const term=wkSearch, shown=term?entries.filter(e=>e.name.includes(term)):entries;
+ document.getElementById('wkCount').textContent=term?(shown.length+' מתוך '+entries.length+' לקוחות'):(entries.length+' לקוחות');
  const cM=isAvg?'מחזור ממוצע':'מחזור', cP=isAvg?'אריזות (ממוצע)':'אריזות';
  let h='<table><thead><tr><th>#</th><th>לקוח</th><th class="fin">'+cM+'</th><th>'+cP+'</th><th>חלק</th></tr></thead><tbody>';
- entries.forEach((e,i)=>{h+=`<tr style="cursor:pointer" data-ci="${e.ci}"><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${e.name}${flagSpan(e.name)}</td><td class="num fin">${ILS(e.m)}</td><td class="num">${NUM(e.q)}</td><td class="num">${wtot?(100*e.m/wtot).toFixed(1):'0'}%</td></tr>`;});
+ entries.forEach((e,i)=>{if(term&&!e.name.includes(term))return;h+=`<tr style="cursor:pointer" data-ci="${e.ci}"><td><span class="rank ${i<3?'top':''}">${i+1}</span></td><td>${e.name}${flagSpan(e.name)}</td><td class="num fin">${ILS(e.m)}</td><td class="num">${NUM(e.q)}</td><td class="num">${wtot?(100*e.m/wtot).toFixed(1):'0'}%</td></tr>`;});
+ if(term&&!shown.length)h+='<tr><td colspan="5" style="padding:18px;text-align:center;color:var(--muted)">לא נמצא לקוח בשם זה בשבועות הנבחרים</td></tr>';
  document.getElementById('wkTab').innerHTML=h+'</tbody></table>';
- document.querySelectorAll('#wkTab tbody tr').forEach(tr=>tr.addEventListener('click',()=>{wkCustSel=+tr.dataset.ci;renderWeekDet();}));
- if((wkCustSel==null||!curWC[wkCustSel]) && entries.length)wkCustSel=entries[0].ci;
+ document.querySelectorAll('#wkTab tbody tr').forEach(tr=>tr.dataset.ci&&tr.addEventListener('click',()=>{wkCustSel=+tr.dataset.ci;renderWeekDet();}));
+ if((wkCustSel==null||!curWC[wkCustSel]) && shown.length)wkCustSel=shown[0].ci;
  renderWeekDet();
 }
 function renderWeekDet(){

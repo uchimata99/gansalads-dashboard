@@ -339,6 +339,10 @@ window.addEventListener('load', ()=>{
     <div class="cw t"><canvas id="weeklyTrendChart"></canvas></div>
     <div class="ins" id="sumIns"></div>
   </div>
+  <div class="card fin">
+    <div class="card-title" id="revChgTitle">מה הניע את השינוי בהכנסות</div>
+    <div class="tbl-wrap"><table class="tbl" id="revChangeTable"></table></div>
+  </div>
   <div class="grid2 fin-pair">
     <div class="card">
       <div class="card-title">פילוח קבוצות — אריזות שבועי <span class="card-badge">ריבוד</span></div>
@@ -713,7 +717,7 @@ function toggleMetric(m){
   ['pkg','kg','rev'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===m));
   buildWeeklyTrendChart();
 }
-function initSummary(){buildWeeklyTrendChart();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
+function initSummary(){buildWeeklyTrendChart();buildRevenueChangeTable();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
 // ═══════ חיזוי לשבוע הבא — עמודת "חיזוי" בגרף המגמה הראשי ═══════
 // *** מקור האמת של כללי החיזוי הוא forecast.html *** — FC_NOTES / FC_CUSTOMER_OUT /
 // FC_HOLIDAYS נטענים ממנו בזמן ריצה (אותו origin) כדי שהעמודה כאן תהיה זהה
@@ -735,39 +739,67 @@ function fcNote(name){for(const n of FC_NOTES){if(n.p===name)return n;}return nu
 function fcIsOneOff(name,w){for(const n of FC_NOTES){if(n.type==='one_off'&&n.p===name&&+n.w===+w)return true;}return false;}
 function fcCustomerOutFactor(name,totK,tw){const e=FC_CUSTOMER_OUT.find(x=>x.p===name);if(!e)return 1;if(e.from!=null&&tw!=null&&tw<e.from)return 1;if(!(totK>0))return 1;return Math.max(0,(totK-e.kg)/totK);}
 function fcHolidayPreWeek(){const now=new Date();now.setHours(0,0,0,0);const sun=new Date(now);sun.setDate(now.getDate()-((now.getDay())%7));const coming=new Date(sun);coming.setDate(sun.getDate()+7);let best=null;for(const h of FC_HOLIDAYS){const hd=new Date(h.date+'T00:00:00');if(isNaN(hd))continue;const days=Math.round((hd-coming)/864e5);if(days>=0&&days<=12){if(!best||days<best.days)best={name:h.name,uplift:h.uplift,days};}}return best;}
-// {pkg,kg} לשבוע הבא — ממוצע נע 4 שבועות פר-מוצר עם הכללים (זהה ל-forecast.html)
+// {pkg,kg,rev} לשבוע הבא — ממוצע נע 4 שבועות פר-מוצר עם הכללים (זהה ל-forecast.html)
 function computeWeekForecastTotals(){
   if(!fcRulesLoaded || !PROD_DETAIL || !ALLWEEKS.length) return null;
   const weeks=ALLWEEKS.map(w=>w.w).sort((a,b)=>a-b);
   const recentAll=weeks.slice(-Math.min(4,weeks.length));
   const targetWeek=weeks[weeks.length-1]+1;
-  let totPkg=0,totKg=0;
+  let totPkg=0,totKg=0,totRev=0;
   for(const name in PROD_DETAIL){
     const note=fcNote(name); if(note&&note.type==='discontinued') continue;
     const wk=PROD_DETAIL[name];
     const recent=recentAll.filter(w=>!fcIsOneOff(name,w)); const useW=recent.length?recent:recentAll;
     const trend=!!(note&&note.type==='trend'); const wts=useW.map((_,i)=>trend?(i+1):1); const wsum=wts.reduce((a,b)=>a+b,0)||1;
-    let sp=0,sk=0,any=false;
-    useW.forEach((w,idx)=>{const dd=wk[w]; if(dd)for(const di in dd){const i=+di; if(i>=0&&i<6){sp+=wts[idx]*fcNum(dd[di][0]); sk+=wts[idx]*fcNum(dd[di][1]); if(dd[di][0]||dd[di][1])any=true;}}});
+    let sp=0,sk=0,sr=0,any=false;
+    useW.forEach((w,idx)=>{const dd=wk[w]; if(dd)for(const di in dd){const i=+di; if(i>=0&&i<6){sp+=wts[idx]*fcNum(dd[di][0]); sk+=wts[idx]*fcNum(dd[di][1]); sr+=wts[idx]*fcNum(dd[di][2]); if(dd[di][0]||dd[di][1])any=true;}}});
     if(!any) continue;
-    let tp=sp/wsum, tk=sk/wsum; if(tk<=0&&tp<=0) continue;
-    const cf=fcCustomerOutFactor(String(name),tk,targetWeek); tp*=cf; tk*=cf;
-    totPkg+=tp; totKg+=tk;
+    let tp=sp/wsum, tk=sk/wsum, tr=sr/wsum; if(tk<=0&&tp<=0) continue;
+    const cf=fcCustomerOutFactor(String(name),tk,targetWeek); tp*=cf; tk*=cf; tr*=cf;
+    totPkg+=tp; totKg+=tk; totRev+=tr;
   }
   const h=fcHolidayPreWeek(); const k=h?(1+h.uplift):1;
-  return {pkg:totPkg*k, kg:totKg*k, targetWeek, holiday:h?h.name:null};
+  return {pkg:totPkg*k, kg:totKg*k, rev:totRev*k, targetWeek, holiday:h?h.name:null};
+}
+function buildRevenueChangeTable(){
+  const tbl=document.getElementById('revChangeTable');if(!tbl)return;
+  const ws=ALLWEEKS.slice().sort((a,b)=>a.w-b.w);
+  const ttl=document.getElementById('revChgTitle');
+  if(ws.length<2){tbl.innerHTML='<tbody><tr><td style="padding:14px;color:var(--muted)">אין מספיק שבועות להשוואה</td></tr></tbody>';return;}
+  const last=ws[ws.length-1].w, prev=ws[ws.length-2].w;
+  const sumRev=(name,wk)=>{const d=(PROD_DETAIL[name]||{})[String(wk)]||{};let s=0;for(const k in d)s+=(d[k][2]||0);return s;};
+  const rows=[];
+  for(const name in PROD_DETAIL){const a=sumRev(name,prev),b=sumRev(name,last),diff=b-a;if(Math.round(Math.abs(diff))>=1)rows.push({name,diff});}
+  rows.sort((x,y)=>y.diff-x.diff);
+  const ups=rows.filter(r=>r.diff>0).slice(0,7);
+  const downs=rows.filter(r=>r.diff<0).slice(-7).reverse();
+  const wl=ALLWEEKS.find(w=>w.w===last)||{}, wp=ALLWEEKS.find(w=>w.w===prev)||{};
+  const tot=(wl.rev||0)-(wp.rev||0);
+  ttl.innerHTML='מה הניע את השינוי בהכנסות — ש'+prev+' → ש'+last+
+    ' <span class="card-badge'+(tot>=0?' g':'')+'" style="'+(tot<0?'background:#fde2e2;color:#dc2626':'')+'">'+(tot>=0?'▲':'▼')+' ₪'+fmt(Math.abs(tot))+'</span>';
+  const up=d=>'<span style="color:#16a34a;font-weight:700;white-space:nowrap">▲ ₪'+fmt(d)+'</span>';
+  const dn=d=>'<span style="color:#dc2626;font-weight:700;white-space:nowrap">▼ ₪'+fmt(-d)+'</span>';
+  let h='<thead><tr><th>מוצר</th><th class="fin">שינוי בהכנסה</th></tr></thead><tbody>';
+  h+='<tr><td colspan="2" style="background:var(--lgreen,#e8f6ee);color:#16a34a;font-weight:700;text-align:right;padding:6px 13px">עליות</td></tr>';
+  ups.forEach(r=>{h+='<tr><td style="text-align:right">'+r.name+'</td><td class="fin" style="text-align:center">'+up(r.diff)+'</td></tr>';});
+  if(!ups.length)h+='<tr><td colspan="2" style="padding:8px 13px;color:var(--muted)">—</td></tr>';
+  h+='<tr><td colspan="2" style="background:#fde2e2;color:#dc2626;font-weight:700;text-align:right;padding:6px 13px">ירידות</td></tr>';
+  downs.forEach(r=>{h+='<tr><td style="text-align:right">'+r.name+'</td><td class="fin" style="text-align:center">'+dn(r.diff)+'</td></tr>';});
+  if(!downs.length)h+='<tr><td colspan="2" style="padding:8px 13px;color:var(--muted)">—</td></tr>';
+  h+='</tbody>';
+  tbl.innerHTML=h;
 }
 function buildWeeklyTrendChart(){
-  const fc=(currentMetric!=='rev')?computeWeekForecastTotals():null;   // חיזוי רק לאריזות/ק"ג
+  const fc=computeWeekForecastTotals();   // חיזוי לכל המטריקות — אריזות/ק"ג/הכנסות
   const labels=WEEKS.map(w=>wLabel(w.w));
   let data,label,color;
   if(currentMetric==='pkg'){data=WEEKS.map(w=>w.pkg);label='אריזות';color='#16a34a';}
   else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
   else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
   const bg=WEEKS.map((_,i)=>i===1?color:color+'CC'), bc=WEEKS.map(()=>color);
-  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:fc.kg); labels.push('השבוע הקרוב'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }
+  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:currentMetric==='kg'?fc.kg:fc.rev); labels.push('השבוע הקרוב'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }
   makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:bc,borderWidth:2,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>c.label==='השבוע הקרוב'?(' חיזוי לשבוע הקרוב: '+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+fmt(c.raw))}}},
+    options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>{const u=currentMetric==='rev'?'₪':'';return c.label==='השבוע הקרוב'?(' חיזוי לשבוע הקרוב: '+u+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+u+fmt(c.raw));}}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
 }
 function buildGroupStackChart(){

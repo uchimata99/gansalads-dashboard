@@ -618,17 +618,29 @@ function renderHeader(){
 
 function kc(cls,lbl,val,sub,subCls){ return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub '+(subCls||'')+'">'+(sub||'')+'</div></div>'; }
 
+// הכנסות צפויות (סה"כ) — נגזרות מהק"ג הצפוי (שכבר כולל תיקוני חג/לקוח שעוזב)
+// כפול המחיר הממוצע לק"ג בשבועות האחרונים. הערכה מצרפית — אין מחירים פר-מוצר.
+function fcRevForecast(){
+  const kgF=num((FORECAST||{}).total_kg);
+  const wks=(PRODDATA&&PRODDATA.WEEKS)?PRODDATA.WEEKS.slice().sort((a,b)=>a.w-b.w).slice(-4):[];
+  if(!kgF || !wks.length) return null;
+  let sr=0,sk=0; wks.forEach(w=>{ sr+=num(w.rev); sk+=num(w.kg); });
+  if(sk<=0 || sr<=0) return null;
+  return kgF*(sr/sk);
+}
 function renderForecastKpis(){
   const peak=DAILY.reduce((b,d)=>!b||d.v>b.v?d:b,null);
   const activeProducts=FORECAST.active_products!=null?FORECAST.active_products:PRODUCTS.length;
   const avgStd=HAS_STD&&PRODUCTS.length?PRODUCTS.reduce((a,p)=>a+pStd(p),0)/PRODUCTS.length:0;
+  const rev=fcRevForecast();
   document.getElementById('fcKpis').innerHTML=
     kc('g','סה"כ '+unitLbl()+' לשבוע',fmt(TOTAL),'תחזית מצרפית')+
     kc('t','מוצרים פעילים',fmt(activeProducts),'בתחזית השבוע')+
     kc('a','יום השיא',PEAK_DAY,peak&&peak.v>0?(fmt(peak.v)+' '+unitLbl()+' · '+pct(peak.v,TOTAL)):'')+
     (HAS_STD
       ? kc('n','סטיית תקן ממוצעת','±'+fmt1(avgStd),'תנודתיות שבועית למוצר ('+unitLbl()+')')
-      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?(holText(FORECAST.next_holiday)||'שבוע לפני החג — ביקוש גבוה'):'בשבוע הקרוב', NEXT_HOL?'a':''));
+      : kc('p','חג קרוב',NEXT_HOL||'אין',NEXT_HOL?(holText(FORECAST.next_holiday)||'שבוע לפני החג — ביקוש גבוה'):'בשבוע הקרוב', NEXT_HOL?'a':''))+
+    (rev!=null ? kc('n fin','הכנסות צפויות לשבוע','₪'+fmt(Math.round(rev)),'הערכה: ק"ג צפוי × מחיר ממוצע אחרון') : '');
 }
 
 function buildDailyChart(){
