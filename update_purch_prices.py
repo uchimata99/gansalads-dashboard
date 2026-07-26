@@ -18,20 +18,123 @@
 """
 import argparse
 import base64
+import io
 import json
 import re
 import sys
-from datetime import datetime, date
+import zipfile
+from datetime import datetime, date, timedelta
 
 SHEET_ID = "1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q"
 TAB = "PURCHASING"
 CHUNK = 40000
+XL_EPOCH = datetime(1899, 12, 30)          # בסיס תאריכי אקסל
+
+
+def _load_ws(path):
+    """טוען את הלשונית הראשונה. חלק מייצואי מחשבשבת ("מחיר קנייה אחרון")
+    מגיעים עם גיליון סגנונות פגום (borderID) והכרזת ממדים חלקית (A1) ששוברים
+    את openpyxl ב-read_only. במקרה כזה מנקים את styles.xml (מרובה xf ריקים כדי
+    שכל הפניה תיפתר) וקוראים במצב מלא. אחרת קריאה רגילה."""
+    from openpyxl import load_workbook
+    try:
+        return load_workbook(path, read_only=True, data_only=True).active
+    except Exception:
+        pass
+    with zipfile.ZipFile(path, "r") as zin:
+        n = 4000
+        styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                  '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                  '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>'
+                  '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
+                  '<borders count="1"><border/></borders>'
+                  '<cellStyleXfs count="1"><xf/></cellStyleXfs>'
+                  '<cellXfs count="%d">%s</cellXfs></styleSheet>' % (n, "<xf/>" * n)).encode("utf-8")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
+            for it in zin.infolist():
+                data = zin.read(it.filename)
+                if it.filename == "xl/styles.xml":
+                    data = styles
+                zout.writestr(it, data)
+    buf.seek(0)
+    return load_workbook(buf, read_only=False, data_only=True).active   # לא read_only: מתעלם מהכרזת A1
+
+
+def _to_date(v):
+    """ערך תא -> datetime (סדרתי-אקסל, datetime, או מחרוזת dd/mm/yy)."""
+    if isinstance(v, (datetime, date)):
+        return datetime(v.year, v.month, v.day)
+    try:
+        return XL_EPOCH + timedelta(days=float(v))
+    except (TypeError, ValueError):
+        return None
+
+
+def _rows(ws):
+    for row in ws.iter_rows(values_only=True):
+        yield list(row)
+
+
+def last_prices_report(path):
+    """דוח "מחיר קנייה אחרון חומרי גלם" (עמודות: קוד מיון, מפתח פריט, שם פריט,
+    תאריך קניה אחרון, מחיר קניה אחרון לפני הנחות) -> {מפתח: {name,price,date}}.
+    מדלגים על מחיר 0 / תאריך 1980 (אין רכש אמיתי) — לא דורסים מחיר קיים בקטלוג."""
+    ws = _load_ws(path)
+    ki = di = pi = ni = None
+    out = {}
+    for vals in _rows(ws):
+        sv = [str(c).strip() if c is not None else "" for c in vals]
+        if ki is None:
+            def find(subs):
+                for i, s in enumerate(sv):
+                    if any(sub in s for sub in subs):
+                        return i
+                return None
+            k_ = find(["מפתח פריט"])
+            d_ = find(["תאריך קניה אחרון", "תאריך קנייה אחרון"])
+            p_ = find(["מחיר קניה אחרון", "מחיר קנייה אחרון"])
+            if k_ is not None and d_ is not None and p_ is not None:
+                ki, di, pi, ni = k_, d_, p_, find(["שם פריט"])
+            continue
+        k = sv[ki] if ki < len(sv) else ""
+        if re.fullmatch(r"\d+\.0", k):
+            k = k[:-2]
+        if not re.fullmatch(r"\d+", k):
+            continue
+        raw_p = vals[pi] if pi < len(vals) else None
+        try:
+            price = float(str(raw_p).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        dt = _to_date(vals[di] if di < len(vals) else None)
+        if price <= 0 or (dt is not None and dt.year <= 1980):
+            continue                                  # אין רכש אמיתי — דלג
+        name = sv[ni] if (ni is not None and ni < len(sv)) else ""
+        out[k] = {"name": name, "price": round(price, 3),
+                  "date": dt.strftime("%d/%m/%y") if dt else ""}
+    if ki is None:
+        sys.exit("לא זוהתה שורת כותרת של דוח 'מחיר קנייה אחרון'.")
+    return out
+
+
+def detect_format(path):
+    """'report' = דוח מחיר קנייה אחרון · 'ledger' = כרטסת מלאי (חשבונית רכש)."""
+    ws = _load_ws(path)
+    for i, vals in enumerate(_rows(ws)):
+        joined = " ".join(str(c) for c in vals if c is not None)
+        if "מחיר קניה אחרון" in joined or "מחיר קנייה אחרון" in joined:
+            return "report"
+        if "מחיר נטו" in joined and "כניסה" in joined:
+            return "ledger"
+        if i > 12:
+            break
+    return "ledger"
 
 
 def last_purchase_prices(path):
     """כרטסת מחשבשבת -> {מפתח פריט: {'name','price','date'}} — חשבונית רכש אחרונה."""
-    from openpyxl import load_workbook
-    ws = load_workbook(path, read_only=True, data_only=True).active
+    ws = _load_ws(path)
     ci = None
     cur, out = None, {}
     for row in ws.iter_rows(values_only=True):
@@ -80,9 +183,11 @@ def _decode_cat(s):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("ledger", help="כרטסת מלאי שבועית (xlsx)")
+    ap.add_argument("ledger", help="כרטסת מלאי שבועית או דוח 'מחיר קנייה אחרון' (xlsx)")
     ap.add_argument("--key", required=True, help="מפתח חשבון שירות (JSON)")
     ap.add_argument("--sheet", default=SHEET_ID)
+    ap.add_argument("--format", choices=["auto", "report", "ledger"], default="auto",
+                    help="report=דוח מחיר קנייה אחרון · ledger=כרטסת מלאי · auto=זיהוי אוטומטי")
     ap.add_argument("--apply", action="store_true", help="כתיבה בפועל (אחרת יבש)")
     args = ap.parse_args()
 
@@ -93,9 +198,12 @@ def main():
     creds = Credentials.from_service_account_file(args.key, scopes=[scope])
     sh = build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
 
-    prices = last_purchase_prices(args.ledger)
+    fmt = detect_format(args.ledger) if args.format == "auto" else args.format
+    prices = last_prices_report(args.ledger) if fmt == "report" \
+        else last_purchase_prices(args.ledger)
+    print(f"פורמט: {'דוח מחיר קנייה אחרון' if fmt == 'report' else 'כרטסת מלאי'}")
     if not prices:
-        sys.exit("לא נמצאו חשבוניות רכש בכרטסת.")
+        sys.exit("לא נמצאו מחירי רכש בקובץ.")
 
     rows = sh.values().get(spreadsheetId=args.sheet, range=f"{TAB}!A:A").execute().get("values", [])
     cat = _decode_cat("".join(r[0] for r in rows if r))
