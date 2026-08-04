@@ -339,7 +339,7 @@ footer{text-align:center;padding:16px;font-size:10px;color:var(--gray);margin-to
 //  כל המספרים הפיננסיים נטענים בזמן ריצה — אין מספרים במקור הדף.
 // ════════════════════════════════════════════════════════════
 const FIN_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
-const FIN_SHEET_ID='1hCghpEyPkhRZyVqGjjvU3fI4DeenU_1UAnSWzjGSQMA';
+const FIN_SHEET_ID='1bRtS1dep659PhD9ogdW1wCKprvINDzARRGqiS0F6GZg';
 const FIN_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
 const FIN_TOKEN_KEY='gsGoogleToken';
 
@@ -349,6 +349,7 @@ let finTokenClient=null, finAccessToken=null, finBuilt=false;
 let MONTHLY_DATA=[];
 const ANN={};   // שנתי גולמי: ANN[key]={v24,v23}
 const SER={};   // סדרות/סקלרים: SER[key]=[...]
+let H1_DATA=[]; // דוח חציוני מבוקר: [{sect:'BS'|'PL', label, val, pct, lvl}]
 
 function A(key, yr){ const o=ANN[key]; if(!o) return 0; return yr==23?o.v23:o.v24; }
 function S(key){ return SER[key]||[]; }
@@ -407,13 +408,14 @@ async function loadFinData(){
 function finNum(x){ if(x===''||x==null) return 0; if(typeof x==='number') return x; const n=parseFloat(String(x).replace(/,/g,'')); return isNaN(n)?0:n; }
 
 function parseFinSheet(rows){
-  MONTHLY_DATA=[]; Object.keys(ANN).forEach(k=>delete ANN[k]); Object.keys(SER).forEach(k=>delete SER[k]);
+  MONTHLY_DATA=[]; H1_DATA=[]; Object.keys(ANN).forEach(k=>delete ANN[k]); Object.keys(SER).forEach(k=>delete SER[k]);
   let sec=null, hdr=null;
   for(const row of rows){
     const a=(row&&row.length)?String(row[0]).trim():'';
     if(a==='#MONTHLY'){sec='m';hdr=null;continue;}
     if(a==='#ANNUAL'){sec='a';hdr=null;continue;}
     if(a==='#SERIES'){sec='s';hdr=null;continue;}
+    if(a==='#H1'){sec='h1';hdr=null;continue;}
     if(!a) continue;
     if(sec==='m'){
       if(!hdr){ hdr=row.map(h=>String(h).trim()); continue; }
@@ -424,6 +426,15 @@ function parseFinSheet(rows){
       ANN[a]={v24:finNum(row[1]), v23:finNum(row[2])};
     } else if(sec==='s'){
       SER[a]=row.slice(1).map(finNum);
+    } else if(sec==='h1'){
+      const blank=x=>(x===''||x==null);
+      H1_DATA.push({
+        sect:a,
+        label:(row[1]==null?'':String(row[1])).trim(),
+        val: blank(row[2])?null:finNum(row[2]),
+        pct: blank(row[3])?null:finNum(row[3]),
+        lvl:(row[4]==null?'':String(row[4])).trim()
+      });
     }
   }
   enrichMonthly();
@@ -502,6 +513,7 @@ window.addEventListener('load', ()=>{
   <div class="tab"         onclick="nav('dupont',this)">🔬 DuPont</div>
   <div class="tab"         onclick="nav('benchmark',this)">📐 השוואה לתעשייה</div>
   <div class="tab"         onclick="nav('monthly',this)">📅 ניתוח חודשי</div>
+  <div class="tab"         onclick="nav('semiannual',this)">🧾 חציוני מבוקר</div>
 </div>
 
 <div class="main">
@@ -1057,6 +1069,43 @@ window.addEventListener('load', ()=>{
   </div><!-- /monthlyResults -->
 </div><!-- /page-monthly -->
 
+<!-- ══════════════════════════════════════
+     PAGE: SEMI-ANNUAL AUDITED REPORT (H1 2026)
+══════════════════════════════════════ -->
+<div id="page-semiannual" class="page">
+  <div class="section-title">דוח חציוני מבוקר — סלטי גן בע"מ · ינואר–יוני 2026</div>
+  <div class="kpi-grid" id="h1Head" style="margin-bottom:14px"></div>
+
+  <div class="card">
+    <div class="card-title">מאזן <span class="card-badge">ליום 30 ביוני 2026 · מבוקר</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead><tr>
+        <td class="col-head" style="width:54%">סעיף</td>
+        <td class="col-head">ש"ח</td>
+        <td class="col-head">% מהמאזן</td>
+      </tr></thead>
+      <tbody id="h1bsBody"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">דוח רווח והפסד <span class="card-badge">01/01–30/06/2026 · מבוקר</span></div>
+    <div class="fs-wrap">
+    <table class="fs-table">
+      <thead><tr>
+        <td class="col-head" style="width:54%">סעיף</td>
+        <td class="col-head">ש"ח</td>
+        <td class="col-head">% מהמכירות</td>
+      </tr></thead>
+      <tbody id="h1plBody"></tbody>
+    </table>
+    </div>
+    <div class="ins">המספרים נמשכים בזמן ריצה מהגיליון הפרטי (אזור <code>#H1</code>) ומוצגים כפי שמופיעים בדוח החציוני המבוקר.</div>
+  </div>
+</div>
+
 </div><!-- /main -->
 <div class="m-tooltip" id="metricTooltip">
   <div class="m-tooltip-title" id="ttTitle"></div>
@@ -1256,6 +1305,7 @@ function buildPage(id) {
   if (id==='leverage')      buildLeverage();
   if (id==='dupont')        buildDuPont();
   if (id==='benchmark')     buildBenchmark();
+  if (id==='semiannual')    buildSemiannual();
 }
 
 function buildProfitability(){
@@ -1743,6 +1793,35 @@ function fmtNum(n) { return Number(n).toLocaleString(); }
 // ════════════════════════════════════════════════════════════
 //  MONTHLY DASHBOARD — נבנה מ-MONTHLY_DATA שנטען מהגליון הפרטי
 // ════════════════════════════════════════════════════════════
+function buildSemiannual(){
+  const fmtV = v => v==null ? '' : (v<0?'-':'')+'₪'+fmtNum(Math.abs(Math.round(v)));
+  const fmtP = p => p==null ? '' : p.toFixed(2)+'%';
+  const rowHTML = r => {
+    if(r.lvl==='sec')     return `<tr><td class="sec" colspan="3">${r.label}</td></tr>`;
+    if(r.lvl==='subhead') return `<tr><td class="sec-sub" colspan="3">${r.label}</td></tr>`;
+    const cls  = r.lvl==='gtotal' ? 'gtotal' : r.lvl==='total' ? 'total' : 'row indent';
+    const vcls = (r.val!=null && r.val<0) ? ' class="neg"' : '';
+    return `<tr class="${cls}"><td class="lbl">${r.label}</td><td${vcls}>${fmtV(r.val)}</td><td>${fmtP(r.pct)}</td></tr>`;
+  };
+  const bsEl=document.getElementById('h1bsBody');
+  if(bsEl) bsEl.innerHTML = H1_DATA.filter(r=>r.sect==='BS').map(rowHTML).join('');
+  const plEl=document.getElementById('h1plBody');
+  if(plEl) plEl.innerHTML = H1_DATA.filter(r=>r.sect==='PL').map(rowHTML).join('');
+
+  const find = lbl => { const r=H1_DATA.find(x=>x.label===lbl); return r?r.val:null; };
+  const rev=find('הכנסות ממכירות בארץ'), gp=find('רווח תפעולי'),
+        op=find('רווח מפעולות רגילות'), net=find('רווח נקי');
+  const M = v => v==null?'—':'₪'+(v/1e6).toFixed(2)+'M';
+  const pct = v => (rev&&v!=null) ? (v/rev*100).toFixed(1)+'% מהמכירות' : '';
+  const head=document.getElementById('h1Head');
+  if(head) head.innerHTML=[
+    kpiCard('g','הכנסות',M(rev),'','','ינואר–יוני 2026'),
+    kpiCard('g','רווח גולמי',M(gp),'','',pct(gp)),
+    kpiCard('g','רווח תפעולי',M(op),'','',pct(op)),
+    kpiCard('g','רווח נקי',M(net),'','',pct(net)),
+  ].join('');
+}
+
 function buildMonthly(){
   const data = MONTHLY_DATA;
   if(!data.length) return;
