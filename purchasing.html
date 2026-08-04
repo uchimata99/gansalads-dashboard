@@ -314,6 +314,12 @@ body{background:#f5f2ec}
     #gsNav.gsopen #gsNavLinks{display:flex!important}
     #gsNavLinks>a,#gsNavLinks>span{display:block;text-align:center}
   }
+  /* מצב מחיקת פריטים */
+  .delbar{position:fixed;left:0;right:0;bottom:0;z-index:120;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;background:#fff;border-top:2px solid #c0392b;padding:11px;box-shadow:0 -4px 16px rgba(0,0,0,.14)}
+  @media (prefers-color-scheme:dark){.delbar{background:#1c2a22;color:#eee}}
+  .icard .delbox{display:flex;align-items:center;margin-inline-end:9px}
+  .icard .delchk{width:22px;height:22px;cursor:pointer;accent-color:#c0392b}
+  .icard.selDel{outline:2px solid #c0392b;outline-offset:-2px;background:rgba(192,57,43,.06)}
   </style>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">רכש</span>
 </div>
@@ -335,6 +341,13 @@ body{background:#f5f2ec}
 
 <div class="main">
 
+ <!-- ============ סרגל מחיקת פריטים (מופיע במצב מחיקה) ============ -->
+ <div id="delBar" class="delbar" style="display:none">
+  <span>נבחרו למחיקה: <b id="delCount">0</b></span>
+  <button class="btn sm" id="delDo" type="button" style="background:#c0392b">🗑️ מחק נבחרים</button>
+  <button class="btn ghost sm" id="delCancel" type="button">בטל</button>
+ </div>
+
  <!-- ============ בניית הזמנה ============ -->
  <div class="page active" id="build">
   <div class="card">
@@ -343,6 +356,8 @@ body{background:#f5f2ec}
     <input id="fSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:200px" autocomplete="off">
     <span class="lbl">ספק:</span><select id="fSup"><option value="">הכל</option></select>
     <label class="lbl" style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="fInOrder" style="width:auto"> רק בהזמנה</label>
+    <button class="btn ghost sm delToggleBtn" type="button">🗑️ מחק פריטים</button>
+    <button class="btn ghost sm" id="delRestore" type="button" style="display:none"></button>
    </div>
    <div class="chips" id="catChips"></div>
    <div class="scroll" id="itemsTab"></div>
@@ -382,7 +397,7 @@ body{background:#f5f2ec}
  <div class="page" id="pack">
   <div class="card">
    <div class="card-t"><span>אריזות — הזיני כמות ליד כל פריט</span><span class="lbl" id="packCount"></span></div>
-   <div class="ctrl"><input id="pkSearch" placeholder="🔍 חיפוש אריזה (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="ctrl"><input id="pkSearch" placeholder="🔍 חיפוש אריזה (שם או מפתח)…" style="min-width:200px" autocomplete="off"><button class="btn ghost sm delToggleBtn" type="button">🗑️ מחק פריטים</button></div>
    <div class="scroll" id="packTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
@@ -395,7 +410,7 @@ body{background:#f5f2ec}
  <div class="page" id="spice">
   <div class="card">
    <div class="card-t"><span>תבלינים — הזיני כמות ליד כל פריט</span><span class="lbl" id="spiceCount"></span></div>
-   <div class="ctrl"><input id="scSearch" placeholder="🔍 חיפוש תבלין (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="ctrl"><input id="scSearch" placeholder="🔍 חיפוש תבלין (שם או מפתח)…" style="min-width:200px" autocomplete="off"><button class="btn ghost sm delToggleBtn" type="button">🗑️ מחק פריטים</button></div>
    <div class="scroll" id="spiceTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
@@ -408,7 +423,7 @@ body{background:#f5f2ec}
  <div class="page" id="canned">
   <div class="card">
    <div class="card-t"><span>שימורים וירקות מעובדים — הזיני כמות ליד כל פריט</span><span class="lbl" id="cannedCount"></span></div>
-   <div class="ctrl"><input id="cnSearch" placeholder="🔍 חיפוש שימור (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="ctrl"><input id="cnSearch" placeholder="🔍 חיפוש שימור (שם או מפתח)…" style="min-width:200px" autocomplete="off"><button class="btn ghost sm delToggleBtn" type="button">🗑️ מחק פריטים</button></div>
    <div class="scroll" id="cannedTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
@@ -421,7 +436,7 @@ body{background:#f5f2ec}
  <div class="page" id="cold">
   <div class="card">
    <div class="card-t"><span>חומרי גלם בקירור — הזיני כמות ליד כל פריט</span><span class="lbl" id="coldCount"></span></div>
-   <div class="ctrl"><input id="cdSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:200px" autocomplete="off"></div>
+   <div class="ctrl"><input id="cdSearch" placeholder="🔍 חיפוש חומר גלם (שם או מפתח)…" style="min-width:200px" autocomplete="off"><button class="btn ghost sm delToggleBtn" type="button">🗑️ מחק פריטים</button></div>
    <div class="scroll" id="coldTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
@@ -503,6 +518,7 @@ let HIST=null;           // שורות היסטוריה (מערך אובייקט
 let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משותף)
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
 let ITEMS_VEG=[], ITEMS_PEEL=[], ITEMS_PACK=[], ITEMS_ALL=[];
+let HIDDEN=new Set(), delMode=false, delSel=new Set();   // מחיקת פריטים מהרשימה (נשמר בגיליון)
 // שני מכרזים (טרי + קלופים) — אותו מנגנון, קונפיג נפרד לכל אחד
 const AUC={
  veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
@@ -608,6 +624,7 @@ function renderCatTab(t){
  renderItemCards(arr,t.box,t.cnt);
 }
 function renderItemCards(arr,boxId,countId){
+ arr=arr.filter(it=>!HIDDEN.has(String(it.k)));            // פריטים שנמחקו מהרשימה מוסתרים תמיד
  setTxt(countId,arr.length+' פריטים');
  const box=document.getElementById(boxId);
  if(!arr.length){box.innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
@@ -616,11 +633,13 @@ function renderItemCards(arr,boxId,countId){
   const o=ORDER[it.k]||{};
   const sups=it.s||[];
   const active=o.qty>0;
+  const chk=delMode?('<label class="delbox"><input type="checkbox" class="delchk" data-k="'+esc(it.k)+'"'+(delSel.has(it.k)?' checked':'')+'></label>'):'';
   let supCell;
   if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):'<span class="pill po">אין ספק</span>';}
   else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
   const pr=(it.p!=null&&it.p>0)?('₪'+Number(it.p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
-  h+='<div class="icard'+(active?' on':'')+'">'+
+  h+='<div class="icard'+(active?' on':'')+(delMode&&delSel.has(it.k)?' selDel':'')+'">'+
+     chk+
      '<div class="iinfo">'+
        '<div class="iname">'+esc(it.n)+'</div>'+
        '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
@@ -637,6 +656,7 @@ function renderItemCards(arr,boxId,countId){
  box.querySelectorAll('.qty').forEach(inp=>inp.addEventListener('input',onQty));
  box.querySelectorAll('.supSel').forEach(sel=>sel.addEventListener('change',onSup));
  box.querySelectorAll('.stbtn').forEach(b=>b.addEventListener('click',onStep));
+ box.querySelectorAll('.delchk').forEach(c=>c.addEventListener('change',onDelChk));
 }
 function onStep(e){
  const t=e.currentTarget;const inp=t.parentNode.querySelector('.qty');
@@ -1027,6 +1047,8 @@ async function aucSave(a){
    בטעינה — השורה האחרונה לכל פריט גוברת ומוחלת על הקטלוג. */
 const MAP_TAB='SUP_MAP';
 const MAP_HEADER=['תאריך','מפתח פריט','שם פריט','מפתחות ספקים (מופרדים בפסיק)'];
+const HID_TAB='HIDDEN_ITEMS';
+const HID_HEADER=['תאריך','מפתח פריט','שם','מצב'];
 let MAPOVR={}, mapSup=null, mapDirty=new Set();
 async function loadSupMap(){
  try{
@@ -1078,6 +1100,75 @@ function renderMapSupplier(box){
  box.querySelector('#mAddBtn').onclick=()=>{const inp=box.querySelector('#mAddItem');const m=inp.value.match(/#(\d+)\s*$/);const it=m?ITEM_BY_K[m[1]]:(CAT.items||[]).find(x=>x.n===inp.value.trim());if(it){if((it.s||[]).indexOf(sk)<0){it.s=(it.s||[]).concat([sk]);mapDirty.add(it.k);}renderMap();}else toast('לא נמצא פריט');};
  box.querySelector('#mSave').onclick=()=>saveMapSup();
 }
+
+/* ================= מחיקת פריטים מהרשימה (נשמר בלשונית HIDDEN_ITEMS) ================= */
+// טעינת רשימת המוסתרים — השורה האחרונה פר-פריט קובעת (hidden/visible)
+async function loadHidden(){
+ try{
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+encodeURIComponent(HID_TAB+'!A:D'),{headers:{Authorization:'Bearer '+purchToken}});
+  if(!r.ok)return;
+  const vals=((await r.json()).values)||[];
+  const last={};
+  vals.forEach(row=>{if(!row||row.length<4)return;const k=String(row[1]||'').trim();if(!/^\d+$/.test(k))return;last[k]=String(row[3]||'').trim();});
+  HIDDEN=new Set(Object.keys(last).filter(k=>last[k]==='hidden'));
+ }catch(e){console.error(e);}
+}
+function rerenderLists(){renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateRestoreBtn();}
+function onDelChk(e){
+ const k=e.target.dataset.k;
+ if(e.target.checked)delSel.add(k);else delSel.delete(k);
+ const card=e.target.closest('.icard');if(card)card.classList.toggle('selDel',e.target.checked);
+ setTxt('delCount',delSel.size);
+}
+function setDelMode(on){
+ delMode=on;delSel=new Set();
+ document.getElementById('delBar').style.display=on?'flex':'none';
+ setTxt('delCount',0);
+ document.querySelectorAll('.delToggleBtn').forEach(b=>b.textContent=on?'✖ בטל בחירה':'🗑️ מחק פריטים');
+ rerenderLists();
+}
+async function delDo(){
+ const keys=[...delSel];
+ if(!keys.length){toast('לא נבחרו פריטים');return;}
+ if(!confirm('למחוק '+keys.length+' פריטים מהרשימה? אפשר לשחזר אחר כך דרך "שחזר מוסתרים".'))return;
+ try{
+  await saveHidden(keys,'hidden');
+  keys.forEach(k=>HIDDEN.add(k));
+  toast('נמחקו '+keys.length+' פריטים מהרשימה');
+ }catch(e){console.error(e);toast('לא ניתן לשמור מחיקה (ייתכן שחסרה הרשאת עריכה)');return;}
+ setDelMode(false);
+}
+async function saveHidden(keys,state){
+ const now=new Date();
+ const ds=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+ const token=await ensureWriteToken();
+ await ensureTab(HID_TAB,HID_HEADER,token);
+ const rows=keys.map(k=>{const it=ITEM_BY_K[k];return [ds,k,it?it.n:'',state];});
+ await appendRaw(HID_TAB,rows,token);
+}
+function updateRestoreBtn(){
+ const b=document.getElementById('delRestore');if(!b)return;
+ if(HIDDEN.size){b.style.display='';b.textContent='♻️ שחזר מוסתרים ('+HIDDEN.size+')';}
+ else b.style.display='none';
+}
+function openRestore(){
+ let ov=document.getElementById('restoreOv');
+ if(!ov){ov=document.createElement('div');ov.id='restoreOv';ov.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';document.body.appendChild(ov);}
+ const keys=[...HIDDEN];
+ const chips=keys.length?keys.map(k=>{const it=ITEM_BY_K[k];const nm=it?it.n:('#'+k);return '<span class="chip on" style="cursor:default">'+esc(nm)+' <button class="rst" data-k="'+esc(k)+'" type="button" title="שחזר">♻️</button></span>';}).join(''):'<span class="lbl">אין פריטים מוסתרים</span>';
+ ov.innerHTML='<div class="card" style="max-width:560px;max-height:80vh;overflow:auto;width:100%"><div class="card-t"><span>פריטים שהוסתרו — '+keys.length+'</span><button class="btn ghost sm" id="rstClose" type="button">סגור</button></div><div class="mchips">'+chips+'</div><div class="lbl" style="margin-top:8px">לחצי ♻️ ליד פריט כדי להחזירו לרשימה.</div></div>';
+ ov.querySelector('#rstClose').onclick=()=>ov.remove();
+ ov.onclick=e=>{if(e.target===ov)ov.remove();};
+ ov.querySelectorAll('.rst').forEach(b=>b.onclick=async()=>{
+  const k=b.dataset.k;
+  try{await saveHidden([k],'visible');HIDDEN.delete(k);toast('הפריט הוחזר');}catch(e){console.error(e);toast('לא ניתן לשחזר');return;}
+  rerenderLists();openRestore();
+ });
+}
+document.querySelectorAll('.delToggleBtn').forEach(b=>b.addEventListener('click',()=>setDelMode(!delMode)));
+document.getElementById('delDo').addEventListener('click',delDo);
+document.getElementById('delCancel').addEventListener('click',()=>setDelMode(false));
+document.getElementById('delRestore').addEventListener('click',openRestore);
 // שמירה — שורת SUP_MAP לכל פריט ששונה (האחסון נשאר לפי פריט)
 async function saveMapSup(){
  if(!mapDirty.size){toast('אין שינויים לשמירה');return;}
@@ -1171,7 +1262,7 @@ function gsAfterToken(){
   const l=document.getElementById('gsLock');if(l)l.style.display='none';
   startApp();
   loadContacts();                                          // ספר טלפונים מרכזי (טלפון/מייל פר ספק)
-  loadSupMap().then(()=>{renderItems();renderPack();});   // החלת שיוכי SUP_MAP על הקטלוג
+  Promise.all([loadHidden(),loadSupMap()]).then(()=>{rerenderLists();});  // SUP_MAP + פריטים שהוסתרו
  }).catch(err=>{
   console.error(err);
   purchToken=null;
