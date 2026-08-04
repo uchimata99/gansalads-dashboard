@@ -458,7 +458,6 @@ body{background:#f5f2ec}
 
  <!-- ============ סל ההזמנה ============ -->
  <div class="page" id="cart">
-  <div class="note" id="cartNote">הפריטים מקובצים אוטומטית <b>לפי ספק</b>. לכל ספק אפשר <b>לשלוח בוואטסאפ</b> (📲), להעתיק טקסט, להפיק דף הזמנה (הדפסה/PDF), ולשמור להיסטוריה. כדי שהשליחה תפתח ישירות את הצ׳אט של הספק — לחצי "☎️ מספר" והזיני את מספרו פעם אחת (נשמר במכשיר). בלי מספר, וואטסאפ ייפתח עם ההודעה המוכנה ותבחרי את איש הקשר. פריט עם כמה ספקים — בחרי את הספק בשורת הפריט.</div>
   <div id="cartWrap"></div>
  </div>
 
@@ -718,33 +717,52 @@ function renderCart(){
  const wrap=document.getElementById('cartWrap');
  if(!keys.length){wrap.innerHTML='<div class="card"><div class="empty">הסל ריק. חזרי ל"בניית הזמנה" והזיני כמויות.</div></div>';return;}
  keys.sort((a,b)=>supName(a).localeCompare(supName(b),'he'));
- let h='';
+ let nItems=0,nNoContact=0,cards='';
  keys.forEach(sk=>{
   const lines=map[sk].slice().sort((a,b)=>a.n.localeCompare(b.n,'he'));
-  const nm=sk==='__none__'?'ללא ספק משויך':supName(sk);
-  const anyPrice=lines.some(l=>l.p!=null&&l.p>0);
-  let est=0;lines.forEach(l=>{if(l.p>0)est+=l.p*l.qty;});
-  h+='<div class="sup-card">'+
-     '<div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span>'+
-     '<span class="sup-actions noprint">'+
-       (WA_AUTO?('<button class="btn sm" onclick="waAuto(\''+esc(sk).replace(/'/g,"\\'")+'\')">🤖 שלח אוטומטית</button>'):'')+
-       '<button class="btn '+(WA_AUTO?'ghost ':'')+'sm" onclick="waSend(\''+esc(sk).replace(/'/g,"\\'")+'\')">📲 שלח בוואטסאפ'+(waPhone(sk)?' ✓':'')+'</button>'+
-       (supEmail(sk)?('<button class="btn ghost sm" onclick="mailSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">✉️ מייל</button>'):'')+
-       '<button class="btn gold sm" onclick="waSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">💬 העתק טקסט</button>'+
-       '<button class="btn ghost sm" onclick="setWaPhone(\''+esc(sk).replace(/'/g,"\\'")+'\')">☎️ מספר</button>'+
-       '<button class="btn ghost sm" onclick="printSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">🖨️ הדפס / PDF</button>'+
-       '<button class="btn blue sm" onclick="saveSupplier(\''+esc(sk).replace(/'/g,"\\'")+'\')">💾 שמור להיסטוריה</button>'+
-     '</span></div>'+
-     '<table><thead><tr><th>פריט</th><th>מפתח</th><th>כמות</th>'+(anyPrice?'<th>מחיר אחרון</th><th>הערכת עלות</th>':'')+'</tr></thead><tbody>';
-  lines.forEach(l=>{
-   h+='<tr><td>'+esc(l.n)+'</td><td class="num">'+esc(l.k)+'</td><td class="num">'+fmtQty(l.qty)+'</td>'+
-      (anyPrice?('<td class="num">'+((l.p>0)?P2(l.p):'—')+'</td><td class="num">'+((l.p>0)?P2(l.p*l.qty):'—')+'</td>'):'')+'</tr>';
-  });
-  h+='</tbody></table>';
-  if(anyPrice)h+='<div class="lbl" style="text-align:left;margin-top:8px">הערכת עלות (לפי מחיר אחרון): <b>'+P2(est)+'</b></div>';
-  h+='</div>';
+  nItems+=lines.length;
+  const none=sk==='__none__';
+  const nm=none?'ללא ספק משויך':supName(sk);
+  const ph=none?'':waPhone(sk), em=none?'':supEmail(sk);
+  let chips;
+  if(none||(!ph&&!em)){chips='<span class="pill po">ללא פרטי קשר — לא יישלח לספק</span>';nNoContact+=lines.length;}
+  else chips=(ph?'<span class="pill pb">📲 וואטסאפ</span> ':'')+(em?'<span class="pill pb">✉️ מייל</span>':'');
+  cards+='<div class="sup-card"><div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span><span>'+chips+'</span></div>'+
+     '<table><thead><tr><th>פריט</th><th>מפתח</th><th>כמות</th></tr></thead><tbody>';
+  lines.forEach(l=>{cards+='<tr><td>'+esc(l.n)+'</td><td class="num">'+esc(l.k)+'</td><td class="num">'+fmtQty(l.qty)+'</td></tr>';});
+  cards+='</tbody></table></div>';
  });
- wrap.innerHTML=h;
+ const warn=nNoContact?(' <b>שימי לב:</b> '+nNoContact+' פריטים ללא ספק/פרטי קשר — ייכללו באקסל למשרד ובהזמנה למפעל, אך לא יישלחו לספק.'):'';
+ const head='<div class="card"><div class="card-t"><span>סיכום ההזמנה — '+nItems+' פריטים · '+keys.length+' ספקים</span></div>'+
+   '<div class="note">לחיצה על <b>"שלח הזמנה"</b> שולחת בבת אחת: לכל ספק את הזמנתו (וואטסאפ + מייל לפי הזמין), למפעל את ההזמנה המלאה בוואטסאפ, ול-<b>office@gansalads.co.il</b> את כל הסל כקובץ אקסל.'+warn+'</div>'+
+   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הזמנה</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
+ wrap.innerHTML=head+cards;
+}
+const ORDER_TAB='ORDER_QUEUE';
+const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','סטטוס'];
+// שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
+async function sendOrder(){
+ const map=orderBySupplier();
+ const keys=Object.keys(map);
+ if(!keys.length){toast('הסל ריק');return;}
+ let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
+ if(!confirm('לשלוח את ההזמנה?\n'+nItems+' פריטים · '+keys.length+' ספקים\nכל ספק יקבל וואטסאפ+מייל, המפעל יקבל את ההזמנה המלאה, והמשרד יקבל אקסל.'))return;
+ const now=new Date();
+ const ds=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+ const oid='ORD'+now.getTime();
+ const rows=[];
+ keys.forEach(sk=>{
+  const none=sk==='__none__';
+  const name=none?'':supName(sk), phone=none?'':waPhone(sk), email=none?'':supEmail(sk);
+  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,'pending']));
+ });
+ try{
+  const token=await ensureWriteToken();
+  await ensureTab(ORDER_TAB,ORDER_HEADER,token);
+  await appendRaw(ORDER_TAB,rows,token);
+  toast('ההזמנה נשלחה לעיבוד — תופץ תוך דקות (וואטסאפ + מייל + אקסל)');
+  ORDER={};renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
+ }catch(e){console.error(e);toast('לא ניתן לשלוח (ייתכן שחסרה הרשאת עריכה)');}
 }
 function fmtQty(q){return Number(q).toLocaleString('en-US',{maximumFractionDigits:3});}
 
