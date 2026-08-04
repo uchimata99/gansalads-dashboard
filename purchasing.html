@@ -1049,7 +1049,18 @@ async function aucSave(a){
   const token=await ensureWriteToken();
   await ensureTab(a.tab,VEG_HEADER,token);
   await appendRaw(a.tab,rows,token);
-  toast('נשמרו '+rows.length+' שורות מכרז');
+  // הוספת הפריטים שנבחרו (עם ספק וכמות) לסל ההזמנה — כדי לשלוח לספק יחד עם השאר
+  let added=0;
+  a.items.forEach(it=>{
+   const vk=it.k,ch=a.chosen[vk];if(ch==null)return;
+   const sk=cols[ch];if(!sk)return;
+   const q=(a.qty[vk]&&a.qty[vk][ch]>0)?a.qty[vk][ch]:((a.qty[vk]&&a.qty[vk][0]>0)?a.qty[vk][0]:0);
+   if(!(q>0))return;
+   if(!ITEM_BY_K[vk])ITEM_BY_K[vk]={k:vk,n:it.n,c:it.c||'',p:it.p,s:[sk]};
+   ORDER[vk]={qty:q,sup:sk};added++;
+  });
+  toast('נשמרו '+rows.length+' שורות מכרז'+(added?(' · '+added+' נוספו לסל'):''));
+  if(added)updateCartBar();
   a.hist=null;await aucLoad(a,true);aucRender(a);
  }catch(err){console.error(err);toast('לא ניתן לשמור (ייתכן שחסרה הרשאת עריכה)');}
 }
