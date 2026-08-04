@@ -320,6 +320,9 @@ body{background:#f5f2ec}
   .icard .delbox{display:flex;align-items:center;margin-inline-end:9px}
   .icard .delchk{width:22px;height:22px;cursor:pointer;accent-color:#c0392b}
   .icard.selDel{outline:2px solid #c0392b;outline-offset:-2px;background:rgba(192,57,43,.06)}
+  /* תווית יחידת מידה במכרז */
+  .vunit{display:inline-block;font-size:11px;font-weight:700;color:#2d6a3f;background:#e6f0e9;border:1px solid #cfe0d5;border-radius:6px;padding:0 6px;margin-inline-start:4px;vertical-align:middle}
+  @media (prefers-color-scheme:dark){.vunit{color:#bfe3cc;background:#213027;border-color:#31463a}}
   </style>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">רכש</span>
 </div>
@@ -529,6 +532,13 @@ const AUC={
 // רשימות המכרז — נעולות, בסדר שמיכל ביקשה
 const VEG_ITEMS=['70526','70520','70523','70527','70528','70538','70541','70542','70532','70533','70545','70539','70521','70522','70535'];
 const PEELED_ITEMS=[{k:'70574',n:"גזר ג'וליאן"},{k:'70621',n:'גזר פרוס'},{k:'PEEL_CHIPS',n:"גזר צ'יפס",p:null},{k:'70572',n:'תפוח אדמה קוביות'},{k:'70569',n:'בטטה קוביות'},{k:'70719',n:'קולורבי'},{k:'70564',n:'כרוב לבן'},{k:'70566',n:'כרוב אדום'},{k:'70581',n:'כרוב לבן גס'},{k:'70562',n:'בצל מקולף'}];
+// יחידות מידה במכרז: קלופים=ק"ג; במכרז הירקות — חציל/פלפל אדום/פלפל ירוק חריף/עגבניות/לימון=משטחים, השאר=קרטונים
+const VEG_PALLET=[/חציל/, /פלפל.*אדום/, /אדום.*פלפל/, /פלפל.*חריף/, /חריף.*פלפל/, /עגבני/, /לימון/];
+function aucUnit(a,it){
+ if(a===AUC.peel)return 'ק"ג';
+ const n=it&&it.n||'';
+ return VEG_PALLET.some(re=>re.test(n))?'משטחים':'קרטונים';
+}
 
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -972,14 +982,15 @@ function aucRender(a){
   h+='<div class="srows">';
   a.items.forEach(it=>{
    const vk=it.k;
+   const u=aucUnit(a,it);
    const lp=aucLast(a,vk,sk);
    const off=(a.off[vk]&&a.off[vk][i]!=null)?a.off[vk][i]:'';
    const chosen=a.chosen[vk]===i;
    const lastBuy=(a.lastbuy[vk]===sk);
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':(lp.src==='catsup'?'אחרון ':'קנייה '))+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
-      '<div class="vr-top"><span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
-        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="'+(i===0?'כמות אצל הספק הראשון מועתקת לשאר':'אפשר לשנות כמות לספק זה בנפרד')+'"></div>'+
+      '<div class="vr-top"><span class="vr-name">'+esc(it.n)+' <span class="vunit">'+esc(u)+'</span>'+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
+        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="'+esc(u)+'" title="יחידה: '+esc(u)+(i===0?' · כמות אצל הספק הראשון מועתקת לשאר':'')+'"></div>'+
       '<div class="vr-bot"><span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
         '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
         '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר"></div>'+
