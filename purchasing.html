@@ -526,6 +526,8 @@ let purchToken=null, purchTokenClient=null;   // אסימון קריאה (משו
 let writeToken=null, writeClient=null;         // אסימון כתיבה (נפרד, לשמירה)
 let ITEMS_VEG=[], ITEMS_PEEL=[], ITEMS_PACK=[], ITEMS_ALL=[];
 let HIDDEN=new Set(), delMode=false, delSel=new Set();   // מחיקת פריטים מהרשימה (נשמר בגיליון)
+let UNITMAP={};   // מפתח פריט -> יחידת מידה שמיכל בחרה (נשמר בגיליון UNIT_MAP)
+const UNIT_OPTS=['קרטון','קופסה','משטח','ק"ג','ליטר','שק','דלי',"יח'"];
 // שני מכרזים (טרי + קלופים) — אותו מנגנון, קונפיג נפרד לכל אחד
 const AUC={
  veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
@@ -547,8 +549,9 @@ function aucUnit(a,it){
 const PEEL_KEYS=new Set(PEELED_ITEMS.map(d=>String(d.k)));
 function itemUnit(k,n){
  k=String(k);
+ if(UNITMAP[k])return UNITMAP[k];                    // בחירת מיכל גוברת
  if(PEEL_KEYS.has(k))return 'ק"ג';
- if(VEG_ITEMS.indexOf(k)>=0)return VEG_PALLET.some(re=>re.test(n||''))?'משטחים':'קרטונים';
+ if(VEG_ITEMS.indexOf(k)>=0)return VEG_PALLET.some(re=>re.test(n||''))?'משטח':'קרטון';
  return "יח'";
 }
 
@@ -656,6 +659,9 @@ function renderItemCards(arr,boxId,countId){
   const sups=it.s||[];
   const active=o.qty>0;
   const chk=delMode?('<label class="delbox"><input type="checkbox" class="delchk" data-k="'+esc(it.k)+'"'+(delSel.has(it.k)?' checked':'')+'></label>'):'';
+  const cu=itemUnit(it.k,it.n);
+  const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(cu)<0?[cu]:[]);
+  const unitSel='<div class="iunitline"><span class="lbl">יחידה:</span> <select class="unitSel isupsel" data-uk="'+esc(it.k)+'">'+uopts.map(o=>'<option'+(o===cu?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select></div>';
   let supCell;
   if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):'<span class="pill po">אין ספק</span>';}
   else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
@@ -666,6 +672,7 @@ function renderItemCards(arr,boxId,countId){
        '<div class="iname">'+esc(it.n)+'</div>'+
        '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
        '<div class="isupline">'+supCell+'</div>'+
+       unitSel+
      '</div>'+
      '<div class="stepper">'+
        '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
@@ -679,6 +686,7 @@ function renderItemCards(arr,boxId,countId){
  box.querySelectorAll('.supSel').forEach(sel=>sel.addEventListener('change',onSup));
  box.querySelectorAll('.stbtn').forEach(b=>b.addEventListener('click',onStep));
  box.querySelectorAll('.delchk').forEach(c=>c.addEventListener('change',onDelChk));
+ box.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',onUnit));
 }
 function onStep(e){
  const t=e.currentTarget;const inp=t.parentNode.querySelector('.qty');
@@ -1103,6 +1111,8 @@ const MAP_TAB='SUP_MAP';
 const MAP_HEADER=['תאריך','מפתח פריט','שם פריט','מפתחות ספקים (מופרדים בפסיק)'];
 const HID_TAB='HIDDEN_ITEMS';
 const HID_HEADER=['תאריך','מפתח פריט','שם','מצב'];
+const UNIT_TAB='UNIT_MAP';
+const UNIT_HEADER=['תאריך','מפתח פריט','שם','יחידה'];
 let MAPOVR={}, mapSup=null, mapDirty=new Set();
 async function loadSupMap(){
  try{
@@ -1223,6 +1233,31 @@ document.querySelectorAll('.delToggleBtn').forEach(b=>b.addEventListener('click'
 document.getElementById('delDo').addEventListener('click',delDo);
 document.getElementById('delCancel').addEventListener('click',()=>setDelMode(false));
 document.getElementById('delRestore').addEventListener('click',openRestore);
+
+/* ================= יחידת מידה פר פריט (לשונית UNIT_MAP) ================= */
+async function loadUnitMap(){
+ try{
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+encodeURIComponent(UNIT_TAB+'!A:D'),{headers:{Authorization:'Bearer '+purchToken}});
+  if(!r.ok)return;
+  const vals=((await r.json()).values)||[];
+  const last={};
+  vals.forEach(row=>{if(!row||row.length<4)return;const k=String(row[1]||'').trim();if(!/^\w+$/.test(k))return;last[k]=String(row[3]||'').trim();});
+  UNITMAP={};Object.keys(last).forEach(k=>{if(last[k])UNITMAP[k]=last[k];});
+ }catch(e){console.error(e);}
+}
+async function onUnit(e){
+ const k=e.target.dataset.uk, v=e.target.value;
+ UNITMAP[k]=v;
+ try{
+  const token=await ensureWriteToken();
+  await ensureTab(UNIT_TAB,UNIT_HEADER,token);
+  const it=ITEM_BY_K[k];
+  const now=new Date();
+  const ds=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  await appendRaw(UNIT_TAB,[[ds,k,it?it.n:'',v]],token);
+  toast('יחידת המידה נשמרה: '+v);
+ }catch(err){console.error(err);toast('לא ניתן לשמור יחידה (הרשאת עריכה?)');}
+}
 // שמירה — שורת SUP_MAP לכל פריט ששונה (האחסון נשאר לפי פריט)
 async function saveMapSup(){
  if(!mapDirty.size){toast('אין שינויים לשמירה');return;}
@@ -1316,7 +1351,7 @@ function gsAfterToken(){
   const l=document.getElementById('gsLock');if(l)l.style.display='none';
   startApp();
   loadContacts();                                          // ספר טלפונים מרכזי (טלפון/מייל פר ספק)
-  Promise.all([loadHidden(),loadSupMap()]).then(()=>{rerenderLists();});  // SUP_MAP + פריטים שהוסתרו
+  Promise.all([loadHidden(),loadSupMap(),loadUnitMap()]).then(()=>{rerenderLists();});  // SUP_MAP + מוסתרים + יחידות
  }).catch(err=>{
   console.error(err);
   purchToken=null;
