@@ -543,6 +543,14 @@ function aucUnit(a,it){
  const n=it&&it.n||'';
  return VEG_PALLET.some(re=>re.test(n))?'משטחים':'קרטונים';
 }
+// יחידת מידה לכל פריט בהזמנה: קלופים=ק"ג, ירקות מכרז=משטחים/קרטונים, שאר=יח'
+const PEEL_KEYS=new Set(PEELED_ITEMS.map(d=>String(d.k)));
+function itemUnit(k,n){
+ k=String(k);
+ if(PEEL_KEYS.has(k))return 'ק"ג';
+ if(VEG_ITEMS.indexOf(k)>=0)return VEG_PALLET.some(re=>re.test(n||''))?'משטחים':'קרטונים';
+ return "יח'";
+}
 
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -744,7 +752,7 @@ function renderCart(){
  wrap.innerHTML=head+cards;
 }
 const ORDER_TAB='ORDER_QUEUE';
-const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','סטטוס'];
+const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס'];
 // שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
 async function sendOrder(){
  const map=orderBySupplier();
@@ -753,13 +761,14 @@ async function sendOrder(){
  let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
  if(!confirm('לשלוח את ההזמנה?\n'+nItems+' פריטים · '+keys.length+' ספקים\nכל ספק יקבל וואטסאפ+מייל, המפעל יקבל את ההזמנה המלאה, והמשרד יקבל אקסל.'))return;
  const now=new Date();
- const ds=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+ const pad=n=>String(n).padStart(2,'0');
+ const ds=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
  const oid='ORD'+now.getTime();
  const rows=[];
  keys.forEach(sk=>{
   const none=sk==='__none__';
   const name=none?'':supName(sk), phone=none?'':waPhone(sk), email=none?'':supEmail(sk);
-  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,'pending']));
+  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending']));
  });
  try{
   const token=await ensureWriteToken();
