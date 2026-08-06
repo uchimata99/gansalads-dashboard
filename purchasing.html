@@ -323,6 +323,11 @@ body{background:#f5f2ec}
   /* תווית יחידת מידה במכרז */
   .vunit{display:inline-block;font-size:11px;font-weight:700;color:#2d6a3f;background:#e6f0e9;border:1px solid #cfe0d5;border-radius:6px;padding:0 6px;margin-inline-start:4px;vertical-align:middle}
   @media (prefers-color-scheme:dark){.vunit{color:#bfe3cc;background:#213027;border-color:#31463a}}
+  /* יישור אחיד של טורי הסל בין כל כרטיסי הספקים */
+  #cartWrap .sup-card table{table-layout:fixed}
+  #cartWrap .sup-card th:nth-child(1),#cartWrap .sup-card td:nth-child(1){width:58%;text-align:right}
+  #cartWrap .sup-card th:nth-child(2),#cartWrap .sup-card td:nth-child(2){width:24%;text-align:center}
+  #cartWrap .sup-card th:nth-child(3),#cartWrap .sup-card td:nth-child(3){width:18%;text-align:center}
   </style>
   <span style="background:#52b788;color:#fff;font-weight:700;font-size:13px;padding:5px 13px;border-radius:18px">רכש</span>
 </div>
