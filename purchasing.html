@@ -323,6 +323,10 @@ body{background:#f5f2ec}
   /* תווית יחידת מידה במכרז */
   .vunit{display:inline-block;font-size:11px;font-weight:700;color:#2d6a3f;background:#e6f0e9;border:1px solid #cfe0d5;border-radius:6px;padding:0 6px;margin-inline-start:4px;vertical-align:middle}
   @media (prefers-color-scheme:dark){.vunit{color:#bfe3cc;background:#213027;border-color:#31463a}}
+  /* כמות + יחידת מידה באותה שורה */
+  .qcell{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .qcell .unitSel{padding:7px 8px;font-size:12.5px;border-radius:9px;min-width:74px;border:1.5px solid var(--border);background:var(--surface)}
+  @media (max-width:560px){.qcell{flex-wrap:wrap;justify-content:flex-end;gap:6px}}
   /* יישור אחיד של טורי הסל בין כל כרטיסי הספקים */
   #cartWrap .sup-card table{table-layout:fixed}
   #cartWrap .sup-card th:nth-child(1),#cartWrap .sup-card td:nth-child(1){width:58%;text-align:right}
@@ -661,7 +665,7 @@ function renderItemCards(arr,boxId,countId){
   const chk=delMode?('<label class="delbox"><input type="checkbox" class="delchk" data-k="'+esc(it.k)+'"'+(delSel.has(it.k)?' checked':'')+'></label>'):'';
   const cu=itemUnit(it.k,it.n);
   const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(cu)<0?[cu]:[]);
-  const unitSel='<div class="iunitline"><span class="lbl">יחידה:</span> <select class="unitSel isupsel" data-uk="'+esc(it.k)+'">'+uopts.map(o=>'<option'+(o===cu?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select></div>';
+  const unitSel='<select class="unitSel" data-uk="'+esc(it.k)+'" title="יחידת מידה">'+uopts.map(o=>'<option'+(o===cu?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
   let supCell;
   if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):'<span class="pill po">אין ספק</span>';}
   else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
@@ -672,12 +676,14 @@ function renderItemCards(arr,boxId,countId){
        '<div class="iname">'+esc(it.n)+'</div>'+
        '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
        '<div class="isupline">'+supCell+'</div>'+
-       unitSel+
      '</div>'+
-     '<div class="stepper">'+
-       '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
-       '<input class="qty" type="text" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
-       '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
+     '<div class="qcell">'+
+       '<div class="stepper">'+
+         '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
+         '<input class="qty" type="text" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
+         '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
+       '</div>'+
+       unitSel+
      '</div>'+
      '</div>';
  });
