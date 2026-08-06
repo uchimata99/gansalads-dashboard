@@ -192,8 +192,9 @@ body{background:#f5f2ec}
 .imeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .iprice{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--green)}
 .ikey{font-size:10.5px;color:var(--muted)}
-.isupline{font-size:12px;color:var(--muted)}.isup{font-weight:600}
+.isupline{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:6px}.isup{font-weight:600}
 .isupsel{padding:5px 9px;font-size:12px;max-width:210px}
+.grpSel{padding:6px 10px;font-size:12.5px;font-weight:600;max-width:220px;border:1.5px solid var(--green);border-radius:9px;background:var(--green-l);color:var(--text)}
 /* מד-כמות (− מספר +) */
 .stepper{display:flex;align-items:center;flex:0 0 auto;background:var(--surface2);border-radius:12px;padding:3px}
 .stbtn{width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--green);font-size:21px;font-weight:700;line-height:1;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .1s,background .12s;display:flex;align-items:center;justify-content:center}
@@ -559,6 +560,32 @@ function itemUnit(k,n){
  return "יח'";
 }
 
+/* ---------- קיבוץ חומרי גלם (שם כללי + בורר גרסה/ספק) ---------- */
+// כל קבוצה: שם חומר הגלם + רשימת מפתחות הפריטים (גרסאות/מותגים). בחירת גרסה קובעת את מפתח הפריט.
+// אומת מול מיכל: 70011 לא רלוונטי; חלמון 70155=10 ק"ג; חציל קלוי נבדל ביחידת מידה; 500 גרם=70070 / 250 גרם=70041 (פריטים בודדים, לא בקבוצה).
+const RAW_GROUPS=[
+ {n:'ביצים קשות', items:[{k:'70002',l:"צ'אם"},{k:'70003',l:'ביצי כפר'}]},
+ {n:'חלבון',       items:[{k:'70006',l:'ביצי כפר'},{k:'70154',l:"צ'אם"}]},
+ {n:'חלמון',       items:[{k:'70113',l:'צ\'אם 1 ק"ג'},{k:'70155',l:'צ\'אם 10 ק"ג'}]},
+ {n:'מיונז',       items:[{k:'70125',l:'מיטב'},{k:'70130',l:'ללא חשש'}]},
+ {n:"רוטב צ'ילי מתוק", items:[{k:'70181',l:'מיטב'},{k:'70402',l:'דיפלומט'}]},
+ {n:'פסטו',        items:[{k:'70079',l:'בד"ץ'},{k:'70080',l:'היתר'}]},
+ {n:'חציל קלוי',   byUnit:true, items:[{k:'70273'},{k:'70379'}]}
+];
+const GROUP_OF={};   // מפתח פריט -> אינדקס קבוצה
+RAW_GROUPS.forEach((g,i)=>g.items.forEach(m=>{GROUP_OF[String(m.k)]=i;}));
+let GROUP_PICK={};   // שם קבוצה -> מפתח הגרסה שנבחרה לאחרונה (נשמר ב-localStorage)
+try{GROUP_PICK=JSON.parse(localStorage.getItem('gsGroupPick')||'{}')||{};}catch(e){GROUP_PICK={};}
+// תווית הגרסה בבורר: תווית מפורשת אם הוגדרה, אחרת נגזרת משם הפריט (הסרת שם הקבוצה), ואם נבדל ביחידה — היחידה
+function grpLabel(g,m){
+ if(m.l)return m.l;
+ const it=ITEM_BY_K[String(m.k)];
+ let base='';
+ if(it){base=it.n||'';if(g.n&&base.indexOf(g.n)===0)base=base.slice(g.n.length).replace(/^[\s\-–·]+/,'').trim();}
+ if(g.byUnit){const u=itemUnit(m.k,it?it.n:'');base=base?(base+' · '+u):u;}
+ return base||(it?it.n:('#'+m.k));
+}
+
 /* ---------- עזרי תצוגה ---------- */
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -652,47 +679,95 @@ function renderCatTab(t){
    .sort((a,b)=>a.n.localeCompare(b.n,'he'));
  renderItemCards(arr,t.box,t.cnt);
 }
+// הגרסה הפעילה בקבוצה: זו שכבר בהזמנה > הבחירה האחרונה שנשמרה > הראשונה
+function grpChosenKey(gi,members){
+ const active=members.find(m=>ORDER[String(m.k)]&&ORDER[String(m.k)].qty>0);
+ if(active)return String(active.k);
+ const pick=GROUP_PICK[RAW_GROUPS[gi].n];
+ if(pick&&members.some(m=>String(m.k)===String(pick)))return String(pick);
+ return String(members[0].k);
+}
+// כרטיס פריט אחד. gi/members מוגדרים רק לכרטיס מקובץ (שם כללי + בורר גרסה); it = הגרסה הנבחרת
+function cardHTML(it,gi,members){
+ const o=ORDER[it.k]||{};
+ const sups=it.s||[];
+ const active=o.qty>0;
+ const chk=delMode?('<label class="delbox"><input type="checkbox" class="delchk" data-k="'+esc(it.k)+'"'+(delSel.has(it.k)?' checked':'')+'></label>'):'';
+ const cu=itemUnit(it.k,it.n);
+ const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(cu)<0?[cu]:[]);
+ const unitSel='<select class="unitSel" data-uk="'+esc(it.k)+'" title="יחידת מידה">'+uopts.map(oo=>'<option'+(oo===cu?' selected':'')+'>'+esc(oo)+'</option>').join('')+'</select>';
+ let title=it.n, grpSel='';
+ if(gi!=null){
+  const g=RAW_GROUPS[gi];
+  title=g.n;   // כותרת הכרטיס = שם חומר הגלם הכללי
+  grpSel='<select class="grpSel" data-gi="'+gi+'" title="גרסה / ספק">'+members.map(m=>'<option value="'+esc(m.k)+'"'+(String(m.k)===String(it.k)?' selected':'')+'>'+esc(grpLabel(g,m))+'</option>').join('')+'</select>';
+ }
+ let supCell;
+ if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):(gi!=null?'':'<span class="pill po">אין ספק</span>');}
+ else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
+ const pr=(it.p!=null&&it.p>0)?('₪'+Number(it.p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
+ return '<div class="icard'+(active?' on':'')+(delMode&&delSel.has(it.k)?' selDel':'')+'" data-cardk="'+esc(it.k)+'">'+
+    chk+
+    '<div class="iinfo">'+
+      '<div class="iname">'+esc(title)+'</div>'+
+      '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
+      '<div class="isupline">'+grpSel+supCell+'</div>'+
+    '</div>'+
+    '<div class="qcell">'+
+      '<div class="stepper">'+
+        '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
+        '<input class="qty" type="text" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
+        '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
+      '</div>'+
+      unitSel+
+    '</div>'+
+    '</div>';
+}
+function bindCard(card){
+ card.querySelectorAll('.qty').forEach(inp=>inp.addEventListener('input',onQty));
+ card.querySelectorAll('.supSel').forEach(sel=>sel.addEventListener('change',onSup));
+ card.querySelectorAll('.stbtn').forEach(b=>b.addEventListener('click',onStep));
+ card.querySelectorAll('.delchk').forEach(c=>c.addEventListener('change',onDelChk));
+ card.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',onUnit));
+ card.querySelectorAll('.grpSel').forEach(sel=>sel.addEventListener('change',onGrp));
+}
 function renderItemCards(arr,boxId,countId){
  arr=arr.filter(it=>!HIDDEN.has(String(it.k)));            // פריטים שנמחקו מהרשימה מוסתרים תמיד
- setTxt(countId,arr.length+' פריטים');
  const box=document.getElementById(boxId);
- if(!arr.length){box.innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
- let h='<div class="ilist">';
+ // קיבוץ חומרי גלם: חברי אותה קבוצה מתמזגים לכרטיס אחד עם בורר גרסה
+ const entries=[], seen=new Set();
  arr.forEach(it=>{
-  const o=ORDER[it.k]||{};
-  const sups=it.s||[];
-  const active=o.qty>0;
-  const chk=delMode?('<label class="delbox"><input type="checkbox" class="delchk" data-k="'+esc(it.k)+'"'+(delSel.has(it.k)?' checked':'')+'></label>'):'';
-  const cu=itemUnit(it.k,it.n);
-  const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(cu)<0?[cu]:[]);
-  const unitSel='<select class="unitSel" data-uk="'+esc(it.k)+'" title="יחידת מידה">'+uopts.map(o=>'<option'+(o===cu?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
-  let supCell;
-  if(sups.length<=1){supCell=sups.length?('<span class="isup">'+esc(supName(sups[0]))+'</span>'):'<span class="pill po">אין ספק</span>';}
-  else{supCell='<select data-sup="'+esc(it.k)+'" class="supSel isupsel">'+sups.map(sk=>'<option value="'+esc(sk)+'"'+(o.sup===sk?' selected':'')+'>'+esc(supName(sk))+'</option>').join('')+'</select>';}
-  const pr=(it.p!=null&&it.p>0)?('₪'+Number(it.p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):'—';
-  h+='<div class="icard'+(active?' on':'')+(delMode&&delSel.has(it.k)?' selDel':'')+'">'+
-     chk+
-     '<div class="iinfo">'+
-       '<div class="iname">'+esc(it.n)+'</div>'+
-       '<div class="imeta"><span class="pill pb">'+esc(catName(it.c))+'</span><span class="iprice">'+pr+'</span><span class="ikey num">#'+esc(it.k)+'</span></div>'+
-       '<div class="isupline">'+supCell+'</div>'+
-     '</div>'+
-     '<div class="qcell">'+
-       '<div class="stepper">'+
-         '<button class="stbtn" data-step="-1" data-k="'+esc(it.k)+'" type="button" aria-label="הפחת">−</button>'+
-         '<input class="qty" type="text" inputmode="decimal" data-qk="'+esc(it.k)+'" value="'+(active?o.qty:'')+'" placeholder="0">'+
-         '<button class="stbtn" data-step="1" data-k="'+esc(it.k)+'" type="button" aria-label="הוסף">+</button>'+
-       '</div>'+
-       unitSel+
-     '</div>'+
-     '</div>';
+  const gi=GROUP_OF[String(it.k)];
+  if(gi==null){entries.push({it});return;}
+  if(seen.has(gi))return; seen.add(gi);
+  const members=arr.filter(x=>GROUP_OF[String(x.k)]===gi);
+  const ck=grpChosenKey(gi,members);
+  entries.push({gi,members,it:ITEM_BY_K[ck]||members[0]});
  });
+ setTxt(countId,entries.length+' פריטים');
+ if(!entries.length){box.innerHTML='<div class="empty">לא נמצאו פריטים בסינון הנוכחי</div>';return;}
+ let h='<div class="ilist">';
+ entries.forEach(e=>{h+=cardHTML(e.it,e.gi==null?null:e.gi,e.members);});
  box.innerHTML=h+'</div>';
- box.querySelectorAll('.qty').forEach(inp=>inp.addEventListener('input',onQty));
- box.querySelectorAll('.supSel').forEach(sel=>sel.addEventListener('change',onSup));
- box.querySelectorAll('.stbtn').forEach(b=>b.addEventListener('click',onStep));
- box.querySelectorAll('.delchk').forEach(c=>c.addEventListener('change',onDelChk));
- box.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',onUnit));
+ box.querySelectorAll('.icard').forEach(bindCard);
+}
+// החלפת גרסה בקבוצה: מעביר כמות שהוזנה לגרסה החדשה, שומר את הבחירה, ובונה מחדש את הכרטיס
+function onGrp(e){
+ const sel=e.target;const gi=+sel.dataset.gi;const g=RAW_GROUPS[gi];
+ const newK=sel.value;
+ const card=sel.closest('.icard');const oldK=card?card.dataset.cardk:null;
+ if(oldK&&oldK!==newK&&ORDER[oldK]){
+  const nit=ITEM_BY_K[newK];const sup=(nit&&nit.s&&nit.s.length)?nit.s[0]:'';
+  ORDER[newK]={qty:ORDER[oldK].qty,sup};delete ORDER[oldK];
+ }
+ GROUP_PICK[g.n]=newK;
+ try{localStorage.setItem('gsGroupPick',JSON.stringify(GROUP_PICK));}catch(err){}
+ const members=[...sel.options].map(o=>({k:o.value}));
+ const nit=ITEM_BY_K[newK]||ITEM_BY_K[members[0].k];
+ const tmp=document.createElement('div');tmp.innerHTML=cardHTML(nit,gi,members);
+ const nc=tmp.firstChild;
+ if(card){card.replaceWith(nc);bindCard(nc);}
+ updateCartBar();
 }
 function onStep(e){
  const t=e.currentTarget;const inp=t.parentNode.querySelector('.qty');
