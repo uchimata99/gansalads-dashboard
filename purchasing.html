@@ -258,13 +258,13 @@ body{background:#f5f2ec}
 .chip.on{background:linear-gradient(135deg,#2d6a3f,#245534);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(45,106,63,.3)}
 /* מכרז — רובריקות ספקים: מחשב 4 לצד זו, טלפון זו מתחת לזו */
 .auc-tools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.scols{display:grid;gap:12px;align-items:start;justify-content:start}
-/* רוחב רובריקה קבוע (~330px) — גם עם ספק אחד היא לא נמתחת */
-.scols.n1{grid-template-columns:repeat(1,minmax(0,330px))}
-.scols.n2{grid-template-columns:repeat(2,minmax(0,330px))}
-.scols.n3{grid-template-columns:repeat(3,minmax(0,330px))}
-.scols.n4{grid-template-columns:repeat(4,minmax(0,330px))}
-@media(max-width:1100px){.scols.n3,.scols.n4{grid-template-columns:repeat(2,minmax(0,330px))}}
+.scols{display:grid;gap:12px;align-items:start;justify-content:center}
+/* הרובריקות נמתחות וממלאות את כל רוחב המסך (לא דחוקות לצד). ספק יחיד — עמודה במרכז, לא על כל הרוחב */
+.scols.n1{grid-template-columns:minmax(0,480px)}
+.scols.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.scols.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.scols.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1100px){.scols.n3,.scols.n4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.scols.n1,.scols.n2,.scols.n3,.scols.n4{grid-template-columns:1fr}}
 .scol{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:10px;box-shadow:var(--shadow-sm)}
 .scol-empty{background:var(--surface);border-style:dashed}
