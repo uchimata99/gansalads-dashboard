@@ -4,7 +4,7 @@
   "short_name": "רכש",
   "description": "בניית הזמנות רכש לספקים ומכרז ירקות יומי — סלטי גן",
   "start_url": "purchasing.html",
-  "scope": "./",
+  "scope": "./purchasing.html",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#173f30",

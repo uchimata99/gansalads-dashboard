@@ -11,7 +11,19 @@
 <meta name="apple-mobile-web-app-title" content="רכש">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script>
+/* בידוד אפליקציית הרכש: רושמים Service Worker בהיקף purchasing.html בלבד,
+   ומסירים רישומים ישנים בהיקף רחב (שורש האתר) ששלטו גם בדשבורדים — הם הגורם
+   לכך ש"אפליקציית ההזמנות" הראתה את הדשבורדים. הניקוי מתרחש בפתיחה הבאה של הרכש. */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){
+ var reg=function(){navigator.serviceWorker.register('sw.js',{scope:'./purchasing.html'}).catch(function(){});};
+ navigator.serviceWorker.getRegistrations().then(function(regs){
+  var mine=null;
+  regs.forEach(function(r){if((r.scope||'').indexOf('purchasing.html')>=0){mine=r;}else{r.unregister();}});
+  if(!mine)reg();
+ }).catch(reg);
+});}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>:root{--bg:#f4f0e8;--surface:#fdfaf4;--surface2:#ece7db;--border:#d3ccb6;
 --green:#2d6a3f;--green-l:#e8f5ec;--gold:#b8890e;--gold-l:#fdf5d8;--red:#b03030;--red-l:#fdeaea;
