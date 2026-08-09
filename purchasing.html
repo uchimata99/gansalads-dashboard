@@ -272,15 +272,14 @@ body{background:#f5f2ec}
 .scol-h select{flex:1;min-width:0;font-weight:700;background:var(--green-l);border-color:var(--green);color:var(--green)}
 .scol-x{flex:0 0 auto;width:30px;height:30px;border:1.5px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;cursor:pointer;font-size:13px;line-height:1}
 .scol-x:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
-.srows{display:flex;flex-direction:column;gap:7px}
-.vrow{border:1.5px solid var(--border);border-radius:11px;padding:7px 9px;transition:border-color .15s,background .15s}
-.vr-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
-.vr-name{flex:1;min-width:0;font-weight:800;font-size:13px;display:flex;align-items:center;gap:4px}
-.vqty{width:72px;text-align:center;padding:5px 6px;font-weight:700;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
+.srows{display:flex;flex-direction:column;gap:5px}
+/* שורה אחת פר פריט (שם · אחרון · כמות · מחיר · נבחר) — פחות גובה, פחות גלילה */
+.vrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1.5px solid var(--border);border-radius:10px;padding:5px 8px;transition:border-color .15s,background .15s}
+.vr-name{flex:1 1 82px;min-width:0;font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
 .vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
-.vr-bot{display:flex;align-items:center;gap:8px}
-.vr-last{font-size:10.5px;color:var(--muted);white-space:nowrap;flex:1;text-align:right}
-.vr-off{width:72px;text-align:center;flex:0 0 auto;padding:5px 6px}   /* רוחב זהה ל-vqty ובקצה השורה — הכמות מיושרת בדיוק מעל המחיר */
+.vr-last{font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
@@ -1122,11 +1121,11 @@ function aucRender(a){
    const lastBuy=(a.lastbuy[vk]===sk);
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':(lp.src==='catsup'?'אחרון ':'קנייה '))+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
-      '<div class="vr-top"><span class="vr-name">'+esc(it.n)+' <span class="vunit">'+esc(u)+'</span>'+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
-        '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="'+esc(u)+'" title="יחידה: '+esc(u)+(i===0?' · כמות אצל הספק הראשון מועתקת לשאר':'')+'"></div>'+
-      '<div class="vr-bot"><span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
-        '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
-        '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר"></div>'+
+      '<span class="vr-name">'+esc(it.n)+' <span class="vunit">'+esc(u)+'</span>'+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
+      '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
+      '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="'+esc(u)+'" title="כמות · יחידה: '+esc(u)+(i===0?' · מועתק לשאר':'')+'">'+
+      '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
+      '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
   });
   h+='</div></div>';
