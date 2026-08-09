@@ -25,7 +25,10 @@ insights, red_flags[], gp_meta(=null עד שיהיו עלויות).
 import argparse
 import csv
 import json
+import os
 import re
+import tempfile
+import zipfile
 from collections import defaultdict
 from statistics import mean, median, pstdev
 
@@ -34,6 +37,40 @@ import openpyxl
 # עמודות בלשונית הפירוט (פורמט מחשבשבת החדש; זהה ל-customer_audit)
 C_ACC, C_FAM, C_KEY, C_NAME, C_WEEK, C_DAY, C_BAL, C_KG, C_MONEY = 0, 1, 3, 4, 5, 6, 8, 9, 10
 
+
+def _patch_xlsx(path):
+    """מתקן פגמי-XML שמופיעים לעיתים בייצוא מחשבשבת (טבלת ציר) ושוברים את openpyxl:
+    casing של מזהי-סגנון (borderID→borderId), bestfit→bestFit, ומטמון-ציר ריק שאינו
+    XML תקין. מחזיר נתיב לעותק מתוקן."""
+    repl = [("borderID", "borderId"), ("bestfit", "bestFit"), ("fillID", "fillId"),
+            ("fontID", "fontId"), ("xfID", "xfId"), ("numFmtID", "numFmtId")]
+    empty_rec = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                 '<pivotCacheRecords xmlns="http://schemas.openxmlformats.org/'
+                 'spreadsheetml/2006/main" count="0"/>')
+    fd, out = tempfile.mkstemp(suffix=".xlsx")
+    os.close(fd)
+    with zipfile.ZipFile(path) as z, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as o:
+        for n in z.namelist():
+            data = z.read(n)
+            if "pivotcacherecords" in n.lower():
+                data = empty_rec.encode("utf-8")
+            elif n.endswith(".xml"):
+                t = data.decode("utf-8", errors="ignore")
+                for a, b in repl:
+                    t = t.replace(a, b)
+                data = t.encode("utf-8")
+            o.writestr(n, data)
+    return out
+
+
+def robust_workbook(path):
+    """פותח חוברת עבודה גם אם הייצוא פגום. *לא* read_only — כדי להתעלם מתגית
+    dimension שגויה (שמצהירה שורה אחת למרות אלפי שורות בקבצי טבלת-ציר)."""
+    try:
+        return openpyxl.load_workbook(path, data_only=True)
+    except Exception:
+        return openpyxl.load_workbook(_patch_xlsx(path), data_only=True)
+
 DEV_FLAG = 3.0   # סף סטייה באחוזים לדגל מכירה חריגה
 RECENT_W = 8     # חלון שבועות אחרונים להצגת דגלים (הדגלים נועדו לפעולה, לא להיסטוריה)
 STALE_W = 6      # אם המחיר הקודם ישן מ-STALE_W שבועות — לא ניתן לשפוט (קונה לסירוגין)
@@ -41,7 +78,11 @@ STALE_W = 6      # אם המחיר הקודם ישן מ-STALE_W שבועות —
 
 def detail_sheet(wb):
     for ws in wb.worksheets:
-        hdr = " ".join(str(c.value or "") for c in next(ws.iter_rows(max_row=1)))
+        try:
+            first = next(ws.iter_rows(max_row=1))
+        except StopIteration:
+            continue   # לשונית ריקה (למשל 'טבלת ציר') — לדלג
+        hdr = " ".join(str(c.value or "") for c in first)
         if "שם חשבון" in hdr and "מפתח פריט" in hdr:
             return ws
     raise SystemExit("לא נמצאה לשונית פירוט לקוחות בקובץ.")
@@ -49,7 +90,7 @@ def detail_sheet(wb):
 
 def load_rows(path):
     """שורות גלם עשירות: לקוח, משפחה, מפתח, פריט, שבוע, אריזות(bal), משקל, כסף."""
-    wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    wb = robust_workbook(path)
     ws = detail_sheet(wb)
     rows = []
     for r in ws.iter_rows(min_row=2, values_only=True):
