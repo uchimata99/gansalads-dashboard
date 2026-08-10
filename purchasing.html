@@ -38,7 +38,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
 .tabs{background:var(--surface);border-bottom:2px solid var(--border);display:flex;padding:0 22px;gap:3px;overflow-x:auto;position:sticky;top:60px;z-index:99}
 .tab{padding:13px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .tab:hover{color:var(--green)}.tab.active{color:var(--green);border-bottom-color:var(--green)}
-.main{max-width:1380px;margin:0 auto;padding:22px 26px;display:grid;gap:18px}
+.main{max-width:1720px;margin:0 auto;padding:22px 26px;display:grid;gap:18px}
+/* מחשב רחב: לנצל את שטח המסך — כתב גדול וגובה שורה גדול יותר במכרז (בלי לשנות רוחב
+   הפקדים, כדי שהשורה לא תישבר), כך שהתוכן ממלא את המסך ונשאר קריא בלי גלילה. */
+@media(min-width:1200px){
+  #veg .srows,#peel .srows{gap:8px}
+  #veg .vrow,#peel .vrow{padding:10px 13px;gap:7px}
+  #veg .vr-name,#peel .vr-name{font-size:15.5px}
+  #veg .vr-last,#peel .vr-last{font-size:12px}
+  #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off{padding:7px 6px;font-size:15px}
+  #veg .vr-unit,#peel .vr-unit{padding:7px 2px;font-size:12.5px}
+  #veg .vpick,#peel .vpick{font-size:12.5px}
+  #veg .scol-h select,#peel .scol-h select{font-size:15.5px;padding:9px 10px}
+  #veg .note,#peel .note{font-size:14px;padding:14px 18px}
+}
 .page{display:none}.page.active{display:block}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px}
 .card-t{font-size:13px;font-weight:800;padding-bottom:11px;margin-bottom:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -280,6 +293,7 @@ body{background:#f5f2ec}
 .vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
 .vr-last{font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
 .vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px}
+.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:11px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
@@ -1114,16 +1128,19 @@ function aucRender(a){
   h+='<div class="srows">';
   a.items.forEach(it=>{
    const vk=it.k;
-   const u=aucUnit(a,it);
+   const u=itemUnit(vk,it.n);   // יחידה פר פריט (בחירת מיכל מ-UNITMAP גוברת) — פעם אחת, ליד הכמות
+   const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(u)<0?[u]:[]);
+   const unitSel='<select class="unitSel vr-unit" data-uk="'+esc(vk)+'" title="יחידת מידה">'+uopts.map(o=>'<option'+(o===u?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
    const lp=aucLast(a,vk,sk);
    const off=(a.off[vk]&&a.off[vk][i]!=null)?a.off[vk][i]:'';
    const chosen=a.chosen[vk]===i;
    const lastBuy=(a.lastbuy[vk]===sk);
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':(lp.src==='catsup'?'אחרון ':'קנייה '))+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
-      '<span class="vr-name">'+esc(it.n)+' <span class="vunit">'+esc(u)+'</span>'+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
+      '<span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
       '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
-      '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="'+esc(u)+'" title="כמות · יחידה: '+esc(u)+(i===0?' · מועתק לשאר':'')+'">'+
+      '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+
+      unitSel+
       '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
       '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
@@ -1154,6 +1171,8 @@ function aucRender(a){
   aucHighlight(a,vk);
  });
  box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{a.chosen[rb.dataset.vk]=+rb.dataset.col;aucMarkChosen(a,rb.dataset.vk);});
+ // בורר יחידה פר פריט — נשמר ב-UNITMAP (משותף עם בניית ההזמנה) ומתעדכן בכל העמודות
+ box.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',e=>{onUnit(e);aucRender(a);}));
  a.items.forEach(it=>aucHighlight(a,it.k));
 }
 function aucCell(a,vk,i){return document.getElementById(a.box).querySelector('.vrow[data-vk="'+String(vk).replace(/["\\]/g,'\\$&')+'"][data-col="'+i+'"]');}
