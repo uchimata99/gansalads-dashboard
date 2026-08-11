@@ -42,12 +42,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
 /* מחשב רחב: לנצל את שטח המסך — כתב גדול וגובה שורה גדול יותר במכרז (בלי לשנות רוחב
    הפקדים, כדי שהשורה לא תישבר), כך שהתוכן ממלא את המסך ונשאר קריא בלי גלילה. */
 @media(min-width:1200px){
+  /* קטלוג/אריזות/קטגוריות: כרטיסים בכמה טורים שממלאים את רוחב המסך (כמו המכרז).
+     סלקטור לפי id כדי לגבור על ‎.ilist{display:flex}‎ הבסיסי שמוגדר אחריו בקובץ. */
+  #itemsTab .ilist,#packTab .ilist,#spiceTab .ilist,#cannedTab .ilist,#coldTab .ilist{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:10px}
   #veg .srows,#peel .srows{gap:6px}
   #veg .vrow,#peel .vrow{padding:6px 13px;gap:7px}
   #veg .vr-name,#peel .vr-name{font-size:15px}
   #veg .vr-last,#peel .vr-last{font-size:11.5px}
   #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off{padding:5px 6px;font-size:14.5px}
-  #veg .vr-unit,#peel .vr-unit{padding:5px 2px;font-size:12.5px}
+  #veg .vr-unit,#peel .vr-unit{padding:5px 2px;font-size:14.5px}
   #veg .vpick,#peel .vpick{font-size:12px}
   #veg .scol-h select,#peel .scol-h select{font-size:15px;padding:7px 10px}
   #veg .note,#peel .note{font-size:13.5px;padding:11px 16px}
@@ -73,8 +76,8 @@ select:focus,input:focus{border-color:var(--green)}
 .btn.ghost{background:var(--surface);color:var(--green);border:1.5px solid var(--green)}
 .btn.gold{background:var(--gold)}.btn.blue{background:var(--blue)}.btn.sm{padding:6px 11px;font-size:12px}
 .scroll{max-height:600px;overflow:auto}
-/* מכרזים: בלי גובה קבוע/גלילה פנימית — הרובריקות גדלות לגובה כל הפריטים וממלאות את המסך */
-#veg .scroll,#peel .scroll{max-height:none;overflow:visible}
+/* כל טאבי הקטלוג/מכרז: בלי גובה קבוע/גלילה פנימית — גדלים לגובה מלא, הדף נגלל כרגיל */
+#vegTab,#peelTab,#itemsTab,#packTab,#spiceTab,#cannedTab,#coldTab{max-height:none;overflow:visible}
 .scroll thead th{position:sticky;top:0;background:var(--surface);z-index:2}
 .note{background:var(--blue-l);border:1px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:12.5px;line-height:1.7;color:#1f3f5c;margin-bottom:18px}
 .note b{color:var(--blue)}
@@ -291,11 +294,14 @@ body{background:#f5f2ec}
 /* שורה אחת פר פריט (שם · אחרון · כמות · מחיר · נבחר) — פחות גובה, פחות גלילה */
 .vrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1.5px solid var(--border);border-radius:10px;padding:5px 8px;transition:border-color .15s,background .15s}
 .vr-name{flex:1 1 82px;min-width:0;font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
+/* כמות + יחידה מקובצות יחד (היחידה צמודה לכמות) */
+.qu-grp{display:flex;align-items:center;gap:3px;flex:0 0 auto}
+/* כמות · מחיר · יחידה — אותו גודל פונט */
+.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
 .vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
 .vr-last{font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
-.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px}
-.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:11px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
+.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px;font-size:13px;font-family:'IBM Plex Mono',monospace}
+.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
@@ -411,24 +417,22 @@ body{background:#f5f2ec}
 
  <!-- ============ מכרז ירקות יומי ============ -->
  <div class="page" id="veg">
-  <div class="note">מכרז יומי לירקות: בחרי עד 4 ספקים בטורים, הזיני כמות לכל ירק ואת המחיר שכל ספק הציע היום. <b>הזול ביותר בכל שורה מסומן בירוק.</b> סמני "הזמנתי" אצל הספק שבחרת ולחצי "שמור מכרז" — המחיר יישמר ויהפוך ל"אחרון" של אותו ספק. בחירת הספקים נזכרת למחר.</div>
   <div class="card">
    <div class="scroll" id="vegTab"><div class="empty">טוען…</div></div>
    <div class="cartbar">
     <button class="btn blue" onclick="saveVeg()">💾 שמור מכרז</button>
-    <span class="lbl">הזול בכל שורה מסומן ירוק · סמני "הזמנתי" לפני שמירה</span>
+    <button class="btn ghost sm" onclick="aucAddCol(AUC.veg)">➕ הוסף ספק</button>
    </div>
   </div>
  </div>
 
  <!-- ============ מכרז ירקות קלופים ============ -->
  <div class="page" id="peel">
-  <div class="note">מכרז ירקות קלופים: בחרי עד 4 ספקים, הזיני כמות ומחיר מוצע לכל פריט. <b>הזול ביותר מסומן בירוק.</b> סמני "הזמנתי" אצל מי שבחרת ולחצי "שמור מכרז". בחירת הספקים נזכרת למחר.</div>
   <div class="card">
    <div class="scroll" id="peelTab"><div class="empty">טוען…</div></div>
    <div class="cartbar">
     <button class="btn blue" onclick="savePeel()">💾 שמור מכרז</button>
-    <span class="lbl">הזול בכל פריט מסומן ירוק · סמני "הזמנתי" לפני שמירה</span>
+    <button class="btn ghost sm" onclick="aucAddCol(AUC.peel)">➕ הוסף ספק</button>
    </div>
   </div>
  </div>
@@ -1117,9 +1121,8 @@ function aucRender(a){
  const cols=aucCols(a).map(c=>valid.has(c)?c:'');
  aucSetCols(a,cols);
  // פריסה הפוכה: רובריקה לכל ספק שנבחר (1–4), ומתחת לכל ספק רשימת הפריטים
- let h='<div class="auc-tools noprint">'+(cols.length<4?'<button class="btn ghost sm aucAdd" type="button">➕ הוסף ספק</button>':'')+
-       '<span class="lbl">'+cols.length+' רובריקות · כמות אצל הספק הראשון מועתקת לשאר</span></div>';
- h+='<div class="scols n'+cols.length+'">';
+ // (כפתור "הוסף ספק" עבר לסרגל התחתון ליד "שמור מכרז")
+ let h='<div class="scols n'+cols.length+'">';
  for(let i=0;i<cols.length;i++){
   const sk=cols[i];
   h+='<div class="scol'+(sk?'':' scol-empty')+'">'+
@@ -1141,8 +1144,7 @@ function aucRender(a){
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       '<span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
       '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
-      '<input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+
-      unitSel+
+      '<span class="qu-grp"><input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+unitSel+'</span>'+
       '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
       '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
@@ -1150,7 +1152,6 @@ function aucRender(a){
   h+='</div></div>';
  }
  box.innerHTML=h+'</div>';
- const addBtn=box.querySelector('.aucAdd');if(addBtn)addBtn.onclick=()=>aucAddCol(a);
  box.querySelectorAll('.aucDel').forEach(b=>b.onclick=()=>aucRemoveCol(a,+b.dataset.i));
  box.querySelectorAll('.vegSupSel').forEach(sel=>sel.onchange=()=>{const c=aucCols(a);c[+sel.dataset.i]=sel.value;aucSetCols(a,c);aucRender(a);});
  // כמות פר-(פריט,ספק): הספק הראשון מעתיק לשאר; שינוי אצל ספק אחר מקבע אותו
