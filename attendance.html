@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>נוכחות עובדים</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>document.documentElement.classList.add('locked')</script>
+  <style>
+    html.locked{overflow:hidden}
+    html.locked body>*{display:none!important}
+    html.locked #gsLock{display:flex!important}
+    #gsLock{display:none;position:fixed;inset:0;z-index:99999;background:#173f30;flex-direction:column;
+            align-items:center;justify-content:center;gap:18px;font-family:'Segoe UI',Arial,sans-serif;direction:rtl}
+    #gsLock .lock-logo{font-size:38px}
+    #gsLock .lock-title{color:#a7d7c2;font-size:19px;font-weight:800}
+    #gsLock .lock-sub{color:#cfe8db;font-size:13px;max-width:320px;text-align:center;line-height:1.7}
+    #gsLock .gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#3c4043;border:none;
+            border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+    #gsLock .gbtn:hover{background:#f1f5f9}
+    #gsLock .gbtn svg{width:18px;height:18px}
+    #gsLock .lock-err{color:#ffb4a8;font-size:13px;min-height:18px}
+
+    :root { --green:#15803d; --green6:#16a34a; --stone50:#fafaf9; --stone100:#f5f5f4;
+            --stone200:#e7e5e4; --stone500:#78716c; --stone800:#292524; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--stone50); color:var(--stone800);
+           font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; }
+    .wrap { max-width:900px; margin:0 auto; padding:24px 20px 48px; }
+    .head { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+    .bar { width:8px; height:32px; background:var(--green); border-radius:3px; }
+    h1 { font-size:24px; margin:0; }
+    .sub { color:var(--stone500); font-size:14px; margin:4px 0 20px 20px; }
+    .card { background:#fff; border:1px solid var(--stone200); border-radius:16px; padding:16px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    button { font-family:inherit; cursor:pointer; border:none; border-radius:10px;
+             padding:8px 14px; font-size:14px; font-weight:600; }
+    .btn-green { background:var(--green); color:#fff; }
+    input[type=date],select { font-family:inherit; border:1px solid var(--stone200);
+             border-radius:8px; padding:6px 10px; font-size:14px; background:var(--stone50); }
+    .search { width:100%; margin-top:12px; border:1px solid var(--stone200); border-radius:10px;
+              padding:10px 12px; font-size:15px; font-family:inherit; background:var(--stone50); }
+    .hero { background:var(--green); color:#fff; border-radius:16px; padding:20px; margin:16px 0; }
+    .hero .n { font-size:38px; font-weight:700; line-height:1; margin-top:4px; }
+    .hero .n small { font-size:18px; font-weight:500; opacity:.85; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .chip { background:var(--green6); border-radius:999px; padding:4px 10px; font-size:12px; }
+    .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+    @media (max-width:640px){ .cols{ grid-template-columns:1fr; } }
+    .colhead { font-size:16px; font-weight:700; margin:0 4px 8px; display:flex; align-items:center; gap:8px; }
+    .colhead-green { color:var(--green); }
+    .cnt { background:var(--stone100); color:var(--stone500); border-radius:999px;
+           padding:2px 9px; font-size:13px; font-weight:600; }
+    .colhead-green .cnt { background:#dcfce7; color:var(--green); }
+    .emp { padding:10px 12px; border-top:1px solid var(--stone100); }
+    .emp:first-child { border-top:none; }
+    .emp .name { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:500; }
+    .emp .ctrls { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+    .emp .ctrls select { flex:1; min-width:88px; }
+    .times { font-size:12px; color:var(--stone500); white-space:nowrap; }
+    .muted { color:var(--stone500); font-size:13px; }
+    .pill { border-radius:999px; padding:6px 10px; border:none; font-size:12px; font-weight:600; }
+    .emp-x { background:transparent; color:#b91c1c; border:1px solid #fca5a5;
+             border-radius:8px; padding:5px 9px; font-size:12px; font-weight:600; }
+    .empty { padding:16px; color:var(--stone500); font-size:13px; text-align:center; }
+    .hiddenbox { margin-top:24px; }
+    .hiddenbox summary { cursor:pointer; font-weight:600; color:var(--stone500); padding:8px 4px; }
+    .hidden-emp { display:flex; align-items:center; justify-content:space-between;
+                  padding:10px 14px; border-top:1px solid var(--stone100); }
+    .hidden-emp:first-child { border-top:none; }
+    .btn-restore { background:var(--stone100); color:var(--green); border-radius:8px;
+                   padding:5px 10px; font-size:12px; font-weight:600; }
+    .s-present{background:#dcfce7;color:#15803d} .s-vacation{background:#fef3c7;color:#b45309}
+    .s-sick{background:#ffe4e6;color:#be123c} .s-reserve{background:#e0f2fe;color:#0369a1}
+    .s-absent{background:#f5f5f4;color:#78716c}
+  </style>
+</head>
+<body>
+
+<div id="gsLock">
+  <div class="lock-logo">🕒</div>
+  <div class="lock-title">נוכחות עובדים</div>
+  <div class="lock-sub" id="gsLockSub">הנתונים פרטיים ונטענים רק לאחר התחברות עם חשבון גוגל מורשה.</div>
+  <button class="gbtn" onclick="gsSignIn()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.4-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.7-2.9-.7-4.6s.3-3.2.7-4.6l-7.9-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.7l-7.1-5.5c-2 1.4-4.6 2.2-8.5 2.2-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+    התחבר עם Google
+  </button>
+  <div class="lock-err" id="gsLockErr"></div>
+</div>
+
+<div class="wrap">
+  <div class="head"><div class="bar"></div><h1>נוכחות עובדים</h1></div>
+  <div class="sub" id="sub">מתעדכן מהשעון אוטומטית כל 15 דקות</div>
+
+  <div class="card">
+    <div class="row">
+      <div class="row" style="gap:8px">
+        <input type="date" id="date" />
+        <span class="muted" id="lastpull"></span>
+      </div>
+      <button class="btn-green" id="pull">רענן</button>
+    </div>
+    <input type="search" id="search" class="search" placeholder="🔍 חיפוש עובד לפי שם…" />
+  </div>
+
+  <div class="hero">
+    <div style="opacity:.85;font-size:14px">נוכחים היום</div>
+    <div class="n"><span id="present">0</span> <small>מתוך <span id="total">0</span></small></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="colhead colhead-green">נוכחים <span class="cnt" id="cntPresent">0</span></div>
+      <div class="card" style="padding:0" id="listPresent"></div>
+    </div>
+    <div class="col">
+      <div class="colhead">לא נוכחים <span class="cnt" id="cntAbsent">0</span></div>
+      <div class="card" style="padding:0" id="listAbsent"></div>
+    </div>
+  </div>
+
+  <details class="hiddenbox" id="hiddenbox">
+    <summary>עובדים שהוסתרו (<span id="cntHidden">0</span>)</summary>
+    <div class="card" style="padding:0;margin-top:8px" id="listHidden"></div>
+  </details>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  נוכחות עובדים — קורא/כותב לגיליון גוגל, אחרי כניסת גוגל.
+//  מחשב המפעל כותב ROSTER + PUNCHES; הדף כותב EMP_META + OVERRIDES.
+//  אותו מנגנון כניסה כמו production/purchasing (הרשאת כתיבה).
+// ═══════════════════════════════════════════════════════════
+const ATT_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const ATT_SHEET_ID='19h1pAaJEWQrqTtA95KDV9j4aerfSdY8aQokTxqOWoBs';   // גיליון "נוכחות עובדים"
+const ATT_SCOPE='https://www.googleapis.com/auth/spreadsheets';   // כתיבה — הדף שומר עריכות
+const ATT_TOKEN_KEY='gsAttToken';
+
+const T_ROSTER='ROSTER', T_PUNCH='PUNCHES', T_META='EMP_META', T_OVER='OVERRIDES';
+
+const STATUS = {
+  present:{l:"נוכח",c:"s-present"}, vacation:{l:"חופשה",c:"s-vacation"},
+  sick:{l:"מחלה",c:"s-sick"}, reserve:{l:"מילואים",c:"s-reserve"}, absent:{l:"נעדר",c:"s-absent"}
+};
+const ORDER = ["present","vacation","sick","reserve","absent"];
+const $ = (id)=>document.getElementById(id);
+
+let attToken=null, attClient=null, filter="";
+// מפות שנבנות מהגיליון:
+let roster={};            // uid -> name
+let punchesByDate={};     // date -> uid -> {first_in,last_out}
+let empMeta={};           // uid -> {name,dept,active}
+let overridesByDate={};   // date -> uid -> status
+let lastPull="";
+
+function gsShowErr(m){ const e=$("gsLockErr"); if(e) e.textContent=m||""; }
+function today(){ const d=new Date(),p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
+
+function gsInitClient(){
+  if(attClient) return attClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)) return null;
+  attClient=google.accounts.oauth2.initTokenClient({
+    client_id:ATT_CLIENT_ID, scope:ATT_SCOPE,
+    callback:(resp)=>{
+      if(resp&&resp.error){ gsShowErr('ההתחברות נכשלה — נסה שוב'); return; }
+      attToken=resp.access_token;
+      try{ sessionStorage.setItem(ATT_TOKEN_KEY, JSON.stringify({t:attToken, exp:Date.now()+((resp.expires_in||3600)*1000)})); }catch(e){}
+      gsAfterToken();
+    }
+  });
+  return attClient;
+}
+function gsSignIn(){ gsShowErr(''); const c=gsInitClient();
+  if(!c){ gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע'); return; }
+  c.requestAccessToken({prompt: attToken?'':'consent'}); }
+
+function gsAfterToken(){
+  loadData().then(()=>{
+    document.documentElement.classList.remove('locked');
+    const l=$("gsLock"); if(l) l.style.display='none';
+    if(!$("date").value) $("date").value=today();
+    render();
+  }).catch(err=>{
+    attToken=null; try{ sessionStorage.removeItem(ATT_TOKEN_KEY); }catch(e){}
+    gsShowErr('אין הרשאה לגיליון עם החשבון הזה. התחבר עם החשבון המורשה.');
+  });
+}
+
+// ---- קריאה/כתיבה לגיליון ----
+async function sheetGet(tab){
+  const range=encodeURIComponent(tab+'!A:E');
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+'/values/'+range,
+    {headers:{Authorization:'Bearer '+attToken}});
+  if(r.status===400) return [];   // לשונית עדיין לא קיימת — נחשב כריקה
+  if(!r.ok) throw new Error('get '+tab+' '+r.status);
+  const j=await r.json(); return j.values||[];
+}
+let _tabsChecked={};
+async function ensureTab(tab){
+  if(_tabsChecked[tab]) return;
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+'?fields=sheets.properties.title',
+    {headers:{Authorization:'Bearer '+attToken}});
+  if(r.ok){ const j=await r.json(); (j.sheets||[]).forEach(s=>_tabsChecked[s.properties.title]=1); }
+  if(_tabsChecked[tab]) return;
+  await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+':batchUpdate',
+    {method:'POST',headers:{Authorization:'Bearer '+attToken,'Content-Type':'application/json'},
+     body:JSON.stringify({requests:[{addSheet:{properties:{title:tab}}}]})});
+  _tabsChecked[tab]=1;
+}
+async function sheetAppend(tab, rows){
+  await ensureTab(tab);
+  const range=encodeURIComponent(tab+'!A:E');
+  const url='https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+'/values/'+range+
+            ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
+  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+attToken,'Content-Type':'application/json'},
+    body:JSON.stringify({values:rows})});
+  if(!r.ok) throw new Error('append '+tab+' '+r.status);
+}
+
+function dropHeader(rows, first){ return (rows.length && String(rows[0][0]||'').toLowerCase()===first) ? rows.slice(1) : rows; }
+
+async function loadData(){
+  const [rs, ps, ms, os] = await Promise.all([
+    sheetGet(T_ROSTER), sheetGet(T_PUNCH), sheetGet(T_META), sheetGet(T_OVER)
+  ]);
+  roster={}; punchesByDate={}; empMeta={}; overridesByDate={}; lastPull="";
+  dropHeader(rs,'uid').forEach(r=>{ if(r[0]) roster[r[0]]=r[1]||r[0]; });
+  dropHeader(ps,'date').forEach(r=>{ const d=r[0],uid=r[1]; if(!d||!uid) return;
+    (punchesByDate[d]=punchesByDate[d]||{})[uid]={first_in:r[2]||null,last_out:r[3]||null};
+    if(d>lastPull) lastPull=d; });
+  dropHeader(ms,'timestamp').forEach(r=>{ const uid=r[1]; if(!uid) return;   // last per uid wins
+    empMeta[uid]={name:r[2]||'', dept:r[3]||'', active:(r[4]===''||r[4]==null)?1:Number(r[4])}; });
+  dropHeader(os,'timestamp').forEach(r=>{ const d=r[1],uid=r[2]; if(!d||!uid) return;   // last per (date,uid)
+    (overridesByDate[d]=overridesByDate[d]||{})[uid]=r[3]||'absent'; });
+}
+
+function buildState(date){
+  const punch=punchesByDate[date]||{}, over=overridesByDate[date]||{};
+  const employees=[], hidden=[];
+  Object.keys(roster).forEach(uid=>{
+    const meta=empMeta[uid]||{};
+    const active=(meta.active==null)?1:meta.active;
+    const name=meta.name||roster[uid];
+    const dept=meta.dept||"";
+    if(!active){ hidden.push({uid,name,dept}); return; }
+    const p=punch[uid];
+    const status=over[uid]||(p?"present":"absent");
+    employees.push({uid,name,dept,status,
+      first_in:p?p.first_in:null, last_out:p?p.last_out:null});
+  });
+  employees.sort((a,b)=>a.name.localeCompare(b.name,"he"));
+  hidden.sort((a,b)=>a.name.localeCompare(b.name,"he"));
+  return {employees,hidden};
+}
+
+// ---- עריכות (עדכון מקומי מיידי + כתיבה לגיליון) ----
+function nowTs(){ return new Date().toISOString().slice(0,19).replace("T"," "); }
+async function writeMeta(uid){
+  const m=empMeta[uid]||{name:roster[uid]||'',dept:'',active:1};
+  try{ await sheetAppend(T_META, [[nowTs(), uid, m.name||roster[uid]||'', m.dept||'', String(m.active==null?1:m.active)]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+function setDept(uid,dept){ const m=empMeta[uid]||{name:roster[uid]||'',active:1}; m.dept=dept; m.active=(m.active==null?1:m.active); empMeta[uid]=m; render(); writeMeta(uid); }
+function setActive(uid,active){ const m=empMeta[uid]||{name:roster[uid]||'',dept:''}; m.active=active?1:0; empMeta[uid]=m; render(); writeMeta(uid); }
+function hideEmp(uid){
+  const name=(empMeta[uid]&&empMeta[uid].name)||roster[uid]||"";
+  if(confirm(`לסמן ש"${name}" לא עובד יותר?\n\nהעובד ייעלם מהלוח ולא יימשך יותר מהשעון.\nאפשר להחזיר אותו בכל עת מהרשימה "עובדים שהוסתרו".`))
+    setActive(uid,0);
+}
+async function setStatus(uid,status){
+  const d=$("date").value||today();
+  (overridesByDate[d]=overridesByDate[d]||{})[uid]=status; render();
+  try{ await sheetAppend(T_OVER, [[nowTs(), d, uid, status]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+async function refresh(){ $("pull").textContent="מרענן…"; $("pull").disabled=true;
+  try{ await loadData(); }catch(e){ alert("הרענון נכשל: "+e.message); }
+  $("pull").textContent="רענן"; $("pull").disabled=false; render(); }
+
+// ---- תצוגה ----
+function empRow(e, depts){
+  const st=STATUS[e.status];
+  const t=e.status==="present"&&(e.first_in||e.last_out)
+    ? `<span class="times">${e.first_in||"—"} ← ${e.last_out||"—"}</span>` : "";
+  const dsel=`<select onchange="setDept('${e.uid}',this.value)">
+      <option value="">ללא מחלקה</option>
+      ${depts.map(d=>`<option ${d===e.dept?"selected":""}>${d}</option>`).join("")}</select>`;
+  const ssel=`<select class="pill ${st.c}" onchange="setStatus('${e.uid}',this.value)">
+      ${ORDER.map(s=>`<option value="${s}" ${s===e.status?"selected":""}>${STATUS[s].l}</option>`).join("")}</select>`;
+  const xbtn=`<button class="emp-x" onclick="hideEmp('${e.uid}')">לא עובד</button>`;
+  return `<div class="emp"><div class="name"><span>${e.name}</span>${t}</div>
+      <div class="ctrls">${dsel}${ssel}${xbtn}</div></div>`;
+}
+
+function render(){
+  const d=$("date").value||today();
+  const st=buildState(d);
+  $("sub").textContent = Object.keys(roster).length
+    ? "מתעדכן מהשעון אוטומטית כל 15 דקות"
+    : "ממתין לנתונים הראשונים מהשעון (מחשב המפעל) — יופיעו כאן אוטומטית";
+  const depts=[]; // מחלקות נגזרות מהעובדים (מה שכבר שויך)
+  const seen={}; Object.values(empMeta).forEach(m=>{ if(m.dept&&!seen[m.dept]){seen[m.dept]=1;depts.push(m.dept);} });
+  depts.sort((a,b)=>a.localeCompare(b,"he"));
+
+  const f=filter.trim();
+  const match=e=>!f||(e.name||"").includes(f);
+  const emps=st.employees;
+  const present=emps.filter(e=>e.status==="present");
+  const absent=emps.filter(e=>e.status!=="present");
+
+  $("present").textContent=present.length;
+  $("total").textContent=emps.length;
+  $("lastpull").textContent = lastPull ? ("עודכן מהשעון: "+lastPull) : "טרם נמשך מהשעון";
+
+  const counts={}; ORDER.forEach(s=>counts[s]=0);
+  emps.forEach(e=>counts[e.status]=(counts[e.status]||0)+1);
+  $("chips").innerHTML=ORDER.filter(s=>s!=="present"&&counts[s])
+    .map(s=>`<span class="chip">${STATUS[s].l}: ${counts[s]}</span>`).join("");
+
+  const pf=present.filter(match), af=absent.filter(match);
+  $("cntPresent").textContent=pf.length;
+  $("cntAbsent").textContent=af.length;
+  $("listPresent").innerHTML=pf.length?pf.map(e=>empRow(e,depts)).join("")
+    :`<div class="empty">${f?"אין נוכחים בסינון הזה":"אין נוכחים"}</div>`;
+  $("listAbsent").innerHTML=af.length?af.map(e=>empRow(e,depts)).join("")
+    :`<div class="empty">${f?"אין תוצאות בסינון הזה":"אין"}</div>`;
+
+  const hf=st.hidden.filter(match);
+  $("cntHidden").textContent=st.hidden.length;
+  $("listHidden").innerHTML=hf.length
+    ?hf.map(e=>`<div class="hidden-emp"><span>${e.name}</span>
+        <button class="btn-restore" onclick="setActive('${e.uid}',1)">↩ החזר</button></div>`).join("")
+    :`<div class="empty">אין עובדים מוסתרים</div>`;
+}
+
+$("date").addEventListener("change", render);
+$("pull").addEventListener("click", refresh);
+$("search").addEventListener("input", e=>{ filter=e.target.value; render(); });
+
+// בטעינה: אם יש אסימון תקף בסשן — להמשיך; אחרת מסך התחברות
+window.addEventListener('load', ()=>{
+  let tok=null; try{ tok=JSON.parse(sessionStorage.getItem(ATT_TOKEN_KEY)||'null'); }catch(e){}
+  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){ attToken=tok.t; gsAfterToken(); return; }
+  let tries=0; const iv=setInterval(()=>{ if(gsInitClient()||++tries>40) clearInterval(iv); }, 150);
+});
+</script>
+</body>
+</html>
