@@ -409,7 +409,7 @@ body{background:#f5f2ec}
    <div class="scroll" id="itemsTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
-    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
     <button class="btn ghost sm" onclick="clearOrder()">נקה הכול</button>
    </div>
   </div>
@@ -445,7 +445,7 @@ body{background:#f5f2ec}
    <div class="scroll" id="packTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
-    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
    </div>
   </div>
  </div>
@@ -458,7 +458,7 @@ body{background:#f5f2ec}
    <div class="scroll" id="spiceTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
-    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
    </div>
   </div>
  </div>
@@ -471,7 +471,7 @@ body{background:#f5f2ec}
    <div class="scroll" id="cannedTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
-    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
    </div>
   </div>
  </div>
@@ -484,7 +484,7 @@ body{background:#f5f2ec}
    <div class="scroll" id="coldTab"></div>
    <div class="cartbar">
     <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
-    <button class="btn sm" onclick="tab('cart')">מעבר לסל ←</button>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
    </div>
   </div>
  </div>
@@ -644,9 +644,11 @@ function startApp(){
  ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
  // בניית הזמנה "הכל" — בלי ירקות, בלי אריזות, ובלי הקטגוריות שקיבלו טאב משלהן (תבלינים/שימורים/קירור)
  ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT&&String(it.c)!=='201'&&!CAT_TAB_CODES.has(String(it.c)));
- ITEMS_PACK=ALL.filter(it=>String(it.c)==='201');                       // טאב אריזות נפרד
- // סדר אריזות לפי מיכל: קופסה+מכסה של כל גודל יחד — 4.5 (כולל מכסה 2.5/4.5), 2.5, 2, 3, 1, 500, 250, מכסי 250/500; השאר אחריהם לפי א"ב
+ // טאב אריזות — רשימה מצומצמת לבקשת מיכל: קופסאות 4.5 / 2.5 / 2 גבוה / 250 / 500 / 3 ק"ג / 1 עגול + המכסים של כולן.
+ // שאר פריטי קטגוריה 201 נשארים בקטלוג (ITEMS_ALL) אך אינם מוצגים בטאב — להוספה, לצרף מפתח ל-PACK_ORDER.
  const PACK_ORDER=['70206','70207','70208','70025','70026','70020','70023','70027','70028','70070','70089','70041','70149','70151','70042'];
+ const PACK_SET=new Set(PACK_ORDER);
+ ITEMS_PACK=ALL.filter(it=>String(it.c)==='201'&&PACK_SET.has(String(it.k)));
  const pRank=k=>{const i=PACK_ORDER.indexOf(String(k));return i<0?999:i;};
  ITEMS_PACK.sort((a,b)=>{const ra=pRank(a.k),rb=pRank(b.k);return ra!==rb?ra-rb:a.n.localeCompare(b.n,'he');});
  // מכרז טרי — רשימה נעולה בסדר שנקבע
@@ -827,6 +829,12 @@ function updateCartBar(){
  const sups=new Set(lines.map(k=>ORDER[k].sup||''));
  document.querySelectorAll('.cbc').forEach(e=>e.textContent=lines.length);
  document.querySelectorAll('.cbs').forEach(e=>e.textContent=sups.size);
+}
+// "שלח לסל" — הפריטים כבר נצברים בסל בזמן הקלדת הכמות; הכפתור רק מאשר ונשאר בטאב
+// (לא מנווט לסל, כדי שאפשר להמשיך להזמין). לסל עוברים דרך פס הניווט "סל ההזמנה".
+function sendToCart(){
+ const n=Object.keys(ORDER).filter(k=>ORDER[k].qty>0).length;
+ toast(n?('✓ בסל: '+n+' פריטים'):'עדיין לא הוזנה כמות');
 }
 function clearOrder(){
  if(Object.keys(ORDER).length && !confirm('לנקות את כל ההזמנה הנוכחית?'))return;
