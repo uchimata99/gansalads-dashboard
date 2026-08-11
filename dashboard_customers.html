@@ -697,7 +697,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>tab(
    מפתח הסשן משותף עם finance/production כך שלא נדרשת כניסה כפולה. */
 const CUST_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
 const CUST_SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
-const CUST_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const CUST_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const CUST_TOKEN_KEY='gsGoogleToken';
 let custTokenClient=null, custAccessToken=null;
 function gsShowErr(msg){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=msg||''; }
@@ -709,9 +709,10 @@ function gsInitClient(){
     callback:(resp)=>{
       if(resp&&resp.error){ gsShowErr('ההתחברות נכשלה — נסה שוב'); return; }
       custAccessToken=resp.access_token;
-      try{ sessionStorage.setItem(CUST_TOKEN_KEY, JSON.stringify({t:custAccessToken, exp:Date.now()+((resp.expires_in||3600)*1000)})); }catch(e){}
+      try{ localStorage.setItem(CUST_TOKEN_KEY, JSON.stringify({t:custAccessToken, exp:Date.now()+((resp.expires_in||3600)*1000)})); }catch(e){}
       gsAfterToken();
-    }
+    },
+    error_callback:()=>{}   // התחברות שקטה נכשלה — משאירים את מסך ההתחברות
   });
   return custTokenClient;
 }
@@ -719,7 +720,7 @@ function gsSignIn(){
   gsShowErr('');
   const c=gsInitClient();
   if(!c){ gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע'); return; }
-  c.requestAccessToken({prompt: custAccessToken?'':'consent'});
+  c.requestAccessToken({prompt:''});
 }
 function gsAfterToken(){
   loadCustData().then(()=>{
@@ -728,7 +729,7 @@ function gsAfterToken(){
     startDashboard();
   }).catch(err=>{
     custAccessToken=null;
-    try{ sessionStorage.removeItem(CUST_TOKEN_KEY); }catch(e){}
+    try{ localStorage.removeItem(CUST_TOKEN_KEY); }catch(e){}
     gsShowErr('אין הרשאה לנתונים עם החשבון הזה. התחבר עם החשבון המורשה.');
   });
 }
@@ -747,9 +748,9 @@ async function loadCustData(){
 }
 // בטעינה: אם יש אסימון תקף בסשן — להמשיך; אחרת להציג מסך התחברות
 window.addEventListener('load', ()=>{
-  let tok=null; try{ tok=JSON.parse(sessionStorage.getItem(CUST_TOKEN_KEY)||'null'); }catch(e){}
+  let tok=null; try{ tok=JSON.parse(localStorage.getItem(CUST_TOKEN_KEY)||'null'); }catch(e){}
   if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){ custAccessToken=tok.t; gsAfterToken(); return; }
-  let tries=0; const iv=setInterval(()=>{ if(gsInitClient()||++tries>40) clearInterval(iv); }, 150);
+  let tries=0; const iv=setInterval(()=>{ const c=gsInitClient(); if(c){ clearInterval(iv); try{ c.requestAccessToken({prompt:''}); }catch(e){} } else if(++tries>40){ clearInterval(iv); } }, 150);
 });
 </script>
 <script>
@@ -794,7 +795,7 @@ document.addEventListener('DOMContentLoaded',updateFinBtn);
    ומשתף קריאה עם חשבון הסוכן. ללא הצלחה (לא מחוברת/אין הרשאה) — נפילה בחן להורדה. */
 (function(){
   var SHARE_WITH='uchi.mata1@gmail.com';
-  function tok(){ try{ var o=JSON.parse(sessionStorage.getItem('gsGoogleToken')||'null'); if(o&&o.t&&(!o.exp||Date.now()<o.exp)) return o.t; }catch(e){} return null; }
+  function tok(){ try{ var o=JSON.parse(localStorage.getItem('gsGoogleToken')||'null'); if(o&&o.t&&(!o.exp||Date.now()<o.exp)) return o.t; }catch(e){} return null; }
   function up(dataUrl,name){
     var t=tok(); if(!t) return Promise.reject(new Error('no-token'));
     return fetch(dataUrl).then(function(r){return r.blob();}).then(function(blob){

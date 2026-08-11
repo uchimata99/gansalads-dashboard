@@ -172,7 +172,7 @@ html.locked #gsLock{display:flex!important}
    אותו מנגנון כניסה כמו שאר הדשבורדים (מפתח סשן משותף, קריאה בלבד). */
 const RPT_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
 const RPT_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גיליון הרכש
-const RPT_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const RPT_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const RPT_TOKEN_KEY='gsGoogleToken';
 let rptToken=null, rptClient=null;
 let PO=[], VEG=[], VP=null, MAT=null, REC=null;
@@ -638,12 +638,12 @@ function gsShowErr(m){const e=document.getElementById('gsLockErr');if(e)e.textCo
 function gsInit(){if(rptClient)return rptClient;if(!(window.google&&google.accounts&&google.accounts.oauth2))return null;
  rptClient=google.accounts.oauth2.initTokenClient({client_id:RPT_CLIENT_ID,scope:RPT_SCOPE,callback:(resp)=>{
   if(resp&&resp.error){gsShowErr('ההתחברות נכשלה — נסה שוב');return;}
-  rptToken=resp.access_token;try{sessionStorage.setItem(RPT_TOKEN_KEY,JSON.stringify({t:rptToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
-  gsAfter();}});return rptClient;}
-function gsSignIn(){gsShowErr('');const c=gsInit();if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב');return;}c.requestAccessToken({prompt:rptToken?'':'consent'});}
+  rptToken=resp.access_token;try{localStorage.setItem(RPT_TOKEN_KEY,JSON.stringify({t:rptToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+  gsAfter();},error_callback:()=>{}});return rptClient;}
+function gsSignIn(){gsShowErr('');const c=gsInit();if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב');return;}c.requestAccessToken({prompt:''});}
 function gsAfter(){document.documentElement.classList.remove('locked');const l=document.getElementById('gsLock');if(l)l.style.display='none';loadAll(false);}
-window.addEventListener('load',()=>{let tok=null;try{tok=JSON.parse(sessionStorage.getItem(RPT_TOKEN_KEY)||'null');}catch(e){}
+window.addEventListener('load',()=>{let tok=null;try{tok=JSON.parse(localStorage.getItem(RPT_TOKEN_KEY)||'null');}catch(e){}
  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){rptToken=tok.t;gsAfter();return;}
- let n=0;const iv=setInterval(()=>{if(gsInit()||++n>40)clearInterval(iv);},150);});
+ let n=0;const iv=setInterval(()=>{const c=gsInit();if(c){clearInterval(iv);try{c.requestAccessToken({prompt:''});}catch(e){}}else if(++n>40){clearInterval(iv);}},150);});
 </script>
 </body></html>

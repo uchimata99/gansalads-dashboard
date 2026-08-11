@@ -529,7 +529,7 @@ const PURCH_SHEET_ID='1rWHMhO8zCB8KKzAJwyFYpuKfo_EQ_-rZB8afaiqUv9Q';   // גיל
 /* קריאה בלבד בכניסה (הרשאה שכבר קיימת במסך ההסכמה, ומפתח סשן משותף עם
    שאר הדפים כך שאין כניסה כפולה). הרשאת הכתיבה מבוקשת בנפרד רק בשמירה
    הראשונה, כדי שהגלישה/עיצוב יעבדו מיד בלי תלות בשינוי מסך ההסכמה. */
-const PURCH_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+const PURCH_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const PURCH_WRITE_SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const PURCH_TOKEN_KEY='gsGoogleToken';      // קריאה — משותף עם finance/production/customers
 const PURCH_WRITE_KEY='gsPurchWrite';        // כתיבה — נפרד, מבוקש רק בשמירה
@@ -1047,7 +1047,7 @@ function initWriteClient(){
 }
 // מחזיר Promise עם אסימון כתיבה תקף (מבקש הסכמה בפעם הראשונה — חייב לרוץ מתוך לחיצה)
 function ensureWriteToken(){
- let tok=null;try{tok=JSON.parse(sessionStorage.getItem(PURCH_WRITE_KEY)||'null');}catch(e){}
+ let tok=null;try{tok=JSON.parse(localStorage.getItem(PURCH_WRITE_KEY)||'null');}catch(e){}
  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){writeToken=tok.t;return Promise.resolve(writeToken);}
  return new Promise((resolve,reject)=>{
   const c=initWriteClient();
@@ -1055,10 +1055,10 @@ function ensureWriteToken(){
   c.callback=(resp)=>{
    if(resp&&resp.error){reject(new Error(resp.error));return;}
    writeToken=resp.access_token;
-   try{sessionStorage.setItem(PURCH_WRITE_KEY,JSON.stringify({t:writeToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+   try{localStorage.setItem(PURCH_WRITE_KEY,JSON.stringify({t:writeToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
    resolve(writeToken);
   };
-  c.requestAccessToken({prompt:writeToken?'':'consent'});
+  c.requestAccessToken({prompt:''});
  });
 }
 // מוודא שהלשונית קיימת (יוצר עם כותרת אם חסרה) — משתמש באסימון כתיבה
@@ -1455,9 +1455,10 @@ function gsInitClient(){
   callback:(resp)=>{
    if(resp&&resp.error){gsShowErr('ההתחברות נכשלה — נסה שוב');return;}
    purchToken=resp.access_token;
-   try{sessionStorage.setItem(PURCH_TOKEN_KEY,JSON.stringify({t:purchToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
+   try{localStorage.setItem(PURCH_TOKEN_KEY,JSON.stringify({t:purchToken,exp:Date.now()+((resp.expires_in||3600)*1000)}));}catch(e){}
    gsAfterToken();
-  }
+  },
+  error_callback:()=>{}
  });
  return purchTokenClient;
 }
@@ -1465,7 +1466,7 @@ function gsSignIn(){
  gsShowErr('');
  const c=gsInitClient();
  if(!c){gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב בעוד רגע');return;}
- c.requestAccessToken({prompt:purchToken?'':'consent'});
+ c.requestAccessToken({prompt:''});
 }
 function gsAfterToken(){
  loadCatalog().then(()=>{
@@ -1477,7 +1478,7 @@ function gsAfterToken(){
  }).catch(err=>{
   console.error(err);
   purchToken=null;
-  try{sessionStorage.removeItem(PURCH_TOKEN_KEY);}catch(e){}
+  try{localStorage.removeItem(PURCH_TOKEN_KEY);}catch(e){}
   gsShowErr('אין הרשאה לקטלוג עם החשבון הזה, או שהלשונית '+CAT_TAB+' חסרה. התחבר עם החשבון המורשה.');
  });
 }
@@ -1493,9 +1494,9 @@ async function loadCatalog(){
  CAT=JSON.parse(new TextDecoder('utf-8').decode(bytes));
 }
 window.addEventListener('load',()=>{
- let tok=null;try{tok=JSON.parse(sessionStorage.getItem(PURCH_TOKEN_KEY)||'null');}catch(e){}
+ let tok=null;try{tok=JSON.parse(localStorage.getItem(PURCH_TOKEN_KEY)||'null');}catch(e){}
  if(tok&&tok.t&&tok.exp&&tok.exp>Date.now()+60000){purchToken=tok.t;gsAfterToken();return;}
- let tries=0;const iv=setInterval(()=>{if(gsInitClient()||++tries>40)clearInterval(iv);},150);
+ let tries=0;const iv=setInterval(()=>{const c=gsInitClient();if(c){clearInterval(iv);try{c.requestAccessToken({prompt:''});}catch(e){}}else if(++tries>40){clearInterval(iv);}},150);
 });
 </script>
 </body></html>
