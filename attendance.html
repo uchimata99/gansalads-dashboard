@@ -55,6 +55,8 @@
     .emp { padding:10px 12px; border-top:1px solid var(--stone100); }
     .emp:first-child { border-top:none; }
     .emp .name { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:500; }
+    .edit-name { background:transparent; border:none; cursor:pointer; font-size:13px; padding:2px 4px; opacity:.5; }
+    .edit-name:hover { opacity:1; }
     .emp .ctrls { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
     .emp .ctrls select { flex:1; min-width:88px; }
     .times { font-size:12px; color:var(--stone500); white-space:nowrap; }
@@ -269,6 +271,14 @@ function hideEmp(uid){
   if(confirm(`לסמן ש"${name}" לא עובד יותר?\n\nהעובד ייעלם מהלוח ולא יימשך יותר מהשעון.\nאפשר להחזיר אותו בכל עת מהרשימה "עובדים שהוסתרו".`))
     setActive(uid,0);
 }
+function editName(uid){
+  const cur=(empMeta[uid]&&empMeta[uid].name)||roster[uid]||"";
+  const v=prompt("שם העובד:", cur);
+  if(v===null) return;
+  const m=empMeta[uid]||{dept:'',active:1};
+  m.name=v.trim(); m.active=(m.active==null?1:m.active); empMeta[uid]=m;
+  render(); writeMeta(uid);
+}
 async function setStatus(uid,status){
   const d=$("date").value||today();
   (overridesByDate[d]=overridesByDate[d]||{})[uid]=status; render();
@@ -290,7 +300,7 @@ function empRow(e, depts){
   const ssel=`<select class="pill ${st.c}" onchange="setStatus('${e.uid}',this.value)">
       ${ORDER.map(s=>`<option value="${s}" ${s===e.status?"selected":""}>${STATUS[s].l}</option>`).join("")}</select>`;
   const xbtn=`<button class="emp-x" onclick="hideEmp('${e.uid}')">לא עובד</button>`;
-  return `<div class="emp"><div class="name"><span>${e.name}</span>${t}</div>
+  return `<div class="emp"><div class="name"><span>${e.name} <button class="edit-name" onclick="editName('${e.uid}')" title="ערוך שם">✏️</button></span>${t}</div>
       <div class="ctrls">${dsel}${ssel}${xbtn}</div></div>`;
 }
 
