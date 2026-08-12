@@ -76,8 +76,14 @@ select:focus,input:focus{border-color:var(--green)}
 .btn.ghost{background:var(--surface);color:var(--green);border:1.5px solid var(--green)}
 .btn.gold{background:var(--gold)}.btn.blue{background:var(--blue)}.btn.sm{padding:6px 11px;font-size:12px}
 .scroll{max-height:600px;overflow:auto}
-/* כל טאבי הקטלוג/מכרז: בלי גובה קבוע/גלילה פנימית — גדלים לגובה מלא, הדף נגלל כרגיל */
-#vegTab,#peelTab,#itemsTab,#packTab,#spiceTab,#cannedTab,#coldTab{max-height:none;overflow:visible}
+/* מרובע לבן אחיד שממלא את גובה המסך בכל הטאבים (מחשב/טאבלט): הכרטיס נמתח לגובה
+   המסך, רשימת הפריטים גוללת בתוכו, וכפתור ההזמנה/מכרז צמוד לתחתית הכרטיס.
+   כך כל הטאבים באותו גודל, ממלאים את המסך, עם הפרדה נוחה בין המוצרים. */
+@media(min-width:900px){
+  .page.active{display:flex;flex-direction:column;height:calc(100vh - 224px)}
+  .page.active>.card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+  #vegTab,#peelTab,#itemsTab,#packTab,#spiceTab,#cannedTab,#coldTab{flex:1 1 auto;min-height:0;overflow:auto;max-height:none}
+}
 .scroll thead th{position:sticky;top:0;background:var(--surface);z-index:2}
 .note{background:var(--blue-l);border:1px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:12.5px;line-height:1.7;color:#1f3f5c;margin-bottom:18px}
 .note b{color:var(--blue)}
