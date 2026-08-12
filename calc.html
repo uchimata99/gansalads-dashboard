@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>סלטי גן — מחשבון ייצור</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{--green:#0d5f2c;--lgreen:#ecfdf5;--teal:#0d9488;--lteal:#f0fdfa;--navy:#1e293b;
+    --gray:#64748b;--border:#e2e8f0;--red:#dc2626;--lred:#fee2e2;--amber:#d97706;--lamber:#fff7ed;--text:#1e293b;--bg:#f6f8f7}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text)}
+  html.locked body{overflow:hidden}
+  .header{background:linear-gradient(135deg,#0d5f2c,#0d9488);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:12px}
+  .header .icon{font-size:26px}
+  .brand-name{font-weight:800;font-size:18px}
+  .brand-sub{font-size:12px;opacity:.85}
+  .main{max-width:1100px;margin:0 auto;padding:16px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .card-title{font-weight:700;font-size:16px;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card-badge{background:var(--lgreen);color:var(--green);font-size:11px;font-weight:700;border-radius:12px;padding:2px 9px}
+  .search-input{border:2px solid var(--border);border-radius:8px;padding:7px 13px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;outline:none;width:100%}
+  .search-input:focus{border-color:var(--green)}
+  .mbtn{border:2px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;font-family:inherit;color:var(--text);background:#fff;cursor:pointer}
+  .mbtn:hover{border-color:var(--green)}
+  .mbtn.active{background:var(--green);color:#fff;border-color:var(--green)}
+  .ins{background:var(--lteal);border-right:4px solid var(--teal);padding:9px 13px;border-radius:0 8px 8px 0;font-size:13px;color:var(--navy);margin-top:9px;line-height:1.7}
+  .ins.g{background:var(--lgreen);border-right-color:var(--green)}
+  .ins.a{background:var(--lamber);border-right-color:var(--amber)}
+  .calc-tbl{width:auto;border-collapse:collapse;font-size:13px}
+  .calc-tbl th,.calc-tbl td{border:1px solid var(--border);padding:4px 10px;text-align:center;white-space:nowrap}
+  .calc-tbl td.n{text-align:right}
+  .calc-tbl thead th{background:#0d5f2c;color:#fff}
+  #gsLock{position:fixed;inset:0;background:linear-gradient(135deg,#0d5f2c,#0d9488);display:flex;align-items:center;justify-content:center;z-index:50}
+  #gsLock .box{background:#fff;border-radius:16px;padding:30px 26px;max-width:340px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  #gsLock .box h1{font-size:20px;color:var(--green);margin:.2em 0 .4em}
+  #gsLock .box p{font-size:13px;color:var(--gray);margin:0 0 18px;line-height:1.6}
+  #gsLock button{background:var(--green);color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;width:100%}
+  #gsLockErr{color:var(--red);font-size:12px;margin-top:12px;min-height:16px}
+  html:not(.locked) #gsLock{display:none}
+</style>
+</head>
+<body>
+
+<div id="gsLock">
+  <div class="box">
+    <div style="font-size:38px">🧮</div>
+    <h1>מחשבון ייצור</h1>
+    <p>כלי תכנון: בוחרים מוצרים וטווח תאריכים ומקבלים כמה לייצר סה"כ ופר-יום. הנתונים פרטיים — יש להתחבר עם חשבון גוגל מורשה.</p>
+    <button onclick="gsSignIn()">התחבר עם Google</button>
+    <div id="gsLockErr"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="icon">🧮</div>
+  <div>
+    <div class="brand-name">סלטי גן — מחשבון ייצור</div>
+    <div class="brand-sub" id="hdrSub">בחירת מוצרים + טווח תאריכים → כמה לייצר</div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="calcSection"></div>
+  <div id="calcMsg" class="ins" style="display:none"></div>
+  <div style="text-align:center;color:var(--gray);font-size:11px;margin-top:18px">מבוסס על החיזוי הנוכחי (ממוצע 4 שבועות אחרונים פר מוצר + תיקוני חג ולקוח שעוזב). מקור הכללים: forecast.html.</div>
+</div>
+
+<script>
+// ════════════════ הגדרות + כניסת גוגל (משותף עם הדשבורדים) ════════════════
+const FC_CLIENT_ID='535307633607-aplksnr9dmlrmop936nc1qp9m9o9e100.apps.googleusercontent.com';
+const SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
+const FC_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
+const FC_TOKEN_KEY='gsGoogleToken';   // מפתח סשן משותף — לא צריך להתחבר פעמיים
+let fcTokenClient=null, fcAccessToken=null, PRODDATA=null, FORECAST=null, PRODUCTS=[];
+let FC_NOTES=[], FC_CUSTOMER_OUT=[], FC_HOLIDAYS=[];
+let fcMetric='kg';
+
+function gsShowErr(m){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=m||''; }
+function gsInitClient(){
+  if(fcTokenClient) return fcTokenClient;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)) return null;
+  fcTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:FC_CLIENT_ID, scope:FC_SCOPE,
+    callback:(resp)=>{ if(resp&&resp.error){ gsShowErr('ההתחברות נכשלה — נסה שוב'); return; }
+      fcAccessToken=resp.access_token;
+      try{ localStorage.setItem(FC_TOKEN_KEY, JSON.stringify({t:fcAccessToken, exp:Date.now()+((resp.expires_in||3600)*1000)})); }catch(e){}
+      gsAfterToken(); },
+    error_callback:()=>{}
+  });
+  return fcTokenClient;
+}
+function gsSignIn(){ gsShowErr(''); const c=gsInitClient(); if(!c){ gsShowErr('מנגנון ההתחברות עדיין נטען — נסה שוב'); return; } c.requestAccessToken({prompt:''}); }
+function gsAfterToken(){
+  Promise.all([loadData(), fcLoadRules()]).then(()=>{
+    document.documentElement.classList.remove('locked');
+    const l=document.getElementById('gsLock'); if(l) l.style.display='none';
+    startCalc();
+  }).catch(err=>{
+    fcAccessToken=null; try{ localStorage.removeItem(FC_TOKEN_KEY); }catch(e){}
+    gsShowErr('אין הרשאה לנתונים עם החשבון הזה. התחבר עם החשבון המורשה.');
+  });
+}
+async function loadData(){
+  const range=encodeURIComponent('DATA!A:A');
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+fcAccessToken}});
+  if(r.status===401||r.status===403) throw new Error('auth');
+  if(!r.ok) throw new Error('DATA '+r.status);
+  const j=await r.json();
+  const cells=(j.values||[]).map(row=>(row&&row.length?row[0]:'')).filter(x=>x!==''&&x!=null);
+  if(!cells.length) throw new Error('empty');
+  PRODDATA=JSON.parse(cells.join(''));
+}
+// כללי החיזוי נמשכים מ-forecast.html בזמן ריצה — מקור אמת אחד, בלי סטייה.
+async function fcLoadRules(){
+  try{
+    const html=await (await fetch('forecast.html',{cache:'no-store'})).text();
+    const grab=re=>{const m=html.match(re); return m?(new Function('return '+m[1])()):null;};
+    FC_NOTES=grab(/const FC_NOTES\s*=\s*(\[[\s\S]*?\]);/)||[];
+    FC_CUSTOMER_OUT=grab(/const FC_CUSTOMER_OUT\s*=\s*(\[[\s\S]*?\]);/)||[];
+    FC_HOLIDAYS=grab(/const FC_HOLIDAYS\s*=\s*(\[[\s\S]*?\]);/)||[];
+  }catch(e){ /* אם נכשל — החישוב ירוץ בלי הכללים */ }
+}
+
+// ════════════════ חישוב החיזוי (זהה ל-forecast.html) ════════════════
+const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const num=x=>{ if(x===''||x==null) return 0; if(typeof x==='number') return x; const n=parseFloat(String(x).replace(/,/g,'')); return isNaN(n)?0:n; };
+const fmt=n=>Math.round(n).toLocaleString('he-IL');
+function stdev(arr){ const n=arr.length; if(n<2) return 0; const m=arr.reduce((a,b)=>a+b,0)/n; let s=0; arr.forEach(v=>{const x=v-m;s+=x*x;}); return Math.sqrt(s/(n-1)); }
+function fcNote(name){ for(const n of FC_NOTES){ if(n.p===name) return n; } return null; }
+function fcIsOneOff(name,w){ for(const n of FC_NOTES){ if(n.type==='one_off' && n.p===name && +n.w===+w) return true; } return false; }
+function fcCustomerOutFactor(name,totK,tw){ const e=FC_CUSTOMER_OUT.find(x=>x.p===name); if(!e) return 1; if(e.from!=null&&tw!=null&&tw<e.from) return 1; if(!(totK>0)) return 1; return Math.max(0,(totK-e.kg)/totK); }
+function fcHolidayPreWeek(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const sun=new Date(now); sun.setDate(now.getDate()-((now.getDay())%7));
+  const coming=new Date(sun); coming.setDate(sun.getDate()+7);
+  let best=null;
+  for(const h of FC_HOLIDAYS){ const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue; const days=Math.round((hd-coming)/86400000); if(days>=0&&days<=12){ if(!best||days<best.days) best={name:h.name,date:h.date,uplift:h.uplift,days}; } }
+  return best;
+}
+function fcDateUplift(dateObj){
+  const d=new Date(dateObj); d.setHours(0,0,0,0);
+  const sun=new Date(d); sun.setDate(d.getDate()-((d.getDay())%7));
+  let best=null;
+  for(const h of FC_HOLIDAYS){ const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue; const days=Math.round((hd-sun)/86400000); if(days>=0&&days<=12){ if(!best||days<best.days) best={name:h.name,uplift:h.uplift,days}; } }
+  return best;
+}
+function fcApplyHolidayBoost(f){
+  if(!f || f.holiday_applied) return f;
+  const h=fcHolidayPreWeek(); if(!h) return f;
+  const k=1+h.uplift;
+  (f.products||[]).forEach(p=>{ ['kg','pkg','std_kg','std_pkg'].forEach(x=>{ if(p[x]!=null) p[x]=num(p[x])*k; });
+    ['daily_kg','daily_pkg'].forEach(dk=>{ const d=p[dk]; if(d&&typeof d==='object'){ for(const day in d) d[day]=num(d[day])*k; } }); });
+  f.holiday_applied={name:h.name,date:h.date,uplift:h.uplift};
+  return f;
+}
+function computeForecastFromData(d){
+  if(!d || !d.PROD_DETAIL) return null;
+  const PD=d.PROD_DETAIL;
+  const weeks=(d.WEEKS||[]).map(w=>w.w).sort((a,b)=>a-b);
+  if(!weeks.length) return null;
+  const recentAll=weeks.slice(-Math.min(4,weeks.length));
+  const targetWeek=weeks[weeks.length-1]+1;
+  const products=[];
+  for(const name in PD){
+    const note=fcNote(name); if(note && note.type==='discontinued') continue;
+    const wk=PD[name];
+    const recent=recentAll.filter(w=>!fcIsOneOff(name,w)); const useWeeks=recent.length?recent:recentAll;
+    const trend=!!(note && note.type==='trend'); const wts=useWeeks.map((_,i)=> trend?(i+1):1); const wsum=wts.reduce((a,b)=>a+b,0)||1;
+    const sumP=DAYS.map(()=>0), sumK=DAYS.map(()=>0); const wkP=[], wkK=[]; let any=false;
+    useWeeks.forEach((w,idx)=>{ const dd=wk[w]; let tp=0,tk=0;
+      if(dd){ for(const di in dd){ const i=+di; if(i>=0&&i<DAYS.length){ const p=num(dd[di][0]),k=num(dd[di][1]); sumP[i]+=wts[idx]*p; sumK[i]+=wts[idx]*k; tp+=p; tk+=k; if(p||k) any=true; } } }
+      wkP.push(tp); wkK.push(tk); });
+    if(!any) continue;
+    const dailyP={}, dailyK={}; let totP=0,totK=0;
+    DAYS.forEach((day,i)=>{ dailyP[day]=sumP[i]/wsum; dailyK[day]=sumK[i]/wsum; totP+=dailyP[day]; totK+=dailyK[day]; });
+    if(totK<=0 && totP<=0) continue;
+    const cf=fcCustomerOutFactor(String(name),totK,targetWeek);
+    if(cf<1){ DAYS.forEach(day=>{ dailyP[day]*=cf; dailyK[day]*=cf; }); totP*=cf; totK*=cf; }
+    products.push({name:String(name), pkg:totP, kg:totK, daily_pkg:dailyP, daily_kg:dailyK, std_pkg:stdev(wkP), std_kg:stdev(wkK)});
+  }
+  if(!products.length) return null;
+  products.sort((a,b)=>b.kg-a.kg);
+  return {computed:true, products, based_on:'שבועות '+recentAll[0]+'–'+recentAll[recentAll.length-1]};
+}
+
+// ════════════════ מחשבון ייצור (זהה לסעיף בדף החיזוי) ════════════════
+let calcSel=new Set(), calcData=null, calcUnit='kg';
+const calcEsc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function renderProdCalc(){
+  const host=document.getElementById('calcSection'); if(!host) return;
+  if(!PRODUCTS.length){ host.innerHTML='<div class="ins a">אין נתוני חיזוי זמינים כרגע.</div>'; return; }
+  calcSel=new Set([...calcSel].filter(n=>PRODUCTS.some(p=>p.name===n)));
+  const pad=n=>String(n).padStart(2,'0'), iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const today=new Date(); const plus6=new Date(today); plus6.setDate(today.getDate()+6);
+  const dstyle='padding:5px 8px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px';
+  host.innerHTML=
+   '<div class="card">'+
+   '<div class="card-title">🧮 כמה לייצר <span class="card-badge">בחרי מוצרים + טווח תאריכים</span></div>'+
+   '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'+
+     '<div style="flex:1;min-width:240px">'+
+       '<input class="search-input" id="calcSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="calcRenderList()">'+
+       '<div id="calcChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0"></div>'+
+       '<div id="calcList" style="max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>'+
+     '</div>'+
+     '<div style="min-width:210px">'+
+       '<div style="font-size:12px;color:var(--gray);font-weight:700;margin-bottom:6px">טווח תאריכים</div>'+
+       '<div style="font-size:13px;margin-bottom:6px">מ־ <input type="date" id="calcFrom" style="'+dstyle+'" value="'+iso(today)+'"></div>'+
+       '<div style="font-size:13px;margin-bottom:10px">עד <input type="date" id="calcTo" style="'+dstyle+'" value="'+iso(plus6)+'"></div>'+
+       '<button class="mbtn active" onclick="calcCompute()">חשב</button> '+
+       '<button class="mbtn" onclick="calcClear()">נקה</button>'+
+     '</div>'+
+   '</div>'+
+   '<div id="calcResult" style="margin-top:16px"></div>'+
+   '</div>';
+  document.getElementById('calcList').addEventListener('change',e=>{ const t=e.target; if(t&&t.matches('input[type=checkbox]')){ const n=t.dataset.name; if(t.checked)calcSel.add(n);else calcSel.delete(n); calcRenderChips(); } });
+  document.getElementById('calcChips').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(b){ calcSel.delete(b.dataset.rm); calcRenderChips(); calcRenderList(); } });
+  calcRenderList(); calcRenderChips();
+}
+function calcRenderList(){
+  const box=document.getElementById('calcList'); if(!box) return;
+  const q=((document.getElementById('calcSearch')||{}).value||'').trim();
+  const list=PRODUCTS.filter(p=>!q||p.name.indexOf(q)>=0).slice(0,300);
+  box.innerHTML=list.map(p=>'<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:13px;cursor:pointer;border-radius:6px'+(calcSel.has(p.name)?';background:#ecfdf5':'')+'">'+
+      '<input type="checkbox" data-name="'+calcEsc(p.name)+'"'+(calcSel.has(p.name)?' checked':'')+'> '+calcEsc(p.name)+'</label>').join('')
+    || '<div style="padding:8px;color:var(--gray);font-size:13px">אין תוצאות</div>';
+}
+function calcRenderChips(){
+  const box=document.getElementById('calcChips'); if(!box) return;
+  box.innerHTML=[...calcSel].map(n=>'<span style="background:var(--green);color:#fff;border-radius:14px;padding:3px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px">'+calcEsc(n)+' <b data-rm="'+calcEsc(n)+'" style="cursor:pointer">✕</b></span>').join('')
+    || '<span style="color:var(--gray);font-size:12px">לא נבחרו מוצרים</span>';
+}
+function calcClear(){ calcSel.clear(); calcRenderChips(); calcRenderList(); const r=document.getElementById('calcResult'); if(r) r.innerHTML=''; }
+function calcCompute(){
+  const res=document.getElementById('calcResult'); if(!res) return;
+  const err=m=>res.innerHTML='<div class="ins" style="background:var(--lred);border-right-color:var(--red);color:var(--red)">'+m+'</div>';
+  const from=(document.getElementById('calcFrom')||{}).value, to=(document.getElementById('calcTo')||{}).value;
+  if(!calcSel.size) return err('בחרי מוצר אחד לפחות.');
+  if(!from||!to||from>to) return err('בחרי טווח תאריכים תקין (מ־ ≤ עד).');
+  const sel=PRODUCTS.filter(p=>calcSel.has(p.name));
+  const applied=num(((FORECAST||{}).holiday_applied||{}).uplift)||0;
+  const dates=[]; const cellK={}, cellP={}; const perKg={}, perPkg={}; let totKg=0,totPkg=0; const holsHit={};
+  sel.forEach(p=>{ perKg[p.name]=0; perPkg[p.name]=0; });
+  let d=new Date(from+'T00:00:00'); const end=new Date(to+'T00:00:00'); let gi=0,guard=0;
+  while(d<=end && guard++<400){
+    const dayName=DAYS[d.getDay()];
+    const hol=dayName?fcDateUplift(d):null; const up=hol?hol.uplift:0;
+    const rowK={}, rowP={};
+    if(dayName) sel.forEach(p=>{ const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up); const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up);
+      rowK[p.name]=bk; rowP[p.name]=bp; perKg[p.name]+=bk; perPkg[p.name]+=bp; totKg+=bk; totPkg+=bp; });
+    if(hol) holsHit[hol.name]=hol.uplift;
+    dates.push({idx:gi, d:new Date(d), dn:dayName||'שבת', hol:hol?hol.name:null, active:!!dayName});
+    cellK[gi]=rowK; cellP[gi]=rowP; gi++; d.setDate(d.getDate()+1);
+  }
+  calcData={sel:sel.map(p=>p.name), dates, cellK, cellP, perKg, perPkg, totKg, totPkg, holsHit};
+  calcUnit=fcMetric; calcRenderResult();
+}
+function calcSetUnit(u){ calcUnit=u; calcRenderResult(); }
+function calcRenderResult(){
+  const res=document.getElementById('calcResult'); if(!res||!calcData) return;
+  const D=calcData, isKg=calcUnit==='kg', cell=isKg?D.cellK:D.cellP;
+  const df=dd=>dd.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
+  const nDays=D.dates.filter(x=>x.active && D.sel.some(n=>(cell[x.idx][n]||0)>0)).length;
+  const perRows=D.sel.slice().sort((a,b)=>D.perKg[b]-D.perKg[a]).map(n=>'<tr><td class="n">'+calcEsc(n)+'</td><td>'+fmt(D.perKg[n])+'</td><td>'+fmt(D.perPkg[n])+'</td></tr>').join('');
+  const summary=
+    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'+
+      '<div class="ins g" style="min-width:170px;flex:0 0 auto;line-height:1.5"><b>סה"כ לייצר בטווח</b><br><span style="font-size:20px;font-weight:800">'+fmt(D.totKg)+'</span> ק"ג<br><span style="font-size:20px;font-weight:800">'+fmt(D.totPkg)+'</span> אריזות<br><span style="color:var(--gray);font-size:12px">'+D.sel.length+' מוצרים · '+nDays+' ימי ייצור</span></div>'+
+      '<div style="flex:1;min-width:220px"><div style="font-weight:700;margin-bottom:5px;font-size:14px">פירוק לפי מוצר (סה"כ בטווח)</div>'+
+        '<div style="overflow-x:auto"><table class="calc-tbl"><thead><tr><th>מוצר</th><th>ק"ג</th><th>אריזות</th></tr></thead><tbody>'+perRows+'</tbody></table></div></div>'+
+    '</div>';
+  const holNote=Object.keys(D.holsHit).length?'<div class="ins a" style="margin-top:10px">🎉 <b>תיקון חג בטווח:</b> '+Object.keys(D.holsHit).map(n=>n+' (+'+Math.round(D.holsHit[n]*100)+'%)').join(' · ')+'</div>':'';
+  const toggle='<div style="margin:14px 0 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">פירוט יומי לכל מוצר · יחידה:</span>'+
+    '<button class="mbtn'+(isKg?' active':'')+'" onclick="calcSetUnit(\'kg\')">ק"ג</button>'+
+    '<button class="mbtn'+(isKg?'':' active')+'" onclick="calcSetUnit(\'pkg\')">אריזות</button></div>';
+  const head='<tr><th>תאריך</th><th>יום</th>'+D.sel.map(n=>'<th>'+calcEsc(n)+'</th>').join('')+'<th>סה"כ</th></tr>';
+  const body=D.dates.map(x=>{ let rt=0; const tds=D.sel.map(n=>{const v=cell[x.idx][n]||0; rt+=v; return '<td>'+(v>0?fmt(v):'—')+'</td>';}).join('');
+    return '<tr'+(rt>0?'':' style="opacity:.45"')+'><td class="n" style="white-space:nowrap">'+df(x.d)+(x.hol?' 🎉':'')+'</td><td>'+x.dn+'</td>'+tds+'<td><b>'+(rt>0?fmt(rt):'—')+'</b></td></tr>'; }).join('');
+  const matrix='<div style="overflow-x:auto"><table class="calc-tbl"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  res.innerHTML=summary+holNote+toggle+matrix;
+}
+
+function startCalc(){
+  FORECAST=computeForecastFromData(PRODDATA);
+  if(FORECAST){ fcApplyHolidayBoost(FORECAST); PRODUCTS=FORECAST.products||[]; }
+  renderProdCalc();
+}
+
+// בטעינה: אם יש אסימון תקף בסשן המשותף — ממשיכים; אחרת מסך התחברות
+window.addEventListener('load', ()=>{
+  document.documentElement.classList.add('locked');
+  let tok=null; try{ tok=JSON.parse(localStorage.getItem(FC_TOKEN_KEY)||'null'); }catch(e){}
+  if(tok&&tok.t&&(!tok.exp||tok.exp>Date.now()+60000)){ fcAccessToken=tok.t; gsAfterToken(); return; }
+  let tries=0; const iv=setInterval(()=>{ if(gsInitClient()||++tries>40) clearInterval(iv); }, 150);
+});
+</script>
+</body>
+</html>
