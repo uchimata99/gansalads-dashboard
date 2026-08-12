@@ -9,7 +9,7 @@
 | `production.html` | ניתוח ייצור שבועי | חי — Google Sheets (לשונית DATA), אחרי כניסת גוגל |
 | `dashboard_customers.html` | דשבורד לקוחות | חי — Google Sheets (לשונית CUSTOMERS), אחרי כניסת גוגל |
 | `finance.html` | דשבורד פיננסי | חי — Google Sheets פרטי, אחרי כניסת גוגל |
-| `calc.html` | מחשבון ייצור — **אפליקציה עצמאית** | חי — לשונית DATA (כמו forecast) + כללים מ-forecast.html; לא בפס הניווט |
+| `calc.html` | מחשבון ייצור — **אפליקציה עצמאית (PWA)** | חי — לשונית DATA (כמו forecast) + כללים מ-forecast.html; לא בפס הניווט |
 | `purchasing.html` | הזמנות רכש — **אפליקציה עצמאית (PWA)** | חי — גיליון רכש נפרד; לצוות הרכש; לא בפס הניווט המשותף |
 | `orders_report.html` | דוח הזמנות (ניהולי, קריאה בלבד) | חי — קורא PO_HISTORY + VEG_AUCTION + VEG_PRICES + MAT_PRICES + RECON מגיליון הרכש |
 
@@ -95,7 +95,7 @@
 - אחרי קידוד: `node --check`, commit, push, merge. `git log` של `FC_NOTES` הוא זיכרון הלמידה.
 
 ## calc.html — מחשבון ייצור (אפליקציה עצמאית, פרטי)
-גרסה עצמאית של סעיף מחשבון הייצור שב-`forecast.html` — עמוד ממוקד לבחירת מוצרים + טווח תאריכים → כמה לייצר סה"כ ופר-יום. **עצמאי בכוונה** (לא בפס הניווט המשותף), אבל **קורא את אותם נתונים**: כניסת גוגל עם מפתח הסשן המשותף `gsGoogleToken` (לא צריך להתחבר פעמיים אם כבר מחוברים לדשבורדים), לשונית `DATA` מהגיליון (`SHEET_ID`, `FC_CLIENT_ID`, `FC_SCOPE` זהים ל-forecast). **מקור הכללים היחיד נשאר forecast.html:** `fcLoadRules()` מושך את `FC_NOTES`/`FC_CUSTOMER_OUT`/`FC_HOLIDAYS` בזמן ריצה (אותו origin). לוגיקת החישוב (`computeForecastFromData`, `fcApplyHolidayBoost`, `fcDateUplift`) והממשק (`renderProdCalc`/`calcCompute`/`calcRenderResult`) הם עותק זהה לזה שב-forecast; שינוי משמעותי בלוגיקה יש לסנכרן. אם המשיכה נכשלת — החישוב רץ בלי הכללים (ללא נאפיס/חגים). אין Chart.js — טבלאות בלבד.
+גרסה עצמאית של סעיף מחשבון הייצור שב-`forecast.html` — עמוד ממוקד לבחירת מוצרים + טווח תאריכים → כמה לייצר סה"כ ופר-יום. **אפליקציה מותקנת (PWA, "הוסף למסך הבית"):** `calc.webmanifest` + `calc-sw.js` + `calc-icon-192/512.png` (אייקון מחשבון ירוק). **בידוד היקף (חשוב — כמו ברכש):** `scope`=`./calc.html` בלבד וה-SW נרשם עם `{scope:'./calc.html'}` — היקף רחב "תופס" דפים אחרים. הרישום **לא** נוגע ברישומי אפליקציות אחרות (הרכש). כפתור "↗ פתח כאפליקציה נפרדת" בסעיף המחשבון שב-forecast.html מקשר אליו. **עצמאי בכוונה** (לא בפס הניווט המשותף), אבל **קורא את אותם נתונים**: כניסת גוגל עם מפתח הסשן המשותף `gsGoogleToken` (לא צריך להתחבר פעמיים אם כבר מחוברים לדשבורדים), לשונית `DATA` מהגיליון (`SHEET_ID`, `FC_CLIENT_ID`, `FC_SCOPE` זהים ל-forecast). **מקור הכללים היחיד נשאר forecast.html:** `fcLoadRules()` מושך את `FC_NOTES`/`FC_CUSTOMER_OUT`/`FC_HOLIDAYS` בזמן ריצה (אותו origin). לוגיקת החישוב (`computeForecastFromData`, `fcApplyHolidayBoost`, `fcDateUplift`) והממשק (`renderProdCalc`/`calcCompute`/`calcRenderResult`) הם עותק זהה לזה שב-forecast; שינוי משמעותי בלוגיקה יש לסנכרן. אם המשיכה נכשלת — החישוב רץ בלי הכללים (ללא נאפיס/חגים). אין Chart.js — טבלאות בלבד.
 
 ## dashboard_customers.html — דשבורד לקוחות (פרטי)
 הדף **פרטי**: אין בו אף מספר במקור. כל הנתונים נמשכים בזמן ריצה אחרי כניסת גוגל, בדיוק כמו `production.html` (אותו מנגנון, אותו מזהה לקוח, ומפתח סשן משותף `gsGoogleToken` כך שלא צריך להתחבר פעמיים). אובייקט הנתונים מתחיל ריק (`let D=null`) ומתמלא בזמן ריצה.

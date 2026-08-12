@@ -2,8 +2,24 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>סלטי גן — מחשבון ייצור</title>
+<!-- אפליקציה וובית מותקנת (הוסף למסך הבית) -->
+<link rel="manifest" href="calc.webmanifest">
+<meta name="theme-color" content="#0d5f2c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="מחשבון">
+<link rel="apple-touch-icon" href="calc-icon-192.png">
+<link rel="icon" type="image/png" href="calc-icon-192.png">
+<script>
+/* בידוד: רושמים Service Worker בהיקף calc.html בלבד (לא שורש האתר — היקף רחב
+   "תופס" דפים אחרים). לא נוגעים ברישומים של אפליקציות אחרות (למשל הרכש). */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){
+  navigator.serviceWorker.register('calc-sw.js',{scope:'./calc.html'}).catch(function(){});
+});}
+</script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{--green:#0d5f2c;--lgreen:#ecfdf5;--teal:#0d9488;--lteal:#f0fdfa;--navy:#1e293b;

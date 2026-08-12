@@ -1,0 +1,19 @@
+{
+  "id": "gansalads-calc",
+  "name": "סלטי גן — מחשבון ייצור",
+  "short_name": "מחשבון",
+  "description": "בחירת מוצרים וטווח תאריכים → כמה לייצר סה\"כ ופר-יום — סלטי גן",
+  "start_url": "calc.html",
+  "scope": "./calc.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d5f2c",
+  "theme_color": "#0d5f2c",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "calc-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "calc-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "calc-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
