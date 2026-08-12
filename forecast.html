@@ -674,6 +674,7 @@ function renderProdCalc(){
   const today=new Date(); const plus6=new Date(today); plus6.setDate(today.getDate()+6);
   const dstyle='padding:5px 8px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px';
   host.innerHTML=
+   '<style>.calc-tbl{width:auto;border-collapse:collapse;font-size:13px}.calc-tbl th,.calc-tbl td{border:1px solid var(--border);padding:4px 10px;text-align:center;white-space:nowrap}.calc-tbl td.n{text-align:right}.calc-tbl thead th{background:#0d5f2c;color:#fff}</style>'+
    '<div class="card">'+
    '<div class="card-title">🧮 מחשבון ייצור — כמה לייצר <span class="card-badge g">בחרי מוצרים + טווח תאריכים</span></div>'+
    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'+
@@ -711,43 +712,61 @@ function calcRenderChips(){
     || '<span style="color:var(--gray);font-size:12px">לא נבחרו מוצרים</span>';
 }
 function calcClear(){ calcSel.clear(); calcRenderChips(); calcRenderList(); const r=document.getElementById('calcResult'); if(r) r.innerHTML=''; }
+let calcData=null, calcUnit='kg';
 function calcCompute(){
   const res=document.getElementById('calcResult'); if(!res) return;
   const err=m=>res.innerHTML='<div class="ins" style="background:var(--lred);border-right-color:var(--red);color:var(--red)">'+m+'</div>';
   const from=(document.getElementById('calcFrom')||{}).value, to=(document.getElementById('calcTo')||{}).value;
   if(!calcSel.size) return err('בחרי מוצר אחד לפחות.');
   if(!from||!to||from>to) return err('בחרי טווח תאריכים תקין (מ־ ≤ עד).');
-  const sel=PRODUCTS.filter(p=>calcSel.has(p.name)); const unit=unitLbl();
-  // daily_kg כבר כולל את תיקון החג של השבוע הקרוב (אם הוחל) — מחלצים בסיס נקי
+  const sel=PRODUCTS.filter(p=>calcSel.has(p.name));
+  // daily_kg/pkg כבר כולל את תיקון החג של השבוע הקרוב (אם הוחל) — מחלצים בסיס נקי
   // ואז מחילים את מקדם החג פר-תאריך, כדי לכסות חגים גם בשבועות עתידיים בטווח.
   const applied=num(((FORECAST||{}).holiday_applied||{}).uplift)||0;
-  const rows=[]; let total=0; const perProd={}; sel.forEach(p=>perProd[p.name]=0); const holsHit={};
-  let d=new Date(from+'T00:00:00'); const end=new Date(to+'T00:00:00'); let guard=0;
+  const dates=[]; const cellK={}, cellP={}; const perKg={}, perPkg={}; let totKg=0,totPkg=0; const holsHit={};
+  sel.forEach(p=>{ perKg[p.name]=0; perPkg[p.name]=0; });
+  let d=new Date(from+'T00:00:00'); const end=new Date(to+'T00:00:00'); let gi=0,guard=0;
   while(d<=end && guard++<400){
     const dayName=DAYS[d.getDay()];   // ראשון..שישי ; שבת (getDay()==6) → undefined
     const hol=dayName?fcDateUplift(d):null; const up=hol?hol.uplift:0;
-    let dt=0;
-    if(dayName) sel.forEach(p=>{ const base=((pDaily(p)||{})[dayName]||0)/(1+applied); const v=base*(1+up); dt+=v; perProd[p.name]+=v; });
+    const rowK={}, rowP={};
+    if(dayName) sel.forEach(p=>{
+      const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up);
+      const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up);
+      rowK[p.name]=bk; rowP[p.name]=bp; perKg[p.name]+=bk; perPkg[p.name]+=bp; totKg+=bk; totPkg+=bp;
+    });
     if(hol) holsHit[hol.name]=hol.uplift;
-    rows.push({d:new Date(d), dn:dayName||'שבת', v:dt, hol:hol?hol.name:null}); total+=dt; d.setDate(d.getDate()+1);
+    dates.push({idx:gi, d:new Date(d), dn:dayName||'שבת', hol:hol?hol.name:null, active:!!dayName});
+    cellK[gi]=rowK; cellP[gi]=rowP; gi++; d.setDate(d.getDate()+1);
   }
+  calcData={sel:sel.map(p=>p.name), dates, cellK, cellP, perKg, perPkg, totKg, totPkg, holsHit};
+  calcUnit=fcMetric;   // מתחילים לפי הבורר הראשי
+  calcRenderResult();
+}
+function calcSetUnit(u){ calcUnit=u; calcRenderResult(); }
+function calcRenderResult(){
+  const res=document.getElementById('calcResult'); if(!res||!calcData) return;
+  const D=calcData, isKg=calcUnit==='kg', cell=isKg?D.cellK:D.cellP;
   const df=dd=>dd.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
-  const dayTbl='<table class="tbl"><thead><tr><th>תאריך</th><th>יום</th><th>'+unit+'</th></tr></thead><tbody>'+
-    rows.map(r=>'<tr'+(r.v>0?'':' style="opacity:.45"')+'><td>'+df(r.d)+(r.hol?' <span title="שבוע לפני '+r.hol+'">🎉</span>':'')+'</td><td>'+r.dn+'</td><td>'+(r.v>0?fmt(r.v):'—')+'</td></tr>').join('')+'</tbody></table>';
-  const holNote=Object.keys(holsHit).length
-    ? '<div class="ins a" style="margin-top:10px">🎉 <b>תיקון חג הוחל בטווח:</b> '+Object.keys(holsHit).map(n=>n+' (+'+Math.round(holsHit[n]*100)+'%)').join(' · ')+' — הימים בשבוע שלפני החג הוגדלו לפי העלייה ההיסטורית.</div>'
-    : '';
-  let prodTbl='';
-  if(sel.length>1){
-    prodTbl='<div style="margin-top:14px"><div style="font-weight:700;margin-bottom:6px;font-size:14px">פירוק לפי מוצר (סה"כ בטווח)</div>'+
-      '<table class="tbl"><thead><tr><th>מוצר</th><th>'+unit+'</th></tr></thead><tbody>'+
-      sel.slice().sort((a,b)=>perProd[b.name]-perProd[a.name]).map(p=>'<tr><td>'+calcEsc(p.name)+'</td><td>'+fmt(perProd[p.name])+'</td></tr>').join('')+'</tbody></table></div>';
-  }
-  const nDays=rows.filter(r=>r.v>0).length;
-  res.innerHTML=
-    '<div class="ins g" style="font-size:15px"><b>סה"כ לייצר: '+fmt(total)+' '+unit+'</b> · '+sel.length+' מוצרים · '+nDays+' ימי ייצור · לפי החיזוי הנוכחי</div>'+
-    holNote+
-    '<div class="tbl-scroll" style="margin-top:10px"><div class="tbl-wrap">'+dayTbl+'</div></div>'+prodTbl;
+  const nDays=D.dates.filter(x=>x.active && D.sel.some(n=>(cell[x.idx][n]||0)>0)).length;
+  // סיכום + פירוק לפי מוצר — זה לצד זה
+  const perRows=D.sel.slice().sort((a,b)=>D.perKg[b]-D.perKg[a]).map(n=>'<tr><td class="n">'+calcEsc(n)+'</td><td>'+fmt(D.perKg[n])+'</td><td>'+fmt(D.perPkg[n])+'</td></tr>').join('');
+  const summary=
+    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'+
+      '<div class="ins g" style="min-width:170px;flex:0 0 auto;line-height:1.5"><b>סה"כ לייצר בטווח</b><br><span style="font-size:20px;font-weight:800">'+fmt(D.totKg)+'</span> ק"ג<br><span style="font-size:20px;font-weight:800">'+fmt(D.totPkg)+'</span> אריזות<br><span style="color:var(--gray);font-size:12px">'+D.sel.length+' מוצרים · '+nDays+' ימי ייצור</span></div>'+
+      '<div style="flex:1;min-width:220px"><div style="font-weight:700;margin-bottom:5px;font-size:14px">פירוק לפי מוצר (סה"כ בטווח)</div>'+
+        '<div style="overflow-x:auto"><table class="calc-tbl"><thead><tr><th>מוצר</th><th>ק"ג</th><th>אריזות</th></tr></thead><tbody>'+perRows+'</tbody></table></div></div>'+
+    '</div>';
+  const holNote=Object.keys(D.holsHit).length?'<div class="ins a" style="margin-top:10px">🎉 <b>תיקון חג בטווח:</b> '+Object.keys(D.holsHit).map(n=>n+' (+'+Math.round(D.holsHit[n]*100)+'%)').join(' · ')+'</div>':'';
+  // פירוט תאריך × מוצר
+  const toggle='<div style="margin:14px 0 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="font-size:13px;font-weight:700">פירוט יומי לכל מוצר · יחידה:</span>'+
+    '<button class="mbtn'+(isKg?' active':'')+'" onclick="calcSetUnit(\'kg\')">ק"ג</button>'+
+    '<button class="mbtn'+(isKg?'':' active')+'" onclick="calcSetUnit(\'pkg\')">אריזות</button></div>';
+  const head='<tr><th>תאריך</th><th>יום</th>'+D.sel.map(n=>'<th>'+calcEsc(n)+'</th>').join('')+'<th>סה"כ</th></tr>';
+  const body=D.dates.map(x=>{ let rt=0; const tds=D.sel.map(n=>{const v=cell[x.idx][n]||0; rt+=v; return '<td>'+(v>0?fmt(v):'—')+'</td>';}).join('');
+    return '<tr'+(rt>0?'':' style="opacity:.45"')+'><td class="n" style="white-space:nowrap">'+df(x.d)+(x.hol?' 🎉':'')+'</td><td>'+x.dn+'</td>'+tds+'<td><b>'+(rt>0?fmt(rt):'—')+'</b></td></tr>'; }).join('');
+  const matrix='<div style="overflow-x:auto"><table class="calc-tbl"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  res.innerHTML=summary+holNote+toggle+matrix;
 }
 function buildDailyChart(){
   makeChart('dailyChart',{type:'bar',data:{labels:DAYS,datasets:[{label:unitLbl(),data:DAILY.map(d=>d.v),backgroundColor:DAYS_COLORS.map(c=>c+'CC'),borderColor:DAYS_COLORS,borderWidth:2,borderRadius:6}]},
