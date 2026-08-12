@@ -99,7 +99,7 @@
 
 <div class="wrap">
   <div class="head"><div class="bar"></div><h1>נוכחות עובדים</h1></div>
-  <div class="sub" id="sub">מתעדכן מהשעון אוטומטית כל 15 דקות</div>
+  <div class="sub" id="sub">מתעדכן מהשעון בתחילת כל יום</div>
 
   <div class="card">
     <div class="row">
@@ -333,16 +333,15 @@ function empRow(e, depts){
       ${depts.map(d=>`<option ${d===e.dept?"selected":""}>${d}</option>`).join("")}</select>`;
   const ssel=`<select class="pill ${st.c}" onchange="setStatus('${e.uid}',this.value)">
       ${ORDER.map(s=>`<option value="${s}" ${s===e.status?"selected":""}>${STATUS[s].l}</option>`).join("")}</select>`;
-  const xbtn=`<button class="emp-x" onclick="hideEmp('${e.uid}')">לא עובד</button>`;
   return `<div class="emp"><div class="name"><span>${e.name} <button class="edit-name" onclick="editName('${e.uid}')" title="ערוך שם">✏️</button></span>${t}</div>
-      <div class="ctrls">${dsel}${ssel}${xbtn}</div></div>`;
+      <div class="ctrls">${dsel}${ssel}</div></div>`;
 }
 
 function render(){
   const d=$("date").value||today();
   const st=buildState(d);
   $("sub").textContent = Object.keys(roster).length
-    ? "מתעדכן מהשעון אוטומטית כל 15 דקות"
+    ? "מתעדכן מהשעון בתחילת כל יום"
     : "ממתין לנתונים הראשונים מהשעון (מחשב המפעל) — יופיעו כאן אוטומטית";
   const depts=[]; // מחלקות נגזרות מהעובדים (מה שכבר שויך)
   const seen={}; Object.values(empMeta).forEach(m=>{ if(m.dept&&!seen[m.dept]){seen[m.dept]=1;depts.push(m.dept);} });
