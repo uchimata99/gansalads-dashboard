@@ -676,7 +676,8 @@ function renderProdCalc(){
   host.innerHTML=
    '<style>.calc-tbl{width:auto;border-collapse:collapse;font-size:13px}.calc-tbl th,.calc-tbl td{border:1px solid var(--border);padding:4px 10px;text-align:center;white-space:nowrap}.calc-tbl td.n{text-align:right}.calc-tbl thead th{background:#0d5f2c;color:#fff}</style>'+
    '<div class="card">'+
-   '<div class="card-title">🧮 מחשבון ייצור — כמה לייצר <span class="card-badge g">בחרי מוצרים + טווח תאריכים</span></div>'+
+   '<div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">🧮 מחשבון ייצור — כמה לייצר <span class="card-badge g">בחרי מוצרים + טווח תאריכים</span>'+
+     '<a href="calc.html" target="_blank" class="mbtn" style="margin-inline-start:auto;text-decoration:none;font-size:12px">↗ פתח כאפליקציה נפרדת</a></div>'+
    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">'+
      '<div style="flex:1;min-width:240px">'+
        '<input class="search-input" id="calcSearch" placeholder="חיפוש מוצר…" autocomplete="off" oninput="calcRenderList()">'+
