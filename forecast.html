@@ -499,6 +499,19 @@ function fcHolidayPreWeek(){
   }
   return best;
 }
+// אותה לוגיקה, אבל לתאריך שרירותי: אם השבוע העסקי של התאריך הוא שבוע-לפני-חג
+// → מחזיר {name,uplift}. משמש את מחשבון הייצור כדי להחיל חגים על כל הטווח העתידי.
+function fcDateUplift(dateObj){
+  const d=new Date(dateObj); d.setHours(0,0,0,0);
+  const sun=new Date(d); sun.setDate(d.getDate()-((d.getDay())%7));   // ראשון של שבוע התאריך
+  let best=null;
+  for(const h of FC_HOLIDAYS){
+    const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue;
+    const days=Math.round((hd-sun)/86400000);
+    if(days>=0 && days<=12){ if(!best || days<best.days) best={name:h.name, uplift:h.uplift, days}; }
+  }
+  return best;
+}
 // מיישם את תיקון-החג אוטומטית: אם השבוע הקרוב הוא לפני חג, מגדיל את
 // התחזית (סה"כ, פר-מוצר ופר-יום) באחוז ההיסטורי שנמדד. מיכל ביקשה
 // שהתיקון ייעשה אוטומטית — לא צריך אישור; רק נרשמת הערה במסך.
@@ -705,17 +718,25 @@ function calcCompute(){
   if(!calcSel.size) return err('בחרי מוצר אחד לפחות.');
   if(!from||!to||from>to) return err('בחרי טווח תאריכים תקין (מ־ ≤ עד).');
   const sel=PRODUCTS.filter(p=>calcSel.has(p.name)); const unit=unitLbl();
-  const rows=[]; let total=0; const perProd={}; sel.forEach(p=>perProd[p.name]=0);
+  // daily_kg כבר כולל את תיקון החג של השבוע הקרוב (אם הוחל) — מחלצים בסיס נקי
+  // ואז מחילים את מקדם החג פר-תאריך, כדי לכסות חגים גם בשבועות עתידיים בטווח.
+  const applied=num(((FORECAST||{}).holiday_applied||{}).uplift)||0;
+  const rows=[]; let total=0; const perProd={}; sel.forEach(p=>perProd[p.name]=0); const holsHit={};
   let d=new Date(from+'T00:00:00'); const end=new Date(to+'T00:00:00'); let guard=0;
   while(d<=end && guard++<400){
     const dayName=DAYS[d.getDay()];   // ראשון..שישי ; שבת (getDay()==6) → undefined
+    const hol=dayName?fcDateUplift(d):null; const up=hol?hol.uplift:0;
     let dt=0;
-    if(dayName) sel.forEach(p=>{ const v=(pDaily(p)||{})[dayName]||0; dt+=v; perProd[p.name]+=v; });
-    rows.push({d:new Date(d), dn:dayName||'שבת', v:dt}); total+=dt; d.setDate(d.getDate()+1);
+    if(dayName) sel.forEach(p=>{ const base=((pDaily(p)||{})[dayName]||0)/(1+applied); const v=base*(1+up); dt+=v; perProd[p.name]+=v; });
+    if(hol) holsHit[hol.name]=hol.uplift;
+    rows.push({d:new Date(d), dn:dayName||'שבת', v:dt, hol:hol?hol.name:null}); total+=dt; d.setDate(d.getDate()+1);
   }
   const df=dd=>dd.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
   const dayTbl='<table class="tbl"><thead><tr><th>תאריך</th><th>יום</th><th>'+unit+'</th></tr></thead><tbody>'+
-    rows.map(r=>'<tr'+(r.v>0?'':' style="opacity:.45"')+'><td>'+df(r.d)+'</td><td>'+r.dn+'</td><td>'+(r.v>0?fmt(r.v):'—')+'</td></tr>').join('')+'</tbody></table>';
+    rows.map(r=>'<tr'+(r.v>0?'':' style="opacity:.45"')+'><td>'+df(r.d)+(r.hol?' <span title="שבוע לפני '+r.hol+'">🎉</span>':'')+'</td><td>'+r.dn+'</td><td>'+(r.v>0?fmt(r.v):'—')+'</td></tr>').join('')+'</tbody></table>';
+  const holNote=Object.keys(holsHit).length
+    ? '<div class="ins a" style="margin-top:10px">🎉 <b>תיקון חג הוחל בטווח:</b> '+Object.keys(holsHit).map(n=>n+' (+'+Math.round(holsHit[n]*100)+'%)').join(' · ')+' — הימים בשבוע שלפני החג הוגדלו לפי העלייה ההיסטורית.</div>'
+    : '';
   let prodTbl='';
   if(sel.length>1){
     prodTbl='<div style="margin-top:14px"><div style="font-weight:700;margin-bottom:6px;font-size:14px">פירוק לפי מוצר (סה"כ בטווח)</div>'+
@@ -725,6 +746,7 @@ function calcCompute(){
   const nDays=rows.filter(r=>r.v>0).length;
   res.innerHTML=
     '<div class="ins g" style="font-size:15px"><b>סה"כ לייצר: '+fmt(total)+' '+unit+'</b> · '+sel.length+' מוצרים · '+nDays+' ימי ייצור · לפי החיזוי הנוכחי</div>'+
+    holNote+
     '<div class="tbl-scroll" style="margin-top:10px"><div class="tbl-wrap">'+dayTbl+'</div></div>'+prodTbl;
 }
 function buildDailyChart(){
