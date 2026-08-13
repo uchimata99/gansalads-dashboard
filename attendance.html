@@ -67,6 +67,14 @@
     .emp .ctrls { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
     .emp .ctrls select { flex:1; min-width:88px; }
     .times { font-size:12px; color:var(--stone500); white-space:nowrap; }
+    .daynote { font-size:12px; border-radius:8px; padding:1px 7px; white-space:nowrap; margin-inline-start:6px; }
+    .dn-late { background:#fef3c7; color:#b45309; }
+    .dn-early { background:#e0e7ff; color:#4338ca; }
+    .dayedit { margin-top:8px; padding:8px; background:var(--stone100); border-radius:10px; display:flex; flex-direction:column; gap:8px; }
+    .de-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .de-lbl { font-size:13px; font-weight:600; min-width:56px; }
+    .de-row input { padding:5px 7px; border:1px solid var(--stone300,#d6d3d1); border-radius:8px; font-size:13px; }
+    .de-foot { justify-content:space-between; }
     .muted { color:var(--stone500); font-size:13px; }
     .pill { border-radius:999px; padding:6px 10px; border:none; font-size:12px; font-weight:600; }
     .emp-x { background:transparent; color:#b91c1c; border:1px solid #fca5a5;
@@ -155,7 +163,7 @@ const ATT_SHEET_ID='19h1pAaJEWQrqTtA95KDV9j4aerfSdY8aQokTxqOWoBs';   // גילי
 const ATT_SCOPE='https://www.googleapis.com/auth/spreadsheets';   // כתיבה — הדף שומר עריכות
 const ATT_TOKEN_KEY='gsAttToken';
 
-const T_ROSTER='ROSTER', T_PUNCH='PUNCHES', T_META='EMP_META', T_OVER='OVERRIDES';
+const T_ROSTER='ROSTER', T_PUNCH='PUNCHES', T_META='EMP_META', T_OVER='OVERRIDES', T_NOTES='NOTES';
 
 const STATUS = {
   present:{l:"נוכח",c:"s-present"}, vacation:{l:"חופשה",c:"s-vacation"},
@@ -171,6 +179,8 @@ let roster={};            // uid -> name
 let punchesByDate={};     // date -> uid -> {first_in,last_out}
 let empMeta={};           // uid -> {name,dept,active}
 let overridesByDate={};   // date -> uid -> status
+let notesByDate={};       // date -> uid -> {late:"HH:MM", early:"HH:MM"} — הודעות איחור/יציאה מוקדמת
+let dayEdit=null;         // uid של השורה שפתחה את עורך היום (חופש/איחור), אחת בכל רגע
 let lastPull="";
 
 function gsShowErr(m){ const e=$("gsLockErr"); if(e) e.textContent=m||""; }
@@ -243,10 +253,10 @@ async function sheetAppend(tab, rows){
 function dropHeader(rows, first){ return (rows.length && String(rows[0][0]||'').toLowerCase()===first) ? rows.slice(1) : rows; }
 
 async function loadData(){
-  const [rs, ps, ms, os] = await Promise.all([
-    sheetGet(T_ROSTER), sheetGet(T_PUNCH), sheetGet(T_META), sheetGet(T_OVER)
+  const [rs, ps, ms, os, ns] = await Promise.all([
+    sheetGet(T_ROSTER), sheetGet(T_PUNCH), sheetGet(T_META), sheetGet(T_OVER), sheetGet(T_NOTES)
   ]);
-  roster={}; punchesByDate={}; empMeta={}; overridesByDate={}; lastPull="";
+  roster={}; punchesByDate={}; empMeta={}; overridesByDate={}; notesByDate={}; lastPull="";
   dropHeader(rs,'uid').forEach(r=>{ if(r[0]) roster[r[0]]=r[1]||r[0]; });
   dropHeader(ps,'date').forEach(r=>{ const d=r[0],uid=r[1]; if(!d||!uid) return;
     (punchesByDate[d]=punchesByDate[d]||{})[uid]={first_in:r[2]||null,last_out:r[3]||null};
@@ -255,10 +265,14 @@ async function loadData(){
     empMeta[uid]={name:r[2]||'', dept:r[3]||'', active:(r[4]===''||r[4]==null)?1:Number(r[4])}; });
   dropHeader(os,'timestamp').forEach(r=>{ const d=r[1],uid=r[2]; if(!d||!uid) return;   // last per (date,uid)
     (overridesByDate[d]=overridesByDate[d]||{})[uid]=r[3]||'absent'; });
+  // NOTES: [timestamp, date, uid, kind, val] — kind=late/early/clear; last-per-(date,uid,kind) גובר לפי סדר השורות
+  dropHeader(ns,'timestamp').forEach(r=>{ const d=r[1],uid=r[2],kind=r[3],val=r[4]||''; if(!d||!uid||!kind) return;
+    const o=((notesByDate[d]=notesByDate[d]||{})[uid]=notesByDate[d][uid]||{});
+    if(kind==='clear'){ o.late=''; o.early=''; } else o[kind]=val; });
 }
 
 function buildState(date){
-  const punch=punchesByDate[date]||{}, over=overridesByDate[date]||{};
+  const punch=punchesByDate[date]||{}, over=overridesByDate[date]||{}, notes=notesByDate[date]||{};
   const employees=[], hidden=[];
   Object.keys(roster).forEach(uid=>{
     const meta=empMeta[uid]||{};
@@ -268,7 +282,7 @@ function buildState(date){
     if(!active){ hidden.push({uid,name,dept}); return; }
     const p=punch[uid];
     const status=over[uid]||(p?"present":"absent");
-    employees.push({uid,name,dept,status,
+    employees.push({uid,name,dept,status,note:notes[uid]||{},
       first_in:p?p.first_in:null, last_out:p?p.last_out:null});
   });
   employees.sort((a,b)=>a.name.localeCompare(b.name,"he"));
@@ -317,6 +331,41 @@ async function setStatus(uid,status){
   try{ await sheetAppend(T_OVER, [[nowTs(), d, uid, status]]); }
   catch(e){ alert("השמירה נכשלה: "+e.message); }
 }
+
+// ---- עורך היום: חופש (טווח) + הודעת איחור / יציאה מוקדמת ----
+function openDay(uid){ dayEdit=(dayEdit===uid)?null:uid; render(); }
+function datesBetween(from,to){   // רשימת תאריכי YYYY-MM-DD כולל, מוגבל ל-60 יום
+  const out=[]; const a=new Date(from+"T00:00:00"), b=new Date((to||from)+"T00:00:00");
+  if(isNaN(a)||isNaN(b)||b<a) return [from];
+  const p=n=>String(n).padStart(2,"0");
+  for(let d=new Date(a), i=0; d<=b && i<60; d.setDate(d.getDate()+1), i++)
+    out.push(d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()));
+  return out;
+}
+async function saveVacation(uid){
+  const f=$("vacFrom_"+uid)?.value, t=$("vacTo_"+uid)?.value;
+  if(!f){ alert("בחרי תאריך התחלה לחופש"); return; }
+  const days=datesBetween(f,t||f), ts=nowTs(), rows=[];
+  days.forEach(d=>{ (overridesByDate[d]=overridesByDate[d]||{})[uid]="vacation"; rows.push([ts,d,uid,"vacation"]); });
+  dayEdit=null; render();
+  try{ await sheetAppend(T_OVER, rows); }catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+async function saveNote(uid,kind){   // kind = late / early
+  const d=$("noteDate_"+uid)?.value||today();
+  const tm=$("noteTime_"+uid)?.value;
+  if(!tm){ alert("בחרי שעה"); return; }
+  const o=((notesByDate[d]=notesByDate[d]||{})[uid]=notesByDate[d][uid]||{}); o[kind]=tm;
+  dayEdit=null; render();
+  try{ await sheetAppend(T_NOTES, [[nowTs(), d, uid, kind, tm]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+async function clearDay(uid){        // מנקה איחור/יציאה מוקדמת ליום המוצג
+  const d=$("noteDate_"+uid)?.value||today();
+  (notesByDate[d]=notesByDate[d]||{})[uid]={};
+  dayEdit=null; render();
+  try{ await sheetAppend(T_NOTES, [[nowTs(), d, uid, "clear", ""]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
 function stampRefresh(){ const d=new Date(),p=n=>String(n).padStart(2,"0");
   const el=$("refAt"); if(el) el.textContent="עודכן "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds()); }
 
@@ -340,15 +389,38 @@ function empRow(e, depts){
       <span>${e.name}</span></label></div>`;
   }
   const st=STATUS[e.status];
-  const t=e.status==="present"&&(e.first_in||e.last_out)
-    ? `<span class="times">${e.first_in||"—"} ← ${e.last_out||"—"}</span>` : "";
+  const n=e.note||{};
+  const t=[
+    e.status==="present"&&(e.first_in||e.last_out)?`<span class="times">${e.first_in||"—"} ← ${e.last_out||"—"}</span>`:"",
+    n.late?`<span class="daynote dn-late">⏰ מגיע ${n.late}</span>`:"",
+    n.early?`<span class="daynote dn-early">🚪 יוצא ${n.early}</span>`:""
+  ].join("");
   const dsel=`<select onchange="setDept('${e.uid}',this.value)">
       <option value="">ללא מחלקה</option>
       ${depts.map(d=>`<option ${d===e.dept?"selected":""}>${d}</option>`).join("")}</select>`;
   const ssel=`<select class="pill ${st.c}" onchange="setStatus('${e.uid}',this.value)">
       ${ORDER.map(s=>`<option value="${s}" ${s===e.status?"selected":""}>${STATUS[s].l}</option>`).join("")}</select>`;
-  return `<div class="emp"><div class="name"><span>${e.name} <button class="edit-name" onclick="editName('${e.uid}')" title="ערוך שם">✏️</button></span>${t}</div>
-      <div class="ctrls">${dsel}${ssel}</div></div>`;
+  return `<div class="emp"><div class="name"><span>${e.name}
+      <button class="edit-name" onclick="editName('${e.uid}')" title="ערוך שם">✏️</button>
+      <button class="edit-name" onclick="openDay('${e.uid}')" title="חופש / איחור / יציאה מוקדמת">📅</button></span>${t}</div>
+      <div class="ctrls">${dsel}${ssel}</div>${dayEdit===e.uid?dayPanel(e):""}</div>`;
+}
+function dayPanel(e){
+  const d=$("date").value||today();
+  return `<div class="dayedit">
+    <div class="de-row"><span class="de-lbl">🌴 חופש:</span>
+      <input type="date" id="vacFrom_${e.uid}" value="${d}"><span>עד</span>
+      <input type="date" id="vacTo_${e.uid}" value="${d}">
+      <button class="btn-soft" onclick="saveVacation('${e.uid}')">שמור חופש</button></div>
+    <div class="de-row"><span class="de-lbl">⏰ ליום:</span>
+      <input type="date" id="noteDate_${e.uid}" value="${d}">
+      <input type="time" id="noteTime_${e.uid}">
+      <button class="btn-soft" onclick="saveNote('${e.uid}','late')">מגיע מאוחר</button>
+      <button class="btn-soft" onclick="saveNote('${e.uid}','early')">יוצא מוקדם</button></div>
+    <div class="de-row de-foot">
+      <button class="btn-soft" onclick="clearDay('${e.uid}')">נקה איחור/יציאה ליום המוצג</button>
+      <button class="btn-soft" onclick="openDay('${e.uid}')">סגור</button></div>
+  </div>`;
 }
 
 function render(){
