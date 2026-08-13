@@ -75,6 +75,7 @@
     .de-lbl { font-size:13px; font-weight:600; min-width:56px; }
     .de-row input { padding:5px 7px; border:1px solid var(--stone300,#d6d3d1); border-radius:8px; font-size:13px; }
     .de-foot { justify-content:space-between; }
+    .selall { margin-inline-start:8px; font-size:12px; padding:2px 8px; border:1px solid var(--stone300,#d6d3d1); border-radius:8px; background:#fff; cursor:pointer; }
     .viewtabs { display:flex; gap:8px; margin:14px 0 10px; }
     .vtab { flex:1; padding:9px; border:1px solid var(--stone300,#d6d3d1); background:#fff; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; color:var(--stone700,#44403c); }
     .vtab-on { background:var(--green,#16a34a); color:#fff; border-color:var(--green,#16a34a); }
@@ -159,11 +160,13 @@
 
   <div class="cols">
     <div class="col">
-      <div class="colhead colhead-green">נוכחים <span class="cnt" id="cntPresent">0</span></div>
+      <div class="colhead colhead-green">נוכחים <span class="cnt" id="cntPresent">0</span>
+        <button class="selall" id="selP" onclick="selCol('p')" style="display:none">בחר הכל</button></div>
       <div class="card" style="padding:0" id="listPresent"></div>
     </div>
     <div class="col">
-      <div class="colhead">לא נוכחים <span class="cnt" id="cntAbsent">0</span></div>
+      <div class="colhead">לא נוכחים <span class="cnt" id="cntAbsent">0</span>
+        <button class="selall" id="selA" onclick="selCol('a')" style="display:none">בחר הכל</button></div>
       <div class="card" style="padding:0" id="listAbsent"></div>
     </div>
   </div>
@@ -370,6 +373,12 @@ function editName(uid){
   render(); writeMeta(uid);
 }
 function delToggle(){ delMode=!delMode; delSel.clear(); render(); }
+function selCol(which){   // בחר הכל בעמודה (נוכחים/לא נוכחים) במצב מחיקה
+  const uids=(which==='p'?window.__pUids:window.__aUids)||[];
+  const allSel=uids.length && uids.every(u=>delSel.has(u));
+  uids.forEach(u=> allSel ? delSel.delete(u) : delSel.add(u));   // לחיצה שנייה מבטלת
+  render();
+}
 function toggleDel(uid,on){ if(on) delSel.add(uid); else delSel.delete(uid);
   const n=document.getElementById("delN"); if(n) n.textContent=delSel.size; }
 async function commitDel(){
@@ -494,11 +503,12 @@ function render(){
   const f=filter.trim();
   const match=e=>(e.name||"").includes(f);
   const emps=st.employees;
-  // ללא חיפוש: מציגים רק "מועסקים" — מי שהוחתם בשעון או שמיכל סימנה לו משהו ליום.
-  // עם חיפוש: מציגים כל התאמה (כדי שאפשר יהיה למצוא כל עובד ולתת לו חופש/מחלקה).
-  const pool = f ? emps.filter(match) : emps.filter(e=>e.tracked);
+  // מציגים את כל המועסקים (עובדים שלא נמחקו), מפוצלים לנוכחים היום / לא נוכחים.
+  // "נוכח" = הוחתם היום או סומן ידנית כנוכח. מחיקה (🗑️) מוציאה מהרשימה לצמיתות.
+  const pool = emps.filter(match);
   const present=pool.filter(e=>e.status==="present");
   const absent=pool.filter(e=>e.status!=="present");
+  window.__pUids=present.map(e=>e.uid); window.__aUids=absent.map(e=>e.uid);   // לבחירת-הכל במצב מחיקה
 
   $("present").textContent=present.length;
   $("total").textContent=pool.length;
@@ -514,7 +524,9 @@ function render(){
   $("listPresent").innerHTML=present.length?present.map(e=>empRow(e,depts)).join("")
     :`<div class="empty">${f?"אין נוכחים בסינון הזה":"אין נוכחים עדיין היום"}</div>`;
   $("listAbsent").innerHTML=absent.length?absent.map(e=>empRow(e,depts)).join("")
-    :`<div class="empty">${f?"אין תוצאות בסינון הזה":"אין היעדרויות מסומנות ליום זה"}</div>`;
+    :`<div class="empty">${f?"אין תוצאות בסינון הזה":"כל המועסקים נוכחים 🎉"}</div>`;
+  const showSel = delMode ? "inline-block" : "none";
+  $("selP").style.display=showSel; $("selA").style.display=showSel;
 
   const hf=st.hidden.filter(match);
   $("cntHidden").textContent=st.hidden.length;
