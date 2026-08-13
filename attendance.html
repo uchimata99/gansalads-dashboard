@@ -487,8 +487,9 @@ function render(){
   $("sub").textContent = Object.keys(roster).length
     ? "מתעדכן מהשעון בתחילת כל יום"
     : "ממתין לנתונים הראשונים מהשעון (מחשב המפעל) — יופיעו כאן אוטומטית";
-  const depts=DEPARTMENTS.slice(); // 9 המחלקות הקבועות + כל מחלקה שכבר שויכה וטרם ברשימה
+  const depts=DEPARTMENTS.slice(); // המחלקות הקבועות + כל מחלקה שכבר שויכה וטרם ברשימה
   Object.values(empMeta).forEach(m=>{ if(m.dept&&!depts.includes(m.dept)) depts.push(m.dept); });
+  depts.sort((a,b)=>a.localeCompare(b,"he"));   // סדר אלפביתי (א-ב)
 
   const f=filter.trim();
   const match=e=>(e.name||"").includes(f);
