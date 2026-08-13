@@ -201,7 +201,7 @@ const T_ROSTER='ROSTER', T_PUNCH='PUNCHES', T_META='EMP_META', T_OVER='OVERRIDES
 const DEPT_POS={
   "יצור":{x:20,y:34}, "מטבח":{x:37,y:34}, "ירקות":{x:66,y:32},
   "מחסן גלם":{x:88,y:40}, "מחסן תוצג":{x:47,y:64}, "אריזה":{x:25,y:73},
-  "טיגון":{x:50,y:54}, "בית מלאכה":{x:39,y:52}, "משרד":{x:8,y:60}, "נהג":{x:40,y:80},
+  "טיגון":{x:50,y:54}, "משרד":{x:8,y:60}, "נהג":{x:40,y:80},
   "מפעל חומוס":{x:18,y:52}, "שטיפת כלים":{x:33,y:58}, "אחזקה":{x:10,y:44}
 };
 
@@ -211,7 +211,19 @@ const STATUS = {
 };
 const ORDER = ["present","vacation","sick","reserve","absent"];
 // המחלקות של מיכל (לפי תוכנית המפעל). ניתן לשייך עובד לכל אחת מהן.
-const DEPARTMENTS = ["מחסן תוצג","מחסן גלם","בית מלאכה","אריזה","יצור","מטבח","טיגון","ירקות","משרד","נהג","מפעל חומוס","שטיפת כלים","אחזקה"];
+const DEPARTMENTS = ["מחסן תוצג","מחסן גלם","אריזה","יצור","מטבח","טיגון","ירקות","משרד","נהג","מפעל חומוס","שטיפת כלים","אחזקה"];
+// כלל אוטומטי: בימים מסוימים עובדים מסוימים משויכים אוטומטית למחלקה (גובר על השיוך הרגיל לאותו יום).
+// days לפי JS: 0=ראשון,1=שני,2=שלישי,3=רביעי,4=חמישי,5=שישי,6=שבת. שני-רביעי = [1,2,3].
+// מארק=283, אמדי=344 (מזוהים לפי מזהה). אילנה לפי שם (עד שנזהה מזהה).
+const DEPT_RULES = [
+  { uids:["283","344"], names:["אילנה"], days:[1,2,3], dept:"מפעל חומוס" }
+];
+function ruleDept(uid,name,dow){
+  for(const r of DEPT_RULES){ if(r.days.includes(dow) && (r.uids.includes(String(uid))||r.names.includes(name))) return r.dept; }
+  return null;
+}
+function dowOf(ds){ const p=String(ds||today()).split("-").map(Number);
+  return (p.length===3 && !isNaN(p[0])) ? new Date(p[0],p[1]-1,p[2]).getDay() : new Date().getDay(); }
 const $ = (id)=>document.getElementById(id);
 
 let attToken=null, attClient=null, filter="";
@@ -335,12 +347,14 @@ async function loadData(){
 
 function buildState(date){
   const punch=punchesByDate[date]||{}, over=overridesByDate[date]||{}, notes=notesByDate[date]||{};
+  const dow=dowOf(date);
   const employees=[], hidden=[];
   Object.keys(roster).forEach(uid=>{
     const meta=empMeta[uid]||{};
     const active=(meta.active==null)?1:meta.active;
     const name=meta.name||roster[uid];
-    const dept=meta.dept||"";
+    let dept=meta.dept||"";
+    const rd=ruleDept(uid,name,dow); if(rd) dept=rd;   // כלל יום-בשבוע גובר על השיוך הרגיל
     if(!active){ hidden.push({uid,name,dept}); return; }
     const p=punch[uid];
     const nt=notes[uid]||{};
