@@ -170,6 +170,8 @@ const STATUS = {
   sick:{l:"מחלה",c:"s-sick"}, reserve:{l:"מילואים",c:"s-reserve"}, absent:{l:"נעדר",c:"s-absent"}
 };
 const ORDER = ["present","vacation","sick","reserve","absent"];
+// המחלקות של מיכל (לפי תוכנית המפעל). ניתן לשייך עובד לכל אחת מהן.
+const DEPARTMENTS = ["מחסן תוצג","מחסן גלם","בית מלאכה","אריזה","יצור","מטבח","טיגון","ירקות","משרד"];
 const $ = (id)=>document.getElementById(id);
 
 let attToken=null, attClient=null, filter="";
@@ -281,8 +283,12 @@ function buildState(date){
     const dept=meta.dept||"";
     if(!active){ hidden.push({uid,name,dept}); return; }
     const p=punch[uid];
+    const nt=notes[uid]||{};
     const status=over[uid]||(p?"present":"absent");
-    employees.push({uid,name,dept,status,note:notes[uid]||{},
+    // "tracked" = עובד פעיל שבאמת קשור ליום: הוחתם בשעון, או שמיכל סימנה לו משהו
+    // (חופש/מחלה/סטטוס/איחור/יציאה). עובדי-רשימה ישנים שלא מחתימים ואין להם סימון — לא מוצגים.
+    const tracked=!!p || (over[uid]!=null) || !!(nt.late||nt.early);
+    employees.push({uid,name,dept,status,note:nt,tracked,
       first_in:p?p.first_in:null, last_out:p?p.last_out:null});
   });
   employees.sort((a,b)=>a.name.localeCompare(b.name,"he"));
@@ -429,32 +435,33 @@ function render(){
   $("sub").textContent = Object.keys(roster).length
     ? "מתעדכן מהשעון בתחילת כל יום"
     : "ממתין לנתונים הראשונים מהשעון (מחשב המפעל) — יופיעו כאן אוטומטית";
-  const depts=[]; // מחלקות נגזרות מהעובדים (מה שכבר שויך)
-  const seen={}; Object.values(empMeta).forEach(m=>{ if(m.dept&&!seen[m.dept]){seen[m.dept]=1;depts.push(m.dept);} });
-  depts.sort((a,b)=>a.localeCompare(b,"he"));
+  const depts=DEPARTMENTS.slice(); // 9 המחלקות הקבועות + כל מחלקה שכבר שויכה וטרם ברשימה
+  Object.values(empMeta).forEach(m=>{ if(m.dept&&!depts.includes(m.dept)) depts.push(m.dept); });
 
   const f=filter.trim();
-  const match=e=>!f||(e.name||"").includes(f);
+  const match=e=>(e.name||"").includes(f);
   const emps=st.employees;
-  const present=emps.filter(e=>e.status==="present");
-  const absent=emps.filter(e=>e.status!=="present");
+  // ללא חיפוש: מציגים רק "מועסקים" — מי שהוחתם בשעון או שמיכל סימנה לו משהו ליום.
+  // עם חיפוש: מציגים כל התאמה (כדי שאפשר יהיה למצוא כל עובד ולתת לו חופש/מחלקה).
+  const pool = f ? emps.filter(match) : emps.filter(e=>e.tracked);
+  const present=pool.filter(e=>e.status==="present");
+  const absent=pool.filter(e=>e.status!=="present");
 
   $("present").textContent=present.length;
-  $("total").textContent=emps.length;
+  $("total").textContent=pool.length;
   $("lastpull").textContent = lastPull ? ("עודכן מהשעון: "+lastPull) : "טרם נמשך מהשעון";
 
   const counts={}; ORDER.forEach(s=>counts[s]=0);
-  emps.forEach(e=>counts[e.status]=(counts[e.status]||0)+1);
+  pool.forEach(e=>counts[e.status]=(counts[e.status]||0)+1);
   $("chips").innerHTML=ORDER.filter(s=>s!=="present"&&counts[s])
     .map(s=>`<span class="chip">${STATUS[s].l}: ${counts[s]}</span>`).join("");
 
-  const pf=present.filter(match), af=absent.filter(match);
-  $("cntPresent").textContent=pf.length;
-  $("cntAbsent").textContent=af.length;
-  $("listPresent").innerHTML=pf.length?pf.map(e=>empRow(e,depts)).join("")
-    :`<div class="empty">${f?"אין נוכחים בסינון הזה":"אין נוכחים"}</div>`;
-  $("listAbsent").innerHTML=af.length?af.map(e=>empRow(e,depts)).join("")
-    :`<div class="empty">${f?"אין תוצאות בסינון הזה":"אין"}</div>`;
+  $("cntPresent").textContent=present.length;
+  $("cntAbsent").textContent=absent.length;
+  $("listPresent").innerHTML=present.length?present.map(e=>empRow(e,depts)).join("")
+    :`<div class="empty">${f?"אין נוכחים בסינון הזה":"אין נוכחים עדיין היום"}</div>`;
+  $("listAbsent").innerHTML=absent.length?absent.map(e=>empRow(e,depts)).join("")
+    :`<div class="empty">${f?"אין תוצאות בסינון הזה":"אין היעדרויות מסומנות ליום זה"}</div>`;
 
   const hf=st.hidden.filter(match);
   $("cntHidden").textContent=st.hidden.length;
