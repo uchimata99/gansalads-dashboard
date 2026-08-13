@@ -218,6 +218,7 @@ let empMeta={};           // uid -> {name,dept,active}
 let overridesByDate={};   // date -> uid -> status
 let notesByDate={};       // date -> uid -> {late:"HH:MM", early:"HH:MM"} — הודעות איחור/יציאה מוקדמת
 let dayEdit=null;         // uid של השורה שפתחה את עורך היום (חופש/איחור), אחת בכל רגע
+let metaDirty={};         // uid -> {name,dept,active} ששונו מקומית וטרם אושרו מהגיליון (מונע "קפיצה" ברענון)
 let mapPos={};            // dept -> {x,y} מיקום התווית במפה (אחוזים), נשמר ב-MAP_POS
 let view="list";          // "list" | "map"
 let mapOpenDept=null;     // מחלקה שנפתחה על המפה (מציגה מי בה)
@@ -303,6 +304,14 @@ async function loadData(){
     if(d>lastPull) lastPull=d; });
   dropHeader(ms,'timestamp').forEach(r=>{ const uid=r[1]; if(!uid) return;   // last per uid wins
     empMeta[uid]={name:r[2]||'', dept:r[3]||'', active:(r[4]===''||r[4]==null)?1:Number(r[4])}; });
+  // שכבת "שינויים מקומיים שטרם אושרו": אם הגיליון עדיין לא מכיל שינוי שנעשה זה עתה
+  // (מחלקה/סטטוס/הסתרה), משאירים את הערך המקומי כדי שלא "יקפוץ" חזרה ברענון. מנקים כשאושר.
+  Object.keys(metaDirty).forEach(uid=>{
+    const w=metaDirty[uid], g=empMeta[uid];
+    const same=g && (g.name||'')===w.name && (g.dept||'')===w.dept && Number(g.active==null?1:g.active)===Number(w.active);
+    if(same) delete metaDirty[uid];
+    else empMeta[uid]={name:w.name, dept:w.dept, active:w.active};
+  });
   dropHeader(os,'timestamp').forEach(r=>{ const d=r[1],uid=r[2]; if(!d||!uid) return;   // last per (date,uid)
     (overridesByDate[d]=overridesByDate[d]||{})[uid]=r[3]||'absent'; });
   // NOTES: [timestamp, date, uid, kind, val] — kind=late/early/clear; last-per-(date,uid,kind) גובר לפי סדר השורות
@@ -341,6 +350,7 @@ function buildState(date){
 function nowTs(){ return new Date().toISOString().slice(0,19).replace("T"," "); }
 async function writeMeta(uid){
   const m=empMeta[uid]||{name:roster[uid]||'',dept:'',active:1};
+  metaDirty[uid]={name:m.name||roster[uid]||'', dept:m.dept||'', active:(m.active==null?1:m.active)};   // סימון "טרם אושר"
   try{ await sheetAppend(T_META, [[nowTs(), uid, m.name||roster[uid]||'', m.dept||'', String(m.active==null?1:m.active)]]); }
   catch(e){ alert("השמירה נכשלה: "+e.message); }
 }
@@ -367,6 +377,7 @@ async function commitDel(){
   const ts=nowTs(), rows=[];
   delSel.forEach(uid=>{
     const m=empMeta[uid]||{dept:'',active:1}; m.name=m.name||roster[uid]||''; m.active=0; empMeta[uid]=m;
+    metaDirty[uid]={name:m.name, dept:m.dept||'', active:0};   // סימון "טרם אושר"
     rows.push([ts, uid, m.name, m.dept||'', '0']);
   });
   delMode=false; delSel.clear(); render();
