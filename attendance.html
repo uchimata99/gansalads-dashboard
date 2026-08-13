@@ -108,6 +108,7 @@
         <span class="muted" id="lastpull"></span>
       </div>
       <div class="row" style="gap:8px">
+        <span class="muted" id="refAt"></span>
         <button class="btn-soft" id="delToggleBtn" onclick="delToggle()">🗑️ מחק כמה</button>
         <button class="btn-green" id="pull">רענן</button>
       </div>
@@ -199,7 +200,9 @@ function gsAfterToken(){
     document.documentElement.classList.remove('locked');
     const l=$("gsLock"); if(l) l.style.display='none';
     if(!$("date").value) $("date").value=today();
-    render();
+    render(); stampRefresh();
+    if(autoTimer) clearInterval(autoTimer);
+    autoTimer=setInterval(silentRefresh, 90000);   // רענון שקט כל דקה וחצי
   }).catch(err=>{
     attToken=null; try{ sessionStorage.removeItem(ATT_TOKEN_KEY); }catch(e){}
     gsShowErr('אין הרשאה לגיליון עם החשבון הזה. התחבר עם החשבון המורשה.');
@@ -314,9 +317,20 @@ async function setStatus(uid,status){
   try{ await sheetAppend(T_OVER, [[nowTs(), d, uid, status]]); }
   catch(e){ alert("השמירה נכשלה: "+e.message); }
 }
+function stampRefresh(){ const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const el=$("refAt"); if(el) el.textContent="עודכן "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds()); }
+
 async function refresh(){ $("pull").textContent="מרענן…"; $("pull").disabled=true;
   try{ await loadData(); }catch(e){ alert("הרענון נכשל: "+e.message); }
-  $("pull").textContent="רענן"; $("pull").disabled=false; render(); }
+  $("pull").textContent="רענן"; $("pull").disabled=false; render(); stampRefresh(); }
+
+// רענון שקט אוטומטי — כדי שעובדים שמחתימים כרטיס יופיעו לבד, בלי ללחוץ.
+// מדלג בזמן מצב מחיקה (כדי לא לאבד סימונים) ואם אין אסימון.
+let autoTimer=null;
+async function silentRefresh(){
+  if(delMode || !attToken) return;
+  try{ await loadData(); render(); stampRefresh(); }catch(e){}
+}
 
 // ---- תצוגה ----
 function empRow(e, depts){
