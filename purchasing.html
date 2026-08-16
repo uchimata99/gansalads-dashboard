@@ -905,7 +905,7 @@ const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם �
 // שליחה מיידית — כתובת שירות Cloud Run (מאזין תמיד, שולח בשניות). ריק = כבוי, ואז
 // ההזמנה רק ממתינה בתור וה-GitHub Action מפיץ אותה כל כמה דקות (התנהגות ישנה).
 // מלא = אחרי הכתיבה לתור, האפליקציה קוראת לשירות שמפיץ מיד. ראה DEPLOY_CLOUDRUN.md במנוע.
-const SEND_URL='';
+const SEND_URL='https://gansalads-send-535307633607.me-west1.run.app';
 // מפעיל את השירות המיידי (אם הוגדר SEND_URL). מחזיר true אם ההפצה יצאה עכשיו.
 async function triggerSend(token){
  if(!SEND_URL)return false;
