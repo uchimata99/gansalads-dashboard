@@ -44,13 +44,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
 @media(min-width:1200px){
   /* קטלוג/אריזות/קטגוריות: כרטיסים בכמה טורים שממלאים את רוחב המסך (כמו המכרז).
      סלקטור לפי id כדי לגבור על ‎.ilist{display:flex}‎ הבסיסי שמוגדר אחריו בקובץ. */
-  #itemsTab .ilist,#packTab .ilist,#spiceTab .ilist,#cannedTab .ilist,#coldTab .ilist{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:10px}
+  #itemsTab .ilist,#packTab .ilist,#spiceTab .ilist,#cannedTab .ilist,#coldTab .ilist,#peelTab .ilist{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:10px}
   #veg .srows,#peel .srows{gap:9px}
   #veg .vrow,#peel .vrow{padding:10px 15px;gap:9px}
   #veg .vr-name,#peel .vr-name{font-size:16.5px}
   #veg .vr-last,#peel .vr-last{font-size:13px}
   #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off{padding:8px 8px;font-size:16px}
-  #veg .vr-unit,#peel .vr-unit{padding:8px 4px;font-size:16px}
+  #veg .vr-unit,#peel .vr-unit{padding:8px 4px;font-size:16px;width:92px}
   #veg .vpick,#peel .vpick{font-size:13.5px}
   #veg .scol-h select,#peel .scol-h select{font-size:16.5px;padding:10px 12px}
   #veg .note,#peel .note{font-size:13.5px;padding:11px 16px}
@@ -302,15 +302,21 @@ body{background:#f5f2ec}
 .vr-name{flex:1 1 82px;min-width:0;font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 /* כמות + יחידה מקובצות יחד (היחידה צמודה לכמות) */
 .qu-grp{display:flex;align-items:center;gap:3px;flex:0 0 auto}
-/* כמות · מחיר · יחידה — אותו גודל פונט */
-.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
-.vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
+/* כמות · יחידה · מחיר — אותו גודל פונט, וצבע שונה לכל אחד כדי להבדיל בקלות:
+   כמות = כחול · יחידה = סגול · מחיר = זהב/כתום */
+.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto;border:1.5px solid var(--blue);background:var(--blue-l);color:var(--blue)}
+.vqty::placeholder{color:var(--blue);opacity:.7}
+.vqty:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,90,136,.2)}
 .vr-last{font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
-.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px;font-size:13px;font-family:'IBM Plex Mono',monospace}
-.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
+.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;border:1.5px solid var(--gold);background:var(--gold-l);color:#8a6608}
+.vr-off::placeholder{color:#8a6608;opacity:.7}
+.vr-off:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.2)}
+.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid var(--purple);background:var(--purple-l);color:var(--purple)}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
+/* המחיר הזול ביותר בשורה — ירוק (גובר על הזהב הרגיל) */
+.vrow.vcheap .vr-off{border-color:var(--green);background:var(--green-l);color:var(--green);font-weight:700}
 .vrow.vchosen{outline:2.5px solid var(--gold);outline-offset:-2px}
 .vrow.vlastbuy .vr-name{color:var(--gold)}
 .vr-name .vbuy{background:none;padding:0;font-size:12px}
@@ -435,10 +441,13 @@ body{background:#f5f2ec}
  <!-- ============ מכרז ירקות קלופים ============ -->
  <div class="page" id="peel">
   <div class="card">
+   <div class="card-t"><span>ירקות קלופים — הזיני כמות ובחרי ספק</span><span class="lbl" id="peelCount"></span></div>
+   <div class="ctrl"><input id="plSearch" placeholder="🔍 חיפוש פריט…" style="min-width:200px" autocomplete="off"></div>
    <div class="scroll" id="peelTab"><div class="empty">טוען…</div></div>
    <div class="cartbar">
-    <button class="btn blue" onclick="savePeel()">💾 שמור מכרז</button>
-    <button class="btn ghost sm" onclick="aucAddCol(AUC.peel)">➕ הוסף ספק</button>
+    <span>בהזמנה: <b class="cbc">0</b> פריטים · <b class="cbs">0</b> ספקים</span>
+    <button class="btn sm" onclick="sendToCart()">🛒 שלח לסל</button>
+    <button class="btn ghost sm" onclick="clearOrder()">נקה הכול</button>
    </div>
   </div>
  </div>
@@ -636,7 +645,7 @@ function tab(p){
  if(p==='cart')renderCart();
  if(p==='hist')loadHistory(false);
  if(p==='veg'){renderVeg();loadVegHist(false).then(renderVeg);}
- if(p==='peel'){renderPeel();loadPeelHist(false).then(renderPeel);}
+ if(p==='peel')renderPeel();
  if(p==='pack')renderPack();
  {const ct=CAT_TABS.find(x=>x.p===p);if(ct)renderCatTab(ct);}
  if(p==='map')renderMap();
@@ -671,6 +680,7 @@ function startApp(){
  setTxt('hdrRange',(ITEMS.length+ITEMS_VEG.length)+' פריטים · '+Object.keys(CAT.suppliers||{}).length+' ספקים');
  ['fSearch','fSup','fInOrder'].forEach(id=>document.getElementById(id).addEventListener('input',renderItems));
  document.getElementById('pkSearch').addEventListener('input',renderPack);
+ {const pl=document.getElementById('plSearch');if(pl)pl.addEventListener('input',renderPeel);}
  CAT_TABS.forEach(t=>{const el=document.getElementById(t.srch);if(el)el.addEventListener('input',()=>renderCatTab(t));});
  initMapSel();
  document.getElementById('hSearch').addEventListener('input',renderHist);
@@ -840,7 +850,8 @@ function updateCartBar(){
 // (לא מנווט לסל, כדי שאפשר להמשיך להזמין). לסל עוברים דרך פס הניווט "סל ההזמנה".
 function sendToCart(){
  const n=Object.keys(ORDER).filter(k=>ORDER[k].qty>0).length;
- toast(n?('✓ בסל: '+n+' פריטים'):'עדיין לא הוזנה כמות');
+ if(!n){toast('עדיין לא הוזנה כמות');return;}
+ toast('✓ '+n+' פריטים בסל · לשליחה לספקים: פתחי "סל ההזמנה" ולחצי "שלח הזמנה"');
 }
 function clearOrder(){
  if(Object.keys(ORDER).length && !confirm('לנקות את כל ההזמנה הנוכחית?'))return;
@@ -874,26 +885,30 @@ function renderCart(){
   let chips;
   if(none||(!ph&&!em)){chips='<span class="pill po">ללא פרטי קשר — לא יישלח לספק</span>';nNoContact+=lines.length;}
   else chips=(ph?'<span class="pill pb">📲 וואטסאפ</span> ':'')+(em?'<span class="pill pb">✉️ מייל</span>':'');
-  cards+='<div class="sup-card"><div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span><span>'+chips+'</span></div>'+
+  const sendBtn='<button class="btn sm" style="margin-inline-start:8px" onclick="sendOrder(&#39;'+esc(sk)+'&#39;)">📤 שלח לספק זה</button>';
+  cards+='<div class="sup-card"><div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span><span>'+chips+sendBtn+'</span></div>'+
      '<table><thead><tr><th>פריט</th><th>מפתח</th><th>כמות</th></tr></thead><tbody>';
   lines.forEach(l=>{cards+='<tr><td>'+esc(l.n)+'</td><td class="num">'+esc(l.k)+'</td><td class="num">'+fmtQty(l.qty)+'</td></tr>';});
   cards+='</tbody></table></div>';
  });
  const warn=nNoContact?(' <b>שימי לב:</b> '+nNoContact+' פריטים ללא ספק/פרטי קשר — ייכללו באקסל למשרד ובהזמנה למפעל, אך לא יישלחו לספק.'):'';
  const head='<div class="card"><div class="card-t"><span>סיכום ההזמנה — '+nItems+' פריטים · '+keys.length+' ספקים</span></div>'+
-   '<div class="note">לחיצה על <b>"שלח הזמנה"</b> שולחת בבת אחת: לכל ספק את הזמנתו (וואטסאפ + מייל לפי הזמין), למפעל את ההזמנה המלאה בוואטסאפ, ול-<b>office@gansalads.co.il</b> את כל הסל כקובץ אקסל.'+warn+'</div>'+
-   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הזמנה</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
+   '<div class="note">אפשר לשלוח <b>כל ספק בנפרד</b> (כפתור "📤 שלח לספק זה" בכל כרטיס) או את <b>כל ההזמנה יחד</b> (כפתור "שלח הכל" למטה). כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד קובץ אקסל.'+warn+'</div>'+
+   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
  wrap.innerHTML=head+cards;
 }
 const ORDER_TAB='ORDER_QUEUE';
 const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס'];
 // שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
-async function sendOrder(){
+// שליחה: בלי ארגומנט = כל הסל; עם onlySup = רק ההזמנה של ספק אחד (שליחה בנפרד)
+async function sendOrder(onlySup){
  const map=orderBySupplier();
- const keys=Object.keys(map);
+ let keys=Object.keys(map);
+ if(onlySup!==undefined){ if(!map[onlySup]){toast('אין פריטים לספק זה');return;} keys=[onlySup]; }
  if(!keys.length){toast('הסל ריק');return;}
  let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
- if(!confirm('לשלוח את ההזמנה?\n'+nItems+' פריטים · '+keys.length+' ספקים\nכל ספק יקבל וואטסאפ+מייל, המפעל יקבל את ההזמנה המלאה, והמשרד יקבל אקסל.'))return;
+ const who=onlySup!==undefined?('לספק '+(onlySup==='__none__'?'ללא ספק':supName(onlySup))):('ל-'+keys.length+' ספקים');
+ if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\nכל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
  const now=new Date();
  const pad=n=>String(n).padStart(2,'0');
  const ds=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -908,8 +923,9 @@ async function sendOrder(){
   const token=await ensureWriteToken();
   await ensureTab(ORDER_TAB,ORDER_HEADER,token);
   await appendRaw(ORDER_TAB,rows,token);
-  toast('ההזמנה נשלחה לעיבוד — תופץ תוך דקות (וואטסאפ + מייל + אקסל)');
-  ORDER={};renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
+  toast('✓ ההזמנה נשלחה לעיבוד '+who+' — תופץ תוך דקות');
+  keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.k]));   // מסירים מהסל רק את מה שנשלח
+  renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
  }catch(e){console.error(e);toast('לא ניתן לשלוח (ייתכן שחסרה הרשאת עריכה)');}
 }
 function fmtQty(q){return Number(q).toLocaleString('en-US',{maximumFractionDigits:3});}
@@ -1407,9 +1423,15 @@ async function saveMapSup(){
 function renderVeg(){aucRender(AUC.veg);}
 function loadVegHist(f){return aucLoad(AUC.veg,f);}
 function saveVeg(){return aucSave(AUC.veg);}
-function renderPeel(){aucRender(AUC.peel);}
-function loadPeelHist(f){return aucLoad(AUC.peel,f);}
-function savePeel(){return aucSave(AUC.peel);}
+// ירקות קלופים — רשימת הזמנה רגילה (לא מכרז): כמות + בורר ספק, זורם לסל
+function renderPeel(){
+ const q=(document.getElementById('plSearch')&&document.getElementById('plSearch').value||'').trim();
+ const arr=(ITEMS_PEEL||[]).filter(it=>!q||((it.n+' '+it.k).indexOf(q)>=0));
+ renderItemCards(arr,'peelTab','peelCount');
+}
+// עטיפות תאימות ישנות (המכרז הוסר מהקלופים) — נשארות כדי לא לשבור קריאות
+function loadPeelHist(f){return Promise.resolve();}
+function savePeel(){return renderPeel();}
 function downloadBackup(sk,rows,oid){
  const nm=sk==='__none__'?'ללא_ספק':supName(sk);
  const csv='﻿'+['תאריך','מזהה','מפתח ספק','ספק','מפתח פריט','פריט','כמות','מחיר אחרון','הערכת עלות'].join(',')+'\n'+
@@ -1423,21 +1445,24 @@ async function loadHistory(force){
  if(HIST&&!force){renderHist();return;}
  const box=document.getElementById('histTab');box.innerHTML='<div class="empty">טוען…</div>';
  try{
-  const range=encodeURIComponent(HIST_TAB+'!A:I');
+  // ההיסטוריה נקראת מ-ORDER_QUEUE — שם נשמרות ההזמנות שנשלחו (עם סטטוס).
+  // עמודות: [מזהה, תאריך, מפתח ספק, שם ספק, טלפון, מייל, מפתח פריט, שם פריט, כמות, יחידה, סטטוס]
+  const range=encodeURIComponent(ORDER_TAB+'!A:K');
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+purchToken}});
   if(!r.ok)throw new Error('hist '+r.status);
   const j=await r.json();
   const vals=j.values||[];
-  // דילוג על שורת כותרת אם קיימת (עמודה 7 לא-מספרית)
-  HIST=vals.filter(row=>row&&row.length>=6&&!isNaN(parseFloat(row[6]))).map(row=>({
-   date:row[0]||'',oid:row[1]||'',supK:row[2]||'',sup:row[3]||'',itemK:row[4]||'',item:row[5]||'',qty:row[6]||'',price:row[7]||'',cost:row[8]||''
+  // דילוג על שורת כותרת (עמודת הכמות, אינדקס 8, לא-מספרית בכותרת)
+  HIST=vals.filter(row=>row&&row.length>=9&&!isNaN(parseFloat(row[8]))).map(row=>({
+   oid:row[0]||'',date:row[1]||'',supK:row[2]||'',sup:row[3]||'',itemK:row[6]||'',item:row[7]||'',qty:row[8]||'',unit:row[9]||'',status:row[10]||''
   }));
   renderHist();
  }catch(err){
   console.error(err);
-  document.getElementById('histTab').innerHTML='<div class="empty">לא ניתן לטעון היסטוריה (ייתכן שהלשונית '+HIST_TAB+' עדיין ריקה, או שאין הרשאת קריאה).</div>';
+  document.getElementById('histTab').innerHTML='<div class="empty">לא ניתן לטעון היסטוריה (ייתכן שעדיין לא נשלחו הזמנות, או שאין הרשאת קריאה).</div>';
  }
 }
+function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
 function renderHist(){
  if(!HIST)return;
  const q=document.getElementById('hSearch').value.trim();
@@ -1445,9 +1470,9 @@ function renderHist(){
  let rows=HIST.slice().reverse(); // אחרונות למעלה
  if(q)rows=rows.filter(r=>(r.item+' '+r.itemK).indexOf(q)>=0);
  if(sup)rows=rows.filter(r=>r.supK===sup);
- if(!rows.length){document.getElementById('histTab').innerHTML='<div class="empty">'+(HIST.length?'אין תוצאות לסינון':'עדיין אין הזמנות שמורות')+'</div>';return;}
- let h='<table><thead><tr><th>תאריך</th><th>הזמנה</th><th>ספק</th><th>פריט</th><th>מפתח</th><th>כמות</th><th>מחיר אחרון</th><th>עלות</th></tr></thead><tbody>';
- rows.forEach(r=>{h+='<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.oid)+'</td><td>'+esc(r.sup)+'</td><td>'+esc(r.item)+'</td><td class="num">'+esc(r.itemK)+'</td><td class="num">'+esc(r.qty)+'</td><td class="num">'+(r.price?P2(r.price):'—')+'</td><td class="num">'+(r.cost?P2(r.cost):'—')+'</td></tr>';});
+ if(!rows.length){document.getElementById('histTab').innerHTML='<div class="empty">'+(HIST.length?'אין תוצאות לסינון':'עדיין אין הזמנות שנשלחו')+'</div>';return;}
+ let h='<table><thead><tr><th>תאריך</th><th>הזמנה</th><th>ספק</th><th>פריט</th><th>מפתח</th><th>כמות</th><th>יחידה</th><th>סטטוס</th></tr></thead><tbody>';
+ rows.forEach(r=>{h+='<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.oid)+'</td><td>'+esc(r.sup||'—')+'</td><td>'+esc(r.item)+'</td><td class="num">'+esc(r.itemK)+'</td><td class="num">'+esc(r.qty)+'</td><td>'+esc(r.unit)+'</td><td>'+statusLabel(r.status)+'</td></tr>';});
  document.getElementById('histTab').innerHTML=h+'</tbody></table>';
 }
 
