@@ -902,6 +902,18 @@ function renderCart(){
 }
 const ORDER_TAB='ORDER_QUEUE';
 const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס'];
+// שליחה מיידית — כתובת שירות Cloud Run (מאזין תמיד, שולח בשניות). ריק = כבוי, ואז
+// ההזמנה רק ממתינה בתור וה-GitHub Action מפיץ אותה כל כמה דקות (התנהגות ישנה).
+// מלא = אחרי הכתיבה לתור, האפליקציה קוראת לשירות שמפיץ מיד. ראה DEPLOY_CLOUDRUN.md במנוע.
+const SEND_URL='https://gansalads-send-535307633607.me-west1.run.app';
+// מפעיל את השירות המיידי (אם הוגדר SEND_URL). מחזיר true אם ההפצה יצאה עכשיו.
+async function triggerSend(token){
+ if(!SEND_URL)return false;
+ try{
+  const r=await fetch(SEND_URL,{method:'POST',headers:{Authorization:'Bearer '+token}});
+  return r.ok;
+ }catch(e){console.error('triggerSend',e);return false;}
+}
 // שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
 // שליחה: בלי ארגומנט = כל הסל; עם onlySup = רק ההזמנה של ספק אחד (שליחה בנפרד)
 async function sendOrder(onlySup){
@@ -926,7 +938,9 @@ async function sendOrder(onlySup){
   const token=await ensureWriteToken();
   await ensureTab(ORDER_TAB,ORDER_HEADER,token);
   await appendRaw(ORDER_TAB,rows,token);
-  toast('✓ ההזמנה נשלחה לעיבוד '+who+' — תופץ תוך דקות');
+  const now=await triggerSend(token);   // שליחה מיידית אם השירות מוגדר
+  toast(now?('✓ ההזמנה נשלחה '+who+' — יצאה עכשיו')
+           :('✓ ההזמנה נשלחה לעיבוד '+who+' — תופץ תוך דקות'));
   keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.k]));   // מסירים מהסל רק את מה שנשלח
   renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
  }catch(e){console.error(e);toast('לא ניתן לשלוח (ייתכן שחסרה הרשאת עריכה)');}
