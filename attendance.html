@@ -280,7 +280,7 @@ function gsAfterToken(){
 
 // ---- קריאה/כתיבה לגיליון ----
 async function sheetGet(tab){
-  const range=encodeURIComponent(tab+'!A:E');
+  const range=encodeURIComponent(tab+'!A:J');   // רחב — חלק מהשורות "הוזזו" ימינה; rowAt מאתר את ההתחלה
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+'/values/'+range,
     {headers:{Authorization:'Bearer '+attToken}});
   if(r.status===400) return [];   // לשונית עדיין לא קיימת — נחשב כריקה
@@ -310,6 +310,10 @@ async function sheetAppend(tab, rows){
 }
 
 function dropHeader(rows, first){ return (rows.length && String(rows[0][0]||'').toLowerCase()===first) ? rows.slice(1) : rows; }
+// חלק משורות EMP_META (ואולי אחרות) נכתבו בעמודות מוזזות ימינה. rowAt מאתר את תחילת
+// השורה האמיתית לפי חותמת-הזמן (YYYY-MM-DD...), כך שהקריאה עובדת בין אם השורה מיושרת ובין אם הוזזה.
+function rowAt(r){ let s=0; while(s<r.length && !/^\d{4}-\d\d-\d\d/.test(String(r[s]||''))) s++;
+  return s<r.length ? r.slice(s) : r; }
 
 async function loadData(){
   const [rs, ps, ms, os, ns, mp] = await Promise.all([
@@ -320,7 +324,7 @@ async function loadData(){
   dropHeader(ps,'date').forEach(r=>{ const d=r[0],uid=r[1]; if(!d||!uid) return;
     (punchesByDate[d]=punchesByDate[d]||{})[uid]={first_in:r[2]||null,last_out:r[3]||null};
     if(d>lastPull) lastPull=d; });
-  dropHeader(ms,'timestamp').forEach(r=>{ const uid=r[1]; if(!uid) return;   // last per uid wins
+  dropHeader(ms,'timestamp').forEach(r0=>{ const r=rowAt(r0); const uid=r[1]; if(!uid) return;   // last per uid wins
     empMeta[uid]={name:r[2]||'', dept:r[3]||'', active:(r[4]===''||r[4]==null)?1:Number(r[4])}; });
   // שכבת "שינויים מקומיים שטרם אושרו": אם הגיליון עדיין לא מכיל שינוי שנעשה זה עתה
   // (מחלקה/סטטוס/הסתרה), משאירים את הערך המקומי כדי שלא "יקפוץ" חזרה ברענון. מנקים כשאושר.
@@ -330,14 +334,14 @@ async function loadData(){
     if(same) delete metaDirty[uid];
     else empMeta[uid]={name:w.name, dept:w.dept, active:w.active};
   });
-  dropHeader(os,'timestamp').forEach(r=>{ const d=r[1],uid=r[2]; if(!d||!uid) return;   // last per (date,uid)
+  dropHeader(os,'timestamp').forEach(r0=>{ const r=rowAt(r0); const d=r[1],uid=r[2]; if(!d||!uid) return;   // last per (date,uid)
     (overridesByDate[d]=overridesByDate[d]||{})[uid]=r[3]||'absent'; });
   // NOTES: [timestamp, date, uid, kind, val] — kind=late/early/clear; last-per-(date,uid,kind) גובר לפי סדר השורות
-  dropHeader(ns,'timestamp').forEach(r=>{ const d=r[1],uid=r[2],kind=r[3],val=r[4]||''; if(!d||!uid||!kind) return;
+  dropHeader(ns,'timestamp').forEach(r0=>{ const r=rowAt(r0); const d=r[1],uid=r[2],kind=r[3],val=r[4]||''; if(!d||!uid||!kind) return;
     const o=((notesByDate[d]=notesByDate[d]||{})[uid]=notesByDate[d][uid]||{});
     if(kind==='clear'){ o.late=''; o.early=''; } else o[kind]=val; });
   // MAP_POS: [timestamp, dept, x, y] — מיקום תווית מחלקה במפה, אחרון-פר-מחלקה גובר
-  dropHeader(mp,'timestamp').forEach(r=>{ const dept=r[1]; if(!dept) return;
+  dropHeader(mp,'timestamp').forEach(r0=>{ const r=rowAt(r0); const dept=r[1]; if(!dept) return;
     const x=Number(r[2]), y=Number(r[3]); if(!isNaN(x)&&!isNaN(y)) mapPos[dept]={x,y}; });
   // שכבת גרירה שטרם אושרה — כדי שתווית שגררת לא "תקפוץ" חזרה ברענון לפני שהשמירה נקלטה
   Object.keys(mapDirty).forEach(dp=>{ const w=mapDirty[dp], g=mapPos[dp];
