@@ -1358,6 +1358,9 @@ function buildDivergence(){
   const yRange=(...series)=>{let lo=1e9,hi=-1e9;series.forEach(a=>a.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));const pad=Math.max(1,(hi-lo)*0.15);return{min:Math.floor(lo-pad),max:Math.ceil(hi+pad)};};
   const opt=yr=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+c.raw.toFixed(1)}}},
     scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,min:yr.min,max:yr.max,ticks:{...tickOpts,callback:v=>v}}}});
+  // אפשרות לגרף המניעים — הטולטיפ מציג את הערך האמיתי (ק"ג/אריזה, ₪/ק"ג) ולא את המדד
+  const optDrv=yr=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>{const i=c.dataIndex;return c.datasetIndex===0?(' משקל ממוצע: '+kpp[i].toFixed(2)+' ק"ג לאריזה'):(' מחיר ממוצע: ₪'+vpk[i].toFixed(2)+' לק"ג');}}}},
+    scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,min:yr.min,max:yr.max,ticks:{...tickOpts,callback:v=>v}}}});
   // הצגה מאוחדת — שלושת המדדים מנורמלים
   makeChart('divChart',{type:'line',data:{labels,datasets:[
     {label:'אריזות',data:iP,borderColor:'#16a34a',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#16a34a',borderWidth:2.5},
@@ -1366,7 +1369,7 @@ function buildDivergence(){
   // מניעי הפער — משקל ממוצע ומחיר ממוצע
   makeChart('divDrivers',{type:'line',data:{labels,datasets:[
     {label:'ק"ג לאריזה (משקל ממוצע)',data:iKpp,borderColor:'#7c3aed',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#7c3aed',borderWidth:2.5},
-    {label:'₪ לק"ג (מחיר ממוצע)',data:iVpk,borderColor:'#d97706',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#d97706',borderWidth:2.5}]},options:opt(yRange(iKpp,iVpk))});
+    {label:'₪ לק"ג (מחיר ממוצע)',data:iVpk,borderColor:'#d97706',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#d97706',borderWidth:2.5}]},options:optDrv(yRange(iKpp,iVpk))});
   if(!txt)return;
   // ניתוח — תנודתיות (CV) ומתאמים
   const cv=a=>{const m=mean(a);if(!m)return 0;return Math.sqrt(mean(a.map(x=>(x-m)*(x-m))))/m*100;};
