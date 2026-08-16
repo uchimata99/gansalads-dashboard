@@ -346,7 +346,7 @@ window.addEventListener('load', ()=>{
   </div>
   <div class="grid2 fin-pair">
     <div class="card">
-      <div class="card-title">פילוח קבוצות — אריזות שבועי <span class="card-badge">ריבוד</span></div>
+      <div class="card-title">פילוח קבוצות שבועי <span class="card-badge">חומוס/טחינה · אחר</span></div>
       <div class="cw"><canvas id="groupStackChart"></canvas></div>
     </div>
     <div class="card fin">
@@ -355,7 +355,7 @@ window.addEventListener('load', ()=>{
     </div>
   </div>
   <div class="card">
-    <div class="card-title">התפלגות שבועית — אריזות <span class="card-badge">ממוצע + חציון</span></div>
+    <div class="card-title">התפלגות שבועית <span class="card-badge">ממוצע + חציון</span></div>
     <div class="cw t"><canvas id="distChart"></canvas></div>
   </div>
   <div class="card">
@@ -716,8 +716,15 @@ let currentMetric='pkg';
 function toggleMetric(m){
   currentMetric=m;
   ['pkg','kg','rev'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===m));
-  buildWeeklyTrendChart();
+  buildWeeklyTrendChart(); buildGroupStackChart(); buildDistChart();
 }
+// עזרי מטריקה — צבע/תווית/ערך לפי הבורר (אריזות=ירוק, ק"ג=טורקיז, הכנסות=כחול; שמורים בכל הגרפים)
+function mCol(){return currentMetric==='pkg'?'#16a34a':currentMetric==='kg'?'#0d9488':'#2563a8';}
+function mLbl(){return currentMetric==='pkg'?'אריזות':currentMetric==='kg'?'ק"ג':'הכנסות ₪';}
+function mVal(w){return currentMetric==='pkg'?w.pkg:currentMetric==='kg'?w.kg:w.rev;}
+function mHt(w){return currentMetric==='pkg'?w.ht_pkg:currentMetric==='kg'?w.ht_kg:w.ht_rev;}
+function mOt(w){return currentMetric==='pkg'?w.ot_pkg:currentMetric==='kg'?w.ot_kg:w.ot_rev;}
+function mAxis(v){return currentMetric==='rev'?'₪'+fmt(v):fmt(v);}
 function initSummary(){buildWeeklyTrendChart();buildRevenueChangeTable();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
 // ═══════ חיזוי לשבוע הבא — עמודת "חיזוי" בגרף המגמה הראשי ═══════
 // *** מקור האמת של כללי החיזוי הוא forecast.html *** — FC_NOTES / FC_CUSTOMER_OUT /
@@ -796,18 +803,18 @@ function buildWeeklyTrendChart(){
   let data,label,color;
   if(currentMetric==='pkg'){data=WEEKS.map(w=>w.pkg);label='אריזות';color='#16a34a';}
   else if(currentMetric==='kg'){data=WEEKS.map(w=>w.kg);label='ק"ג';color='#0d9488';}
-  else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#d97706';}
+  else{data=WEEKS.map(w=>w.rev);label='הכנסות ₪';color='#2563a8';}   // הכנסות בכחול — כדי שעמודת החיזוי הכתומה תבלוט
   const bg=WEEKS.map((_,i)=>i===1?color:color+'CC'), bc=WEEKS.map(()=>color);
-  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:currentMetric==='kg'?fc.kg:fc.rev); labels.push('השבוע הקרוב'); data=data.concat([fv]); bg.push(currentMetric==='rev'?'#2563a8':'#f59e0b'); bc.push(currentMetric==='rev'?'#1e4e8c':'#d97706'); }
+  if(fc){ const fv=Math.round(currentMetric==='pkg'?fc.pkg:currentMetric==='kg'?fc.kg:fc.rev); labels.push('השבוע הקרוב'); data=data.concat([fv]); bg.push('#f59e0b'); bc.push('#d97706'); }   // עמודת החיזוי כתומה בכל המצבים
   makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:bc,borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>{const u=currentMetric==='rev'?'₪':'';return c.label==='השבוע הקרוב'?(' חיזוי לשבוע הקרוב: '+u+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+u+fmt(c.raw));}}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
 }
 function buildGroupStackChart(){
   makeChart('groupStackChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),
-    datasets:[{label:'חומוס/טחינה',data:WEEKS.map(w=>w.ht_pkg),backgroundColor:'#16a34a',borderRadius:3},{label:'אחר',data:WEEKS.map(w=>w.ot_pkg),backgroundColor:'#2563a8',borderRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:ttip},
-      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:tickOpts}}}});
+    datasets:[{label:'חומוס/טחינה',data:WEEKS.map(w=>mHt(w)),backgroundColor:'#16a34a',borderRadius:3},{label:'אחר',data:WEEKS.map(w=>mOt(w)),backgroundColor:'#2563a8',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+(currentMetric==='rev'?'₪':'')+fmt(c.raw)}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:tickOpts},y:{stacked:true,grid:gridOpts,ticks:{...tickOpts,callback:v=>mAxis(v)}}}}});
 }
 function buildRevenueChart(){
   makeChart('revenueChart',{type:'line',data:{labels:WEEKS.map(w=>wLabel(w.w)),
@@ -821,14 +828,14 @@ function buildRevenueChart(){
 }
 function buildWeeklyTable(){
   const tbl=document.getElementById('weeklyTable');
-  let html='<thead><tr><th>שבוע</th><th>ימים</th><th>אריזות</th><th>ממוצע/יום</th><th>ק"ג</th><th>ק"ג/ארז</th><th class="fin">הכנסות</th><th class="fin">₪/ק"ג</th><th>הערות</th></tr></thead><tbody>';
+  let html='<thead><tr><th>שבוע</th><th>ימים</th><th class="fin">הכנסות</th><th class="fin">₪/ק"ג</th><th>אריזות</th><th>ממוצע/יום</th><th>ק"ג</th><th>ק"ג/ארז</th><th>הערות</th></tr></thead><tbody>';
   let prev=null;
   WEEKS.forEach(w=>{
-    let chg='';if(prev!==null){const d=((w.pkg-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.pkg;
-    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td><td class="fin">${rev(w.rev)}</td><td class="fin">₪${(w.rev/w.kg).toFixed(2)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
+    let chg='';if(prev!==null){const d=((w.rev-prev)/prev*100).toFixed(1);chg=d>0?`<span class="chg up">▲${d}%</span>`:`<span class="chg dn">▼${Math.abs(d)}%</span>`;}prev=w.rev;
+    html+=`<tr><td>שבוע ${w.w} ${chg}</td><td>${w.days}</td><td class="fin">${rev(w.rev)}</td><td class="fin">₪${(w.rev/w.kg).toFixed(2)}</td><td>${fmtF(w.pkg)}</td><td>${(w.pkg/w.days).toFixed(0)}</td><td>${fmtF(w.kg)}</td><td>${(w.kg/w.pkg).toFixed(2)}</td><td class="hol">${w.hol==='—'?'':w.hol}</td></tr>`;
   });
   const tP=WEEKS.reduce((a,w)=>a+w.pkg,0),tK=WEEKS.reduce((a,w)=>a+w.kg,0),tR=WEEKS.reduce((a,w)=>a+w.rev,0),tD=WEEKS.reduce((a,w)=>a+w.days,0);
-  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(tK)}</td><td>${(tK/tP).toFixed(2)}</td><td class="fin">${rev(tR)}</td><td class="fin">₪${(tR/tK).toFixed(2)}</td><td></td></tr></tbody>`;
+  html+=`<tr class="total"><td>סה"כ</td><td>${tD}</td><td class="fin">${rev(tR)}</td><td class="fin">₪${(tR/tK).toFixed(2)}</td><td>${fmtF(tP)}</td><td>${(tP/tD).toFixed(0)}</td><td>${fmtF(tK)}</td><td>${(tK/tP).toFixed(2)}</td><td></td></tr></tbody>`;
   tbl.innerHTML=html;
 }
 
@@ -1310,15 +1317,16 @@ function subActive(tab){const id=tab==='pkg'?'page-pkg_analysis':'page-kg_analys
 
 // התפלגות השבועות (אריזות, ממוין, עם ממוצע וחציון)
 function buildDistChart(){const el=document.getElementById('distChart');if(!el)return;
-  const arr=WEEKS.map(w=>({w:w.w,v:w.pkg})).sort((a,b)=>a.v-b.v);
+  const arr=WEEKS.map(w=>({w:w.w,v:mVal(w)})).sort((a,b)=>a.v-b.v);
   const mean=arr.reduce((a,x)=>a+x.v,0)/(arr.length||1);
   const med=arr.length?(arr.length%2?arr[(arr.length-1)/2].v:(arr[arr.length/2-1].v+arr[arr.length/2].v)/2):0;
+  const col=mCol();
   makeChart('distChart',{type:'bar',data:{labels:arr.map(x=>'ש'+x.w),datasets:[
-    {label:'אריזות לשבוע',data:arr.map(x=>x.v),backgroundColor:'#16a34aCC',borderColor:'#16a34a',borderWidth:1,borderRadius:4,order:3},
+    {label:mLbl()+' לשבוע',data:arr.map(x=>x.v),backgroundColor:col+'CC',borderColor:col,borderWidth:1,borderRadius:4,order:3},
     {label:'ממוצע',data:arr.map(()=>mean),type:'line',borderColor:'#d97706',borderDash:[6,3],pointRadius:0,borderWidth:2,order:1},
-    {label:'חציון',data:arr.map(()=>med),type:'line',borderColor:'#2563a8',borderDash:[3,3],pointRadius:0,borderWidth:2,order:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}},tooltip:ttip},
-      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>fmt(v)}}}}});}
+    {label:'חציון',data:arr.map(()=>med),type:'line',borderColor:'#7c3aed',borderDash:[3,3],pointRadius:0,borderWidth:2,order:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+(currentMetric==='rev'?'₪':'')+fmt(c.raw)}}},
+      scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>mAxis(v)}}}}});}
 
 // לחיצה על באר שבוע בגרף → החרגה/הוספה
 function weekBarClick(evt,els){if(els&&els.length){const w=WEEKS[els[0].index];if(w)toggleWeek(w.w);}}
