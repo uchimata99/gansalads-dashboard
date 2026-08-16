@@ -355,9 +355,12 @@ function buildState(date){
     const name=meta.name||roster[uid];
     let dept=meta.dept||"";
     const rd=ruleDept(uid,name,dow); if(rd) dept=rd;   // כלל יום-בשבוע גובר על השיוך הרגיל
-    if(!active){ hidden.push({uid,name,dept}); return; }
     const p=punch[uid];
     const nt=notes[uid]||{};
+    // עובד "מחוק" (active=0) שהחתים כרטיס או שסומן ידנית ליום — עדיין מוצג (החתמה גוברת על מחיקה).
+    // רק מי שמחוק ולא החתים ואין לו סימון — נשאר מוסתר.
+    const hasSignal = !!p || (over[uid]!=null);
+    if(!active && !hasSignal){ hidden.push({uid,name,dept}); return; }
     const status=over[uid]||(p?"present":"absent");
     // "tracked" = עובד פעיל שבאמת קשור ליום: הוחתם בשעון, או שמיכל סימנה לו משהו
     // (חופש/מחלה/סטטוס/איחור/יציאה). עובדי-רשימה ישנים שלא מחתימים ואין להם סימון — לא מוצגים.
