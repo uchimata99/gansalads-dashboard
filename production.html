@@ -1339,47 +1339,72 @@ function buildDistChart(){const el=document.getElementById('distChart');if(!el)r
 // ═══════ ניתוח הפער בין אריזות / ק"ג / הכנסות ═══════
 // הזהות: הכנסות = אריזות × (ק"ג לאריזה) × (₪ לק"ג). שלושת המדדים מנורמלים לממוצע=100
 // (הצגה מאוחדת), ומתחת שני מניעי-התמהיל שמסבירים את הפער שנשאר בין הקווים.
+// שבוע 1 מוחרג — שבוע קצר (יומיים) שמעוות את הנרמול. המוצרים מאוחדים לפי PROD_UNI
+// כך שגדלים/שמות שונים של אותו מוצר נספרים יחד (למשל שני גדלי חמוצים אסיאתיים).
+function divUnify(name){return (PROD_UNI&&PROD_UNI[name])?PROD_UNI[name]:name;}
 function buildDivergence(){
   const el=document.getElementById('divChart');if(!el)return;
   const txt=document.getElementById('divText');
-  const ws=WEEKS.slice();
-  if(ws.length<2){if(txt)txt.innerHTML='צריך לפחות שני שבועות לניתוח.';return;}
+  const ws=WEEKS.filter(w=>w.w!==1);   // ביטול שבוע 1 (שבוע קצר שמעוות)
+  if(ws.length<2){if(txt)txt.innerHTML='צריך לפחות שני שבועות לניתוח (מלבד שבוע 1).';return;}
   const labels=ws.map(w=>wLabel(w.w));
   const pkg=ws.map(w=>w.pkg), kg=ws.map(w=>w.kg), rev=ws.map(w=>w.rev);
   const kpp=ws.map(w=>w.pkg?w.kg/w.pkg:0);   // ק"ג לאריזה (משקל ממוצע)
   const vpk=ws.map(w=>w.kg?w.rev/w.kg:0);     // ₪ לק"ג (מחיר ממוצע)
   const mean=a=>a.reduce((x,y)=>x+y,0)/(a.length||1);
   const idx=a=>{const m=mean(a);return a.map(v=>m?v/m*100:100);};
-  const iP=idx(pkg), iK=idx(kg), iR=idx(rev);
-  const lineOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+c.raw.toFixed(1)}}},
-    scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>v}}}};
+  const iP=idx(pkg), iK=idx(kg), iR=idx(rev), iKpp=idx(kpp), iVpk=idx(vpk);
+  // ציר Y מהודק — טווח סביב הנתונים בפועל (במקום 0..max) כדי שהתנודות ייראו
+  const yRange=(...series)=>{let lo=1e9,hi=-1e9;series.forEach(a=>a.forEach(v=>{if(v<lo)lo=v;if(v>hi)hi=v;}));const pad=Math.max(1,(hi-lo)*0.15);return{min:Math.floor(lo-pad),max:Math.ceil(hi+pad)};};
+  const opt=yr=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}},tooltip:{...ttip,callbacks:{label:c=>' '+c.dataset.label+': '+c.raw.toFixed(1)}}},
+    scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,min:yr.min,max:yr.max,ticks:{...tickOpts,callback:v=>v}}}});
   // הצגה מאוחדת — שלושת המדדים מנורמלים
   makeChart('divChart',{type:'line',data:{labels,datasets:[
     {label:'אריזות',data:iP,borderColor:'#16a34a',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#16a34a',borderWidth:2.5},
     {label:'ק"ג',data:iK,borderColor:'#0d9488',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#0d9488',borderWidth:2.5},
-    {label:'הכנסות',data:iR,borderColor:'#2563a8',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#2563a8',borderWidth:2.5}]},options:lineOpts});
+    {label:'הכנסות',data:iR,borderColor:'#2563a8',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#2563a8',borderWidth:2.5}]},options:opt(yRange(iP,iK,iR))});
   // מניעי הפער — משקל ממוצע ומחיר ממוצע
   makeChart('divDrivers',{type:'line',data:{labels,datasets:[
-    {label:'ק"ג לאריזה (משקל ממוצע)',data:idx(kpp),borderColor:'#7c3aed',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#7c3aed',borderWidth:2.5},
-    {label:'₪ לק"ג (מחיר ממוצע)',data:idx(vpk),borderColor:'#d97706',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#d97706',borderWidth:2.5}]},options:lineOpts});
+    {label:'ק"ג לאריזה (משקל ממוצע)',data:iKpp,borderColor:'#7c3aed',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#7c3aed',borderWidth:2.5},
+    {label:'₪ לק"ג (מחיר ממוצע)',data:iVpk,borderColor:'#d97706',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#d97706',borderWidth:2.5}]},options:opt(yRange(iKpp,iVpk))});
   if(!txt)return;
   // ניתוח — תנודתיות (CV) ומתאמים
   const cv=a=>{const m=mean(a);if(!m)return 0;return Math.sqrt(mean(a.map(x=>(x-m)*(x-m))))/m*100;};
   const corr=(a,b)=>{const ma=mean(a),mb=mean(b);let s=0,sa=0,sb=0;for(let i=0;i<a.length;i++){const da=a[i]-ma,db=b[i]-mb;s+=da*db;sa+=da*da;sb+=db*db;}return(sa&&sb)?s/Math.sqrt(sa*sb):0;};
-  const cvKpp=cv(kpp), cvVpk=cv(vpk), cPkgRev=corr(pkg,rev), cDrivers=corr(kpp,vpk);
+  const cvKpp=cv(kpp), cvVpk=cv(vpk), cKgPkg=corr(pkg,kg), cRevPkg=corr(pkg,rev), cDrivers=corr(kpp,vpk);
   let ext=null;ws.forEach((w,i)=>{const gap=iR[i]-iP[i];if(!ext||Math.abs(gap)>Math.abs(ext.gap))ext={w:w.w,gap};});
-  const bigger=cvKpp>=cvVpk;
-  let h='<b>למה יש הבדל בין אריזות, ק"ג והכנסות?</b><br>';
-  h+='הזהות הבסיסית: <b>הכנסות = אריזות × (ק"ג לאריזה) × (₪ לק"ג)</b>. ';
-  h+='רוב התנועה משותפת — כשמייצרים יותר אריזות, גם הק"ג וגם ההכנסות עולים יחד (מתאם אריזות↔הכנסות '+cPkgRev.toFixed(2)+'). ';
-  h+='הפער הקטן שנשאר בין הקווים נובע משני מניעי-תמהיל:<br>';
-  h+='• <b>משקל ממוצע לאריזה</b> — תנודתיות '+cvKpp.toFixed(1)+'% (יותר אריזות 4 ק"ג ⇐ יותר ק"ג לאריזה, מרים את הק"ג מעל האריזות).<br>';
-  h+='• <b>מחיר ממוצע לק"ג</b> — תנודתיות '+cvVpk.toFixed(1)+'% (תמהיל מוצרים יקרים/זולים, מרים את ההכנסות מעל הק"ג).<br>';
-  h+='המניע החזק יותר בשבועות אלה: <b>'+(bigger?'המשקל הממוצע לאריזה':'המחיר הממוצע לק"ג')+'</b>. ';
-  if(cDrivers<-0.15) h+='שני המניעים נעים בכיוונים הפוכים (מתאם '+cDrivers.toFixed(2)+') — אריזות כבדות יותר (4 ק"ג) נוטות למחיר-לק"ג נמוך יותר, ולכן ההכנסות נצמדות לאריזות ולא בורחות רחוק.';
-  else if(cDrivers>0.15) h+='שני המניעים נעים יחד (מתאם '+cDrivers.toFixed(2)+') — כששניהם עולים באותו שבוע, ההכנסות מתרחקות מהאריזות יותר.';
-  else h+='שני המניעים כמעט בלתי-תלויים (מתאם '+cDrivers.toFixed(2)+').';
-  if(ext&&Math.abs(ext.gap)>=3) h+='<br>השבוע הכי חריג: <b>שבוע '+ext.w+'</b> — ההכנסות היו '+(ext.gap>0?'גבוהות ב-':'נמוכות ב-')+Math.abs(ext.gap).toFixed(0)+' נק\' מדד מהאריזות (תמהיל '+(ext.gap>0?'יקר/כבד':'זול/קל')+' מהרגיל).';
+  // ── ניתוח מוצרים ספציפיים (מאוחד לפי PROD_UNI) ──
+  const wset=new Set(ws.map(w=>String(w.w)));
+  const agg={};   // בסיס מאוחד → {pkg,kg,rev}
+  for(const name in PROD_DETAIL){const b=divUnify(name);const wk=PROD_DETAIL[name];const a=agg[b]||(agg[b]={pkg:0,kg:0,rev:0});
+    for(const w in wk){if(!wset.has(String(w)))continue;const dd=wk[w];for(const di in dd){a.pkg+=(dd[di][0]||0);a.kg+=(dd[di][1]||0);a.rev+=(dd[di][2]||0);}}}
+  let TP=0,TK=0,TR=0;for(const b in agg){TP+=agg[b].pkg;TK+=agg[b].kg;TR+=agg[b].rev;}
+  const aggKpp=TP?TK/TP:0, aggVpk=TK?TR/TK:0;
+  const heavy=[],pricey=[];
+  for(const b in agg){const a=agg[b];if(a.pkg<50||a.kg<=0)continue;   // סף נפח מינימלי
+    const kppP=a.kg/a.pkg, vpkP=a.rev/a.kg;
+    heavy.push({b,kpp:kppP,contrib:(a.pkg/TP)*(kppP-aggKpp)});
+    pricey.push({b,vpk:vpkP,contrib:(a.kg/TK)*(vpkP-aggVpk)});}
+  heavy.sort((x,y)=>y.contrib-x.contrib);pricey.sort((x,y)=>y.contrib-x.contrib);
+  const topHeavy=heavy.slice(0,4),topPricey=pricey.slice(0,4);
+  // ── טקסט ──
+  let h='<b>שלושה מדדים לאותה עבודה — למה הם לא זהים?</b><br>';
+  h+='כל אריזה שיוצאת נספרת שלוש פעמים: כ<b>אריזה</b> אחת, כמשקל ב<b>ק"ג</b>, וכ<b>הכנסה</b> בשקלים. ';
+  h+='הקשר ביניהם קבוע: <b>הכנסות = אריזות × (ק"ג לאריזה) × (₪ לק"ג)</b>.<br>';
+  h+='בגרף המאוחד רואים ששלושת הקווים כמעט חופפים — כשמייצרים יותר, הכל עולה יחד (מתאם אריזות↔ק"ג '+cKgPkg.toFixed(2)+', אריזות↔הכנסות '+cRevPkg.toFixed(2)+'). ';
+  h+='<b>הנפח המיוצר הוא הסיפור המרכזי.</b> הפער הקטן שנשאר בין הקווים נובע רק מ<b>תמהיל</b> — אילו מוצרים ייצרנו השבוע, בגרף התחתון:<br>';
+  h+='• <b>משקל ממוצע לאריזה</b> (סגול, תנודתיות '+cvKpp.toFixed(1)+'%): כשמייצרים יותר אריזות גדולות (4 ק"ג) — הק"ג עולה מעל האריזות.<br>';
+  h+='• <b>מחיר ממוצע לק"ג</b> (כתום, תנודתיות '+cvVpk.toFixed(1)+'%): כשהתמהיל נוטה למוצרים יקרים לק"ג — ההכנסות עולות מעל הק"ג.<br>';
+  if(cDrivers<-0.15) h+='שני המניעים מושכים לכיוונים הפוכים (מתאם '+cDrivers.toFixed(2)+') — מוצרים כבדים (4 ק"ג) נוטים להיות זולים יותר לק"ג, ולכן הם מבטלים זה את זה וההכנסות נצמדות לאריזות.<br>';
+  else if(cDrivers>0.15) h+='שני המניעים מושכים לאותו כיוון (מתאם '+cDrivers.toFixed(2)+') — בשבוע כבד גם המחיר לק"ג עולה, וההכנסות מתרחקות מהאריזות יותר.<br>';
+  else h+='שני המניעים כמעט בלתי-תלויים (מתאם '+cDrivers.toFixed(2)+').<br>';
+  h+='<br><b>אילו מוצרים מזיזים את התמהיל?</b><br>';
+  h+='<u>מושכים את הק"ג מעל האריזות — המוצרים הכבדים (ק"ג לאריזה):</u><br>';
+  h+=topHeavy.map(x=>'&nbsp;•&nbsp;'+x.b+' — <b>'+x.kpp.toFixed(1)+' ק"ג/אריזה</b>').join('<br>')+'<br>';
+  h+='<u>מושכים את ההכנסות מעל הק"ג — המוצרים היקרים ביותר לק"ג:</u><br>';
+  h+=topPricey.map(x=>'&nbsp;•&nbsp;'+x.b+' — <b>₪'+x.vpk.toFixed(1)+' לק"ג</b>').join('<br>')+'<br>';
+  h+='<span style="color:var(--muted)">(הממוצע הכללי: '+aggKpp.toFixed(2)+' ק"ג/אריזה · ₪'+aggVpk.toFixed(1)+' לק"ג. מוצרים מעל הממוצע מרחיקים את הקווים; מתחתיו — מקרבים.)</span>';
+  if(ext&&Math.abs(ext.gap)>=3) h+='<br><br>השבוע הכי חריג: <b>שבוע '+ext.w+'</b> — ההכנסות היו '+(ext.gap>0?'גבוהות ב-':'נמוכות ב-')+Math.abs(ext.gap).toFixed(0)+' נק\' מדד מהאריזות (תמהיל '+(ext.gap>0?'יקר/כבד':'זול/קל')+' מהרגיל).';
   txt.innerHTML=h;
 }
 
