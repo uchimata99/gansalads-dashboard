@@ -50,7 +50,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
   #veg .vr-name,#peel .vr-name{font-size:16.5px}
   #veg .vr-last,#peel .vr-last{font-size:13px}
   #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off{padding:8px 8px;font-size:16px}
-  #veg .vr-unit,#peel .vr-unit{padding:8px 4px;font-size:16px}
+  #veg .vr-unit,#peel .vr-unit{padding:8px 4px;font-size:16px;width:92px}
   #veg .vpick,#peel .vpick{font-size:13.5px}
   #veg .scol-h select,#peel .scol-h select{font-size:16.5px;padding:10px 12px}
   #veg .note,#peel .note{font-size:13.5px;padding:11px 16px}
@@ -302,15 +302,21 @@ body{background:#f5f2ec}
 .vr-name{flex:1 1 82px;min-width:0;font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 /* כמות + יחידה מקובצות יחד (היחידה צמודה לכמות) */
 .qu-grp{display:flex;align-items:center;gap:3px;flex:0 0 auto}
-/* כמות · מחיר · יחידה — אותו גודל פונט */
-.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto}
-.vqty:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.18)}
+/* כמות · יחידה · מחיר — אותו גודל פונט, וצבע שונה לכל אחד כדי להבדיל בקלות:
+   כמות = כחול · יחידה = סגול · מחיר = זהב/כתום */
+.vqty{width:60px;text-align:center;padding:3px 5px;font-weight:700;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;flex:0 0 auto;border:1.5px solid var(--blue);background:var(--blue-l);color:var(--blue)}
+.vqty::placeholder{color:var(--blue);opacity:.7}
+.vqty:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,90,136,.2)}
 .vr-last{font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
-.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px;font-size:13px;font-family:'IBM Plex Mono',monospace}
-.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
+.vr-off{width:60px;text-align:center;flex:0 0 auto;padding:3px 5px;font-size:13px;font-family:'IBM Plex Mono',monospace;border-radius:8px;border:1.5px solid var(--gold);background:var(--gold-l);color:#8a6608}
+.vr-off::placeholder{color:#8a6608;opacity:.7}
+.vr-off:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.2)}
+.vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid var(--purple);background:var(--purple-l);color:var(--purple)}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
+/* המחיר הזול ביותר בשורה — ירוק (גובר על הזהב הרגיל) */
+.vrow.vcheap .vr-off{border-color:var(--green);background:var(--green-l);color:var(--green);font-weight:700}
 .vrow.vchosen{outline:2.5px solid var(--gold);outline-offset:-2px}
 .vrow.vlastbuy .vr-name{color:var(--gold)}
 .vr-name .vbuy{background:none;padding:0;font-size:12px}
@@ -840,7 +846,8 @@ function updateCartBar(){
 // (לא מנווט לסל, כדי שאפשר להמשיך להזמין). לסל עוברים דרך פס הניווט "סל ההזמנה".
 function sendToCart(){
  const n=Object.keys(ORDER).filter(k=>ORDER[k].qty>0).length;
- toast(n?('✓ בסל: '+n+' פריטים'):'עדיין לא הוזנה כמות');
+ if(!n){toast('עדיין לא הוזנה כמות');return;}
+ toast('✓ '+n+' פריטים בסל · לשליחה לספקים: פתחי "סל ההזמנה" ולחצי "שלח הזמנה"');
 }
 function clearOrder(){
  if(Object.keys(ORDER).length && !confirm('לנקות את כל ההזמנה הנוכחית?'))return;
