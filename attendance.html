@@ -103,6 +103,17 @@
     .mp-h { font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
     .mp-name { display:inline-block; margin:3px 4px; padding:3px 9px; border-radius:999px; font-size:13px; background:#dcfce7; color:#15803d; }
     .mp-name.mp-abs { background:#f5f5f4; color:#78716c; }
+    .mapWrap { display:flex; gap:14px; align-items:flex-start; }
+    .mapWrap > .mapCol { flex:1 1 0; min-width:0; }
+    .mapWrap > .mapCol:first-child { flex:1.15 1 0; }
+    .mapTblTitle { font-weight:700; margin:0 2px 8px; font-size:15px; }
+    #mapTable { max-height:74vh; overflow:auto; }
+    .dgrp { border:1px solid var(--stone200,#e7e5e4); border-radius:10px; padding:7px 10px; margin-bottom:8px; }
+    .dgrp-h { display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14px; margin-bottom:5px; }
+    .dgrp-h .c { font-size:12px; font-weight:600; color:var(--stone500,#78716c); background:#f0fdf4; border:1px solid #bbf7d0; border-radius:999px; padding:1px 8px; }
+    .tchip { display:inline-block; margin:2px 3px; padding:2px 9px; border-radius:999px; font-size:12.5px; background:#f5f5f4; color:#78716c; }
+    .tchip.pr { background:#dcfce7; color:#15803d; font-weight:600; }
+    @media (max-width:760px){ .mapWrap { flex-direction:column; } .mapWrap > .mapCol, .mapWrap > .mapCol:first-child { flex:1 1 auto; width:100%; } #mapTable { max-height:none; } }
     .muted { color:var(--stone500); font-size:13px; }
     .pill { border-radius:999px; padding:6px 10px; border:none; font-size:12px; font-weight:600; }
     .emp-x { background:transparent; color:#b91c1c; border:1px solid #fca5a5;
@@ -165,9 +176,17 @@
 
   <div id="mapSection" style="display:none">
     <div class="muted" style="margin:0 2px 8px">גררי כל תווית מחלקה למקום שלה במפה (נשמר). לחיצה על תווית — מי במחלקה.</div>
-    <div class="mapCanvas" id="mapCanvas"><img id="mapImg" alt="תוכנית המפעל"></div>
-    <div id="mapPopup"></div>
-    <div class="muted" id="mapUnassigned" style="margin-top:8px"></div>
+    <div class="mapWrap">
+      <div class="mapCol">
+        <div class="mapCanvas" id="mapCanvas"><img id="mapImg" alt="תוכנית המפעל"></div>
+        <div id="mapPopup"></div>
+        <div class="muted" id="mapUnassigned" style="margin-top:8px"></div>
+      </div>
+      <div class="mapCol">
+        <div class="mapTblTitle">👥 עובדים לפי מחלקה</div>
+        <div id="mapTable"></div>
+      </div>
+    </div>
   </div>
 
   <div class="cols">
@@ -645,6 +664,21 @@ function renderMap(){
   const unassigned=st.employees.filter(e=>!e.dept && e.tracked);
   $("mapUnassigned").textContent = unassigned.length
     ? `לא משויכים למחלקה (מבין הנוכחים/מסומנים היום): ${unassigned.length}. חפשי אותם ברשימה ושייכי להם מחלקה.` : "";
+
+  // טבלת עובדים לפי מחלקה (רובריקה שנייה) — נוכחים + מסומנים (חופשה/מחלה), בלי סתם נעדרים כדי לחסוך גלילה
+  const tOrder=DEPARTMENTS.slice(); Object.keys(byDept).forEach(dp=>{ if(!tOrder.includes(dp)) tOrder.push(dp); });
+  const groupHtml=(title,list)=>{
+    const rel=list.filter(e=>e.status!=="absent").slice()
+      .sort((a,b)=>(a.status==="present"?0:1)-(b.status==="present"?0:1) || a.name.localeCompare(b.name,"he"));
+    if(!rel.length) return "";
+    const pr=rel.filter(e=>e.status==="present").length;
+    return `<div class="dgrp"><div class="dgrp-h"><span>${title}</span><span class="c">${pr} נוכחים</span></div><div>`+
+      rel.map(e=>`<span class="tchip ${e.status==="present"?"pr":""}">${e.name}${e.status!=="present"?" · "+STATUS[e.status].l:""}</span>`).join("")+
+      `</div></div>`;
+  };
+  let thtml=""; tOrder.forEach(dp=>{ thtml+=groupHtml(dp, byDept[dp]||[]); });
+  thtml+=groupHtml("ללא מחלקה", st.employees.filter(e=>!e.dept));
+  $("mapTable").innerHTML = thtml || '<div class="muted">אין עובדים נוכחים/מסומנים כרגע.</div>';
 }
 
 async function saveMapPos(dept,x,y){
