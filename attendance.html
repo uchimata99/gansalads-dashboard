@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="נוכחות" />
-  <link rel="apple-touch-icon" href="att-icon-192.png" />
-  <link rel="icon" href="att-icon-192.png" />
+  <link rel="apple-touch-icon" href="att-icon-192.png?v=3" />
+  <link rel="icon" href="att-icon-192.png?v=3" />
   <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('attendance-sw.js').catch(function(){});});}</script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>document.documentElement.classList.add('locked')</script>
@@ -36,7 +36,7 @@
     * { box-sizing:border-box; }
     body { margin:0; background:var(--stone50); color:var(--stone800);
            font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; }
-    .wrap { max-width:900px; margin:0 auto; padding:24px 20px 48px; }
+    .wrap { max-width:1600px; margin:0 auto; padding:24px clamp(14px,3vw,44px) 48px; }
     .head { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
     .bar { width:8px; height:32px; background:var(--green); border-radius:3px; }
     h1 { font-size:24px; margin:0; }
