@@ -2,8 +2,18 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>נוכחות עובדים</title>
+  <!-- אפליקציה (PWA) — "הוסף למסך הבית" -->
+  <link rel="manifest" href="attendance.webmanifest" />
+  <meta name="theme-color" content="#166534" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="נוכחות" />
+  <link rel="apple-touch-icon" href="att-icon-192.png" />
+  <link rel="icon" href="att-icon-192.png" />
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('attendance-sw.js').catch(function(){});});}</script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>document.documentElement.classList.add('locked')</script>
   <style>
@@ -222,6 +232,10 @@ function ruleDept(uid,name,dow){
   for(const r of DEPT_RULES){ if(r.days.includes(dow) && (r.uids.includes(String(uid))||r.names.includes(name))) return r.dept; }
   return null;
 }
+// עובדים שברירת-המחדל שלהם "נוכח" כי אינם מחתימים כרטיס בבקר (גאולה=7, אברהם=1, אריאל=23).
+const ALWAYS_PRESENT_UIDS=new Set(["1","7","23"]);
+const ALWAYS_PRESENT_NAMES=new Set(["אברהם","גאולה","אריאל"]);
+function isAlwaysPresent(uid,name){ return ALWAYS_PRESENT_UIDS.has(String(uid))||ALWAYS_PRESENT_NAMES.has(name); }
 function dowOf(ds){ const p=String(ds||today()).split("-").map(Number);
   return (p.length===3 && !isNaN(p[0])) ? new Date(p[0],p[1]-1,p[2]).getDay() : new Date().getDay(); }
 const $ = (id)=>document.getElementById(id);
@@ -350,8 +364,16 @@ async function loadData(){
 }
 
 function buildState(date){
-  const punch=punchesByDate[date]||{}, over=overridesByDate[date]||{}, notes=notesByDate[date]||{};
+  const punch=punchesByDate[date]||{}, notes=notesByDate[date]||{};
   const dow=dowOf(date);
+  // סטטוס נקבע כך: (1) הבקר קובע — מי שהחתים היום = נוכח; (2) סימון ידני (חופשה וכו')
+  // "דביק" — נשאר עד שהעובד שוב מחתים בבקר; (3) גאולה/אברהם/אריאל ברירת-מחדל נוכחים; (4) אחרת נעדר.
+  // לכן מחשבים לכל עובד את הסימון האחרון וההחתמה האחרונה עד לתאריך הנבחר.
+  const ovLatest={}, pkLatest={};
+  for(const d in overridesByDate){ if(d<=date){ const m=overridesByDate[d];
+    for(const u in m){ if(m[u]!=null && (!ovLatest[u]||d>ovLatest[u].d)) ovLatest[u]={d,s:m[u]}; } } }
+  for(const d in punchesByDate){ if(d<=date){ const m=punchesByDate[d];
+    for(const u in m){ if(!pkLatest[u]||d>pkLatest[u]) pkLatest[u]=d; } } }
   const employees=[], hidden=[];
   Object.keys(roster).forEach(uid=>{
     const meta=empMeta[uid]||{};
@@ -361,14 +383,18 @@ function buildState(date){
     const rd=ruleDept(uid,name,dow); if(rd) dept=rd;   // כלל יום-בשבוע גובר על השיוך הרגיל
     const p=punch[uid];
     const nt=notes[uid]||{};
-    // עובד "מחוק" (active=0) שהחתים כרטיס או שסומן ידנית ליום — עדיין מוצג (החתמה גוברת על מחיקה).
-    // רק מי שמחוק ולא החתים ואין לו סימון — נשאר מוסתר.
-    const hasSignal = !!p || (over[uid]!=null);
-    if(!active && !hasSignal){ hidden.push({uid,name,dept}); return; }
-    const status=over[uid]||(p?"present":"absent");
-    // "tracked" = עובד פעיל שבאמת קשור ליום: הוחתם בשעון, או שמיכל סימנה לו משהו
-    // (חופש/מחלה/סטטוס/איחור/יציאה). עובדי-רשימה ישנים שלא מחתימים ואין להם סימון — לא מוצגים.
-    const tracked=!!p || (over[uid]!=null) || !!(nt.late||nt.early);
+    const alwaysP=isAlwaysPresent(uid,name);
+    const ov=ovLatest[uid], pk=pkLatest[uid];
+    // סימון "דביק" תקף רק אם לא בוטל בהחתמה מאוחרת יותר בבקר
+    const stickyOv=(ov && (!pk || pk<ov.d)) ? ov.s : null;
+    let status;
+    if(p) status="present";               // הבקר: החתים היום → נוכח (מנקה חופשה — "חזר")
+    else if(stickyOv) status=stickyOv;     // חופשה/סטטוס ידני נשאר עד שיחתים שוב
+    else if(alwaysP) status="present";     // גאולה/אברהם/אריאל — לא מחתימים, נוכחים כברירת מחדל
+    else status="absent";
+    // עובד "מחוק" (active=0) מוסתר — אלא אם הופיע בבקר היום (חזר) או שהוא ברירת-מחדל-נוכח.
+    if(!active && !p && !alwaysP){ hidden.push({uid,name,dept}); return; }
+    const tracked=!!p || !!stickyOv || alwaysP || !!(nt.late||nt.early);
     employees.push({uid,name,dept,status,note:nt,tracked,
       first_in:p?p.first_in:null, last_out:p?p.last_out:null});
   });
