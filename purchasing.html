@@ -866,9 +866,10 @@ function orderBySupplier(){
  const map={};
  Object.keys(ORDER).forEach(k=>{
   const o=ORDER[k];if(!(o.qty>0))return;
-  const it=ITEM_BY_K[k];if(!it)return;
+  const bk=k.split('#')[0];   // מפתח מורכב 'ירק#ספק' (ממכרז ריבוי-ספקים) → מפתח הפריט הבסיסי
+  const it=ITEM_BY_K[bk];if(!it)return;
   const sk=o.sup||((it.s&&it.s.length)?it.s[0]:'__none__');
-  (map[sk]=map[sk]||[]).push({k,n:it.n,c:it.c,qty:o.qty,p:it.p,pd:it.pd});
+  (map[sk]=map[sk]||[]).push({k:bk,ok:k,n:it.n,c:it.c,qty:o.qty,p:it.p,pd:it.pd});
  });
  return map;
 }
@@ -940,7 +941,7 @@ async function sendOrder(onlySup){
   await appendRaw(ORDER_TAB,rows,token);
   // ההזמנה נשמרה בתור — מנקים מיד את הסל ונותנים משוב מיידי, בלי להמתין 20 שניות
   // לסיום ההפצה (וגם מונע לחיצה כפולה ששולחת פעמיים). ההפצה רצה ברקע ומעדכנת את הטוסט.
-  keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.k]));
+  keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.ok||l.k]));
   renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
   toast('✓ ההזמנה נשלחה '+who+' — מפיצה עכשיו…');
   triggerSend(token).then(now=>toast(now?('✓ הופצה '+who+' — יצאה עכשיו')
@@ -1187,7 +1188,7 @@ function aucRender(a){
    const unitSel='<select class="unitSel vr-unit" data-uk="'+esc(vk)+'" title="יחידת מידה">'+uopts.map(o=>'<option'+(o===u?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>';
    const lp=aucLast(a,vk,sk);
    const off=(a.off[vk]&&a.off[vk][i]!=null)?a.off[vk][i]:'';
-   const chosen=a.chosen[vk]===i;
+   const chosen=!!(a.chosen[vk]&&a.chosen[vk][i]);
    const lastBuy=(a.lastbuy[vk]===sk);
    const lastTxt=(lp.p==null)?'—':((lp.src==='offer'?'הצעה ':(lp.src==='catsup'?'אחרון ':'קנייה '))+P2(lp.p));
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
@@ -1195,7 +1196,7 @@ function aucRender(a){
       '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
       '<span class="qu-grp"><input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+unitSel+'</span>'+
       '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
-      '<label class="vpick"><input type="radio" name="'+a.box+'_'+esc(vk)+'" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
+      '<label class="vpick"><input type="checkbox" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
   });
   h+='</div></div>';
@@ -1222,7 +1223,7 @@ function aucRender(a){
   a.off[vk]=a.off[vk]||{};if(v>0)a.off[vk][ci]=v;else delete a.off[vk][ci];
   aucHighlight(a,vk);
  });
- box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{a.chosen[rb.dataset.vk]=+rb.dataset.col;aucMarkChosen(a,rb.dataset.vk);});
+ box.querySelectorAll('.vpick input').forEach(rb=>rb.onchange=()=>{const vk=rb.dataset.vk,ci=+rb.dataset.col;a.chosen[vk]=a.chosen[vk]||{};if(rb.checked)a.chosen[vk][ci]=true;else delete a.chosen[vk][ci];aucMarkChosen(a,vk);});
  // בורר יחידה פר פריט — נשמר ב-UNITMAP (משותף עם בניית ההזמנה) ומתעדכן בכל העמודות
  box.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',e=>{onUnit(e);aucRender(a);}));
  a.items.forEach(it=>aucHighlight(a,it.k));
@@ -1234,7 +1235,7 @@ function aucHighlight(a,vk){
  const min=vals.length?Math.min.apply(null,vals):null;
  for(let i=0;i<4;i++){const cell=aucCell(a,vk,i);if(cell)cell.classList.toggle('vcheap',min!=null&&offs[i]!=null&&offs[i]===min);}
 }
-function aucMarkChosen(a,vk){for(let i=0;i<4;i++){const cell=aucCell(a,vk,i);if(cell)cell.classList.toggle('vchosen',a.chosen[vk]===i);}}
+function aucMarkChosen(a,vk){for(let i=0;i<4;i++){const cell=aucCell(a,vk,i);if(cell)cell.classList.toggle('vchosen',!!(a.chosen[vk]&&a.chosen[vk][i]));}}
 async function aucSave(a){
  const cols=aucCols(a);
  const ds=new Date().toLocaleDateString('he-IL');
@@ -1244,7 +1245,7 @@ async function aucSave(a){
   for(let i=0;i<cols.length;i++){
    const sk=cols[i];if(!sk)continue;
    const price=offs[i];if(price==null)continue;   // שומרים רק הצעות שהוזנו
-   rows.push([ds,vk,it.n,sk,supName(sk),price,(qtys[i]>0?qtys[i]:''),(chosen===i?'1':'0')]);
+   rows.push([ds,vk,it.n,sk,supName(sk),price,(qtys[i]>0?qtys[i]:''),((chosen&&chosen[i])?'1':'0')]);
   }
  });
  if(!rows.length){toast('אין מה לשמור — הזיני מחירים לספקים');return;}
@@ -1255,12 +1256,15 @@ async function aucSave(a){
   // הוספת הפריטים שנבחרו (עם ספק וכמות) לסל ההזמנה — כדי לשלוח לספק יחד עם השאר
   let added=0;
   a.items.forEach(it=>{
-   const vk=it.k,ch=a.chosen[vk];if(ch==null)return;
-   const sk=cols[ch];if(!sk)return;
-   const q=(a.qty[vk]&&a.qty[vk][ch]>0)?a.qty[vk][ch]:((a.qty[vk]&&a.qty[vk][0]>0)?a.qty[vk][0]:0);
-   if(!(q>0))return;
-   if(!ITEM_BY_K[vk])ITEM_BY_K[vk]={k:vk,n:it.n,c:it.c||'',p:it.p,s:[sk]};
-   ORDER[vk]={qty:q,sup:sk};added++;
+   const vk=it.k,ch=a.chosen[vk];if(!ch)return;
+   for(let i=0;i<cols.length;i++){
+    if(!ch[i])continue;                 // רק ספקים שסומנו "נבחר"
+    const sk=cols[i];if(!sk)continue;
+    const q=(a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:0;
+    if(!(q>0))continue;                 // צריך כמות לאותו ספק
+    if(!ITEM_BY_K[vk])ITEM_BY_K[vk]={k:vk,n:it.n,c:it.c||'',p:it.p,s:[sk]};
+    ORDER[vk+'#'+sk]={qty:q,sup:sk};added++;   // מפתח מורכב: אותו ירק יכול להיכנס מכמה ספקים
+   }
   });
   toast('נשמרו '+rows.length+' שורות מכרז'+(added?(' · '+added+' נוספו לסל'):''));
   if(added)updateCartBar();
