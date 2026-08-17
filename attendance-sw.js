@@ -15,6 +15,22 @@ self.addEventListener('fetch', e => {
   // גוגל (התחברות + Sheets API) — תמיד רשת, בלי מטמון
   if (u.hostname.indexOf('google') !== -1 || u.hostname.indexOf('gstatic') !== -1) return;
   if (e.request.method !== 'GET') return;
+
+  // ה-HTML של האפליקציה — תמיד רשת קודם (כדי לקבל את הגרסה העדכנית),
+  // נפילה למטמון רק כשאין אינטרנט. כך עדכוני עיצוב מופיעים בלי לתקוע גרסה ישנה.
+  const isDoc = e.request.mode === 'navigate' ||
+                (u.origin === location.origin && u.pathname.endsWith('attendance.html'));
+  if (isDoc) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        if (resp && resp.ok) { const cp = resp.clone(); caches.open(CACHE).then(c => c.put('attendance.html', cp)); }
+        return resp;
+      }).catch(() => caches.match('attendance.html'))
+    );
+    return;
+  }
+
+  // שאר הנכסים (אייקונים, מניפסט) — מטמון קודם, עדכון ברקע
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
       if (resp && resp.ok && u.origin === location.origin) {
