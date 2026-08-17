@@ -938,11 +938,13 @@ async function sendOrder(onlySup){
   const token=await ensureWriteToken();
   await ensureTab(ORDER_TAB,ORDER_HEADER,token);
   await appendRaw(ORDER_TAB,rows,token);
-  const now=await triggerSend(token);   // שליחה מיידית אם השירות מוגדר
-  toast(now?('✓ ההזמנה נשלחה '+who+' — יצאה עכשיו')
-           :('✓ ההזמנה נשלחה לעיבוד '+who+' — תופץ תוך דקות'));
-  keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.k]));   // מסירים מהסל רק את מה שנשלח
+  // ההזמנה נשמרה בתור — מנקים מיד את הסל ונותנים משוב מיידי, בלי להמתין 20 שניות
+  // לסיום ההפצה (וגם מונע לחיצה כפולה ששולחת פעמיים). ההפצה רצה ברקע ומעדכנת את הטוסט.
+  keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.k]));
   renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
+  toast('✓ ההזמנה נשלחה '+who+' — מפיצה עכשיו…');
+  triggerSend(token).then(now=>toast(now?('✓ הופצה '+who+' — יצאה עכשיו')
+           :('✓ ההזמנה נשמרה '+who+' — תופץ תוך דקות'))).catch(()=>{});
  }catch(e){console.error(e);toast('לא ניתן לשלוח (ייתכן שחסרה הרשאת עריכה)');}
 }
 function fmtQty(q){return Number(q).toLocaleString('en-US',{maximumFractionDigits:3});}
