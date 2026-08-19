@@ -672,6 +672,9 @@ function startApp(){
  ITEMS_VEG=VEG_ITEMS.map(k=>ITEM_BY_K[k]).filter(Boolean);
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
  ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:(PEEL_SUP[d.k]||(b?b.s:[])),sp:(b?b.sp:null)};});
+ // דריסת ספק הקלופים גם ב-ITEM_BY_K — כדי שההזמנה שנכתבת ל-ORDER_QUEUE וה-PDF ישתמשו בספק הנכון
+ // (למשל ירקות קלופים שיווק ישראל 20615) ולא בספק המזוהם שבקטלוג (טלזר 019 וכו'). onQty/orderBySupplier קוראים מכאן.
+ ITEMS_PEEL.forEach(it=>{const b=ITEM_BY_K[it.k];if(b){b.s=(PEEL_SUP[it.k]||b.s);}else{ITEM_BY_K[it.k]=it;}});
  AUC.veg.items=ITEMS_VEG; AUC.veg.byK={}; ITEMS_VEG.forEach(it=>AUC.veg.byK[it.k]=it);
  AUC.peel.items=ITEMS_PEEL; AUC.peel.byK={}; ITEMS_PEEL.forEach(it=>AUC.peel.byK[it.k]=it);
  renderCatChips();   // קטגוריות כטאבים (chips)
