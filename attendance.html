@@ -165,6 +165,19 @@
     .s-present{background:#dcfce7;color:#15803d} .s-vacation{background:#fef3c7;color:#b45309}
     .s-sick{background:#ffe4e6;color:#be123c} .s-reserve{background:#e0f2fe;color:#0369a1}
     .s-absent{background:#f5f5f4;color:#78716c}
+    /* צפי שבוע הבא */
+    .planSummary{display:flex;flex-wrap:wrap;gap:10px;margin:0 2px 12px}
+    .planSummary .pd{background:#fff;border:1px solid var(--stone200);border-radius:12px;padding:8px 12px;font-size:12.5px;min-width:118px}
+    .planSummary .pd b{display:block;font-size:14px;margin-bottom:3px;color:var(--stone800)}
+    .planSummary .pd .hn{color:#b45309;font-weight:700}.planSummary .pd .ln{color:#4338ca;font-weight:700}
+    .planSummary .pd .ok{color:#15803d;font-weight:700}
+    table.histTbl td.pcell{vertical-align:top;padding:4px 5px;min-width:106px}
+    .psel{width:100%;border:1px solid var(--stone200,#e7e5e4);border-radius:8px;padding:5px 6px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer}
+    .psel.s-present{background:#fff;color:var(--stone800)}
+    .plate{margin-top:4px;text-align:center}
+    .latebtn{background:transparent;border:1px dashed #cfc9c0;color:#8a827a;border-radius:8px;padding:2px 8px;font-size:11.5px;font-weight:600;cursor:pointer}
+    .latetag{display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#b45309;border-radius:999px;padding:2px 3px 2px 8px;font-size:11.5px;font-weight:700}
+    .latetag button{background:transparent;border:none;color:#b45309;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
   </style>
 </head>
 <body>
@@ -209,6 +222,7 @@
     <button class="vtab vtab-on" id="tabList" onclick="setView('list')">📋 רשימה</button>
     <button class="vtab" id="tabMap" onclick="setView('map')">🗺️ מפה</button>
     <button class="vtab" id="tabHist" onclick="setView('hist')">📅 היסטוריה</button>
+    <button class="vtab" id="tabPlan" onclick="setView('plan')">📆 צפי שבוע הבא</button>
   </div>
 
   <div id="histSection" style="display:none">
@@ -245,6 +259,12 @@
         <div id="mapTable"></div>
       </div>
     </div>
+  </div>
+
+  <div id="planSection" style="display:none">
+    <div class="muted" style="margin:0 2px 6px">תכנון שבוע הבא — מי בחופשה, מחלה, מילואים, ומי צפוי לאחר. הסימון נשמר וגם משפיע על הנוכחות בפועל כשהיום מגיע. סימון "חופשה" נמשך לימים הבאים עד שמסמנים "מגיע".</div>
+    <div id="planSummary" class="planSummary"></div>
+    <div id="planWrap" class="histWrap"></div>
   </div>
 
   <div class="cols">
@@ -673,20 +693,104 @@ function render(){
   $("delToggleBtn").style.background = delMode ? "#fee2e2" : "";
 
   // מעבר רשימה/מפה/היסטוריה
-  const mapOn = view==="map", histOn = view==="hist", listOn = view==="list";
+  const mapOn = view==="map", histOn = view==="hist", planOn = view==="plan", listOn = view==="list";
   document.querySelector(".cols").style.display = listOn ? "" : "none";
   $("hiddenbox").style.display = listOn ? "" : "none";
   $("mapSection").style.display = mapOn ? "block" : "none";
   $("histSection").style.display = histOn ? "block" : "none";
+  $("planSection").style.display = planOn ? "block" : "none";
   $("tabList").classList.toggle("vtab-on", listOn);
   $("tabMap").classList.toggle("vtab-on", mapOn);
   $("tabHist").classList.toggle("vtab-on", histOn);
+  $("tabPlan").classList.toggle("vtab-on", planOn);
   if(mapOn) renderMap();
   if(histOn) renderHist();
+  if(planOn) renderPlan();
 }
 
 function setView(v){ view=v; mapOpenDept=null; render(); }
 function closeDept(){ mapOpenDept=null; render(); }
+
+// ---- טאב "צפי שבוע הבא": תכנון חופשות/מחלה/מילואים ואיחורים לשבוע הקרוב ----
+function nextWeekDays(){
+  const t=new Date(); let add=(7-t.getDay())%7; if(add===0) add=7;   // ראשון של השבוע הבא
+  const z=n=>String(n).padStart(2,"0"); const out=[];
+  for(let i=0;i<5;i++){                                              // א'–ה'
+    const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+add+i);
+    out.push({ds:d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()),
+              lbl:HIST_DOW[d.getDay()], dm:z(d.getDate())+"/"+z(d.getMonth()+1)});
+  }
+  return out;
+}
+function planEmployees(){
+  const out=[];
+  Object.keys(roster).forEach(uid=>{
+    const meta=empMeta[uid]||{}; const active=(meta.active==null)?1:meta.active;
+    const name=meta.name||roster[uid]||uid;
+    if(!active && !isAlwaysPresent(uid,name)) return;   // מדלגים עובדים שהוסתרו
+    out.push({uid,name});
+  });
+  out.sort((a,b)=>a.name.localeCompare(b.name,"he"));
+  return out;
+}
+function planStatusAt(uid,date){   // סטטוס "דביק" לתאריך עתידי (חופשה/מחלה/מילואים), אחרת "מגיע"
+  let ov=null; for(const d in overridesByDate){ if(d<=date){ const s=overridesByDate[d][uid];
+    if(s!=null && (!ov||d>ov.d)) ov={d,s}; } }
+  let pk=null; for(const d in punchesByDate){ if(d<=date && punchesByDate[d][uid]){ if(!pk||d>pk) pk=d; } }
+  const s=(ov && (!pk||pk<ov.d))?ov.s:null;
+  return (s==='vacation'||s==='sick'||s==='reserve')?s:'present';
+}
+function renderPlan(){
+  const days=nextWeekDays(), emps=planEmployees();
+  const sum=days.map(dd=>{ let vac=0,sick=0,res=0,late=0;
+    emps.forEach(e=>{ const s=planStatusAt(e.uid,dd.ds);
+      if(s==='vacation')vac++; else if(s==='sick')sick++; else if(s==='reserve')res++;
+      const nt=(notesByDate[dd.ds]||{})[e.uid]; if(nt&&nt.late)late++; });
+    return {vac,sick,res,late,coming:emps.length-vac-sick-res}; });
+  $("planSummary").innerHTML = days.map((dd,i)=>{ const c=sum[i], parts=[];
+    if(c.vac)parts.push('חופשה <span class="hn">'+c.vac+'</span>');
+    if(c.sick)parts.push('מחלה <span class="hn">'+c.sick+'</span>');
+    if(c.res)parts.push('מילואים <span class="hn">'+c.res+'</span>');
+    if(c.late)parts.push('איחור <span class="ln">'+c.late+'</span>');
+    return '<div class="pd"><b>'+dd.lbl+"' "+dd.dm+'</b><div><span class="ok">מגיעים '+c.coming+'</span>'+
+           (parts.length?' · '+parts.join(' · '):'')+'</div></div>';
+  }).join("");
+  if(!emps.length){ $("planWrap").innerHTML='<div class="empty">אין עדיין עובדים ברשימה</div>'; return; }
+  const opt=(v,cur,l)=>'<option value="'+v+'"'+(cur===v?' selected':'')+'>'+l+'</option>';
+  let h='<table class="histTbl"><thead><tr><th class="nameCol">עובד</th>'+
+    days.map(dd=>'<th class="hd">'+dd.lbl+"'<br><small>"+dd.dm+'</small></th>').join('')+'</tr></thead><tbody>';
+  emps.forEach(e=>{
+    h+='<tr><td class="nameCol">'+e.name+'</td>';
+    days.forEach(dd=>{
+      const st=planStatusAt(e.uid,dd.ds), nt=(notesByDate[dd.ds]||{})[e.uid]||{};
+      const sel='<select class="psel s-'+st+'" onchange="planSet(\''+e.uid+'\',\''+dd.ds+'\',this.value)">'+
+        opt('present',st,'מגיע')+opt('vacation',st,'חופשה')+opt('sick',st,'מחלה')+opt('reserve',st,'מילואים')+'</select>';
+      const late = nt.late
+        ? '<span class="latetag">🕐 '+nt.late+'<button title="בטל איחור" onclick="planClearLate(\''+e.uid+'\',\''+dd.ds+'\')">✕</button></span>'
+        : '<button class="latebtn" onclick="planLate(\''+e.uid+'\',\''+dd.ds+'\')">＋ איחור</button>';
+      h+='<td class="pcell">'+sel+'<div class="plate">'+late+'</div></td>';
+    });
+    h+='</tr>';
+  });
+  $("planWrap").innerHTML=h+'</tbody></table>';
+}
+async function planSet(uid,date,status){
+  (overridesByDate[date]=overridesByDate[date]||{})[uid]=status; renderPlan();
+  try{ await sheetAppend(T_OVER,[[nowTs(),date,uid,status]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+async function planLate(uid,date){
+  const tm=prompt("שעת הגעה צפויה (למשל 09:30):","");
+  if(tm===null) return; const v=(tm||"").trim(); if(!v) return;
+  const o=((notesByDate[date]=notesByDate[date]||{})[uid]=notesByDate[date][uid]||{}); o.late=v; renderPlan();
+  try{ await sheetAppend(T_NOTES,[[nowTs(),date,uid,"late",v]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+async function planClearLate(uid,date){
+  const o=((notesByDate[date]=notesByDate[date]||{})[uid]=notesByDate[date][uid]||{}); o.late=''; renderPlan();
+  try{ await sheetAppend(T_NOTES,[[nowTs(),date,uid,"clear",""]]); }
+  catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
 
 // ---- טאב היסטוריה: נוכחות לאורך זמן, סינון לפי עובד ולפי טווח תאריכים ----
 const HIST_DOW=["א","ב","ג","ד","ה","ו","ש"];
