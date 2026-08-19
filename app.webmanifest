@@ -1,9 +1,9 @@
 {
   "id": "gansalads-mgmt",
-  "name": "סלטי גן — ניהול",
-  "short_name": "סלטי גן",
+  "name": "סלטי גן — ניהול כללי",
+  "short_name": "ניהול כללי",
   "start_url": "dashboard_gansalads.html",
-  "scope": "./",
+  "scope": "./dashboard_gansalads.html",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f4f0e8",
