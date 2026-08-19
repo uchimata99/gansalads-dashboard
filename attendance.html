@@ -231,6 +231,15 @@
     .gtoday{position:absolute;top:0;bottom:0;width:2px;background:#dc2626;z-index:3}
     .glg{width:14px;height:14px;border-radius:3px;display:inline-block}
     .glg.ghol{position:static;background:#d6d3d1;width:6px;height:15px}.glg.gholN{position:static;background:#16a34a;width:6px;height:15px}
+    /* גאנט במסך מלא */
+    #pmGanttView.gfull{position:fixed;inset:0;z-index:9999;background:#fff;margin:0;
+      padding:14px clamp(10px,2.5vw,28px);overflow:auto;box-shadow:0 0 0 100vmax #fff}
+    #pmGanttView.gfull #ganttWrap{max-height:calc(100vh - 130px)}
+    #pmGanttView.gfull .grow .gtrack{height:34px}
+    #pmGanttView.gfull .grow .gtrack .gspan{top:8px;height:18px}
+    #pmGanttView.gfull .gname{flex-basis:150px;font-size:14px}
+    #pmGanttView.gfull .grow.ghead .gruler{height:34px}
+    #pmGanttView.gfull .gmlabel{font-size:12px}
   </style>
 </head>
 <body>
@@ -346,7 +355,8 @@
           <b id="ganttYearLbl"></b>
           <button class="btn-soft" onclick="ganttYearShift(1)">›</button>
         </span>
-        <input class="search" id="ganttSearch" style="flex:1 1 200px;margin-top:0" placeholder="🔍 סינון עובד…" oninput="renderGantt()">
+        <input class="search" id="ganttSearch" style="flex:1 1 160px;margin-top:0" placeholder="🔍 סינון עובד…" oninput="renderGantt()">
+        <button class="btn-soft" id="ganttFullBtn" onclick="toggleGanttFull()">⛶ מסך מלא</button>
       </div>
       <div class="histWrap" id="ganttWrap"></div>
       <div class="histLegend" id="ganttLegend" style="margin-top:8px"></div>
@@ -933,6 +943,14 @@ function setPlanMode(m){
   renderPlanActive();
 }
 function renderPlanActive(){ if(planMode==="emp") renderEmpMonth(); else if(planMode==="gantt") renderGantt(); else renderPlan(); }
+function toggleGanttFull(){
+  const el=$("pmGanttView"); const on=el.classList.toggle("gfull");
+  $("ganttFullBtn").textContent=on?"✖ צא ממסך מלא":"⛶ מסך מלא";
+  document.body.style.overflow=on?"hidden":"";
+  renderGantt();
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ const el=$("pmGanttView");
+  if(el&&el.classList.contains("gfull")) toggleGanttFull(); } });
 
 // ---- תצוגת עובד: לוח חודשי ----
 function monthAdd(ym,delta){ const p=ym.split("-").map(Number); const d=new Date(p[0],p[1]-1+delta,1);
