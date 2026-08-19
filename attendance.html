@@ -115,6 +115,27 @@
     .tchip { display:inline-block; margin:2px 3px; padding:2px 9px; border-radius:999px; font-size:12.5px; background:#f5f5f4; color:#78716c; }
     .tchip.pr { background:#dcfce7; color:#15803d; font-weight:600; }
     @media (max-width:760px){ .mapWrap { flex-direction:column; } .mapWrap > .mapCol, .mapWrap > .mapCol:first-child { flex:1 1 auto; width:100%; } #mapTable { max-height:none; } }
+    /* היסטוריה */
+    .histBar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:4px 2px 10px; }
+    .histBar label { font-size:14px; color:var(--stone500,#78716c); display:inline-flex; align-items:center; gap:6px; }
+    .histBar .histSearch { flex:1 1 200px; margin-top:0; min-width:160px; }
+    .histQuick { display:inline-flex; gap:6px; }
+    .histQuick button { padding:6px 12px; }
+    .histLegend { display:flex; flex-wrap:wrap; gap:12px; margin:0 2px 10px; font-size:12.5px; color:var(--stone500,#78716c); }
+    .histLegend .hl { display:inline-flex; align-items:center; gap:5px; }
+    .histLegend .hc { width:14px; height:14px; border-radius:4px; display:inline-block; }
+    .histWrap { overflow:auto; max-height:74vh; border:1px solid var(--stone200,#e7e5e4); border-radius:12px; }
+    table.histTbl { border-collapse:separate; border-spacing:0; font-size:13px; width:max-content; min-width:100%; }
+    table.histTbl th, table.histTbl td { padding:6px 8px; text-align:center; white-space:nowrap; border-bottom:1px solid var(--stone200,#e7e5e4); }
+    table.histTbl thead th { position:sticky; top:0; z-index:3; background:#fff; font-weight:700; }
+    table.histTbl .nameCol { position:sticky; right:0; z-index:2; background:#fff; text-align:right; font-weight:600; box-shadow:-1px 0 0 var(--stone200,#e7e5e4) inset; }
+    table.histTbl thead th.nameCol { z-index:4; }
+    table.histTbl .nameCol small { color:var(--stone500,#78716c); font-weight:400; font-size:11px; }
+    table.histTbl .hd small { color:var(--stone500,#78716c); font-weight:400; }
+    table.histTbl .cell { font-size:12px; border-radius:6px; }
+    table.histTbl tbody tr:hover .nameCol { background:#f8fafc; }
+    table.histTbl .totRow td { font-weight:700; background:#f0fdf4; color:#166534; border-top:2px solid #bbf7d0; }
+    table.histTbl .totRow .nameCol { background:#f0fdf4; }
     .muted { color:var(--stone500); font-size:13px; }
     .pill { border-radius:999px; padding:6px 10px; border:none; font-size:12px; font-weight:600; }
     .emp-x { background:transparent; color:#b91c1c; border:1px solid #fca5a5;
@@ -173,6 +194,28 @@
   <div class="viewtabs">
     <button class="vtab vtab-on" id="tabList" onclick="setView('list')">📋 רשימה</button>
     <button class="vtab" id="tabMap" onclick="setView('map')">🗺️ מפה</button>
+    <button class="vtab" id="tabHist" onclick="setView('hist')">📅 היסטוריה</button>
+  </div>
+
+  <div id="histSection" style="display:none">
+    <div class="histBar">
+      <label>מ־<input type="date" id="histFrom" onchange="onHist()"></label>
+      <label>עד<input type="date" id="histTo" onchange="onHist()"></label>
+      <span class="histQuick">
+        <button class="btn-soft" onclick="histRange(7)">שבוע</button>
+        <button class="btn-soft" onclick="histRange(14)">שבועיים</button>
+        <button class="btn-soft" onclick="histRange(30)">חודש</button>
+      </span>
+      <input class="search histSearch" id="histSearch" placeholder="🔍 סינון לפי עובד…" oninput="onHistSearch()">
+    </div>
+    <div class="histLegend">
+      <span class="hl"><i class="hc s-present"></i>נוכח</span>
+      <span class="hl"><i class="hc s-vacation"></i>חופשה</span>
+      <span class="hl"><i class="hc s-sick"></i>מחלה</span>
+      <span class="hl"><i class="hc s-reserve"></i>מילואים</span>
+      <span class="hl"><i class="hc s-absent"></i>נעדר</span>
+    </div>
+    <div class="histWrap"><div id="histTable"></div></div>
   </div>
 
   <div id="mapSection" style="display:none">
@@ -272,8 +315,9 @@ let dayEdit=null;         // uid של השורה שפתחה את עורך היו
 let metaDirty={};         // uid -> {name,dept,active} ששונו מקומית וטרם אושרו מהגיליון (מונע "קפיצה" ברענון)
 let mapPos={};            // dept -> {x,y} מיקום התווית במפה (אחוזים), נשמר ב-MAP_POS
 let mapDirty={};          // dept -> {x,y} מיקום שנגרר וטרם אושר מהגיליון (מונע "קפיצה" חזרה ברענון)
-let view="list";          // "list" | "map"
+let view="list";          // "list" | "map" | "hist"
 let mapOpenDept=null;     // מחלקה שנפתחה על המפה (מציגה מי בה)
+let histFrom="", histTo="", histFilter="";   // טווח וסינון בטאב ההיסטוריה
 let lastPull="";
 
 function gsShowErr(m){ const e=$("gsLockErr"); if(e) e.textContent=m||""; }
@@ -614,18 +658,66 @@ function render(){
   $("delToggleBtn").textContent = delMode ? "✖️ יציאה" : "🗑️ מחק כמה";
   $("delToggleBtn").style.background = delMode ? "#fee2e2" : "";
 
-  // מעבר רשימה/מפה
-  const mapOn = view==="map";
-  document.querySelector(".cols").style.display = mapOn ? "none" : "";
-  $("hiddenbox").style.display = mapOn ? "none" : "";
+  // מעבר רשימה/מפה/היסטוריה
+  const mapOn = view==="map", histOn = view==="hist", listOn = view==="list";
+  document.querySelector(".cols").style.display = listOn ? "" : "none";
+  $("hiddenbox").style.display = listOn ? "" : "none";
   $("mapSection").style.display = mapOn ? "block" : "none";
-  $("tabList").classList.toggle("vtab-on", !mapOn);
+  $("histSection").style.display = histOn ? "block" : "none";
+  $("tabList").classList.toggle("vtab-on", listOn);
   $("tabMap").classList.toggle("vtab-on", mapOn);
+  $("tabHist").classList.toggle("vtab-on", histOn);
   if(mapOn) renderMap();
+  if(histOn) renderHist();
 }
 
 function setView(v){ view=v; mapOpenDept=null; render(); }
 function closeDept(){ mapOpenDept=null; render(); }
+
+// ---- טאב היסטוריה: נוכחות לאורך זמן, סינון לפי עובד ולפי טווח תאריכים ----
+const HIST_DOW=["א","ב","ג","ד","ה","ו","ש"];
+const HIST_LBL={present:"✓",vacation:"ח",sick:"מ",reserve:"מל",absent:"·"};
+function dateAdd(ds,delta){ const p=ds.split("-").map(Number); const d=new Date(p[0],p[1]-1,p[2]+delta);
+  const z=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()); }
+function histRange(n){ histTo=today(); histFrom=dateAdd(histTo,-(n-1)); syncHistInputs(); renderHist(); }
+function syncHistInputs(){ if($("histFrom")) $("histFrom").value=histFrom; if($("histTo")) $("histTo").value=histTo; }
+function onHist(){ histFrom=$("histFrom").value||histFrom; histTo=$("histTo").value||histTo; renderHist(); }
+function onHistSearch(){ histFilter=$("histSearch").value||""; renderHist(); }
+
+function renderHist(){
+  if(!histFrom||!histTo){ histTo=$("date").value||today(); histFrom=dateAdd(histTo,-13); syncHistInputs(); }
+  let from=histFrom, to=histTo; if(from>to){ const t=from; from=to; to=t; }
+  // רשימת ימים בטווח (מדלגים שבת — אין עבודה), עד 45 עמודות, החדש קרוב לשם
+  const days=[]; for(let d=to; d>=from; d=dateAdd(d,-1)){ if(dowOf(d)!==6) days.push(d); if(days.length>=45) break; }
+  const capped = (function(){ let c=0; for(let d=to; d>=from; d=dateAdd(d,-1)){ if(dowOf(d)!==6) c++; } return c>45; })();
+  // מערך העובדים = המועסקים כיום (אותה קבוצה שבטאב הרשימה)
+  const rows=buildState(today()).employees.slice()
+    .filter(e=>(e.name||"").includes((histFilter||"").trim()))
+    .sort((a,b)=>a.name.localeCompare(b.name,"he"));
+  // סטטוס לכל יום
+  const byDay={}; days.forEach(d=>{ const st=buildState(d); const m={}; st.employees.forEach(e=>m[e.uid]=e.status); byDay[d]=m; });
+
+  if(!rows.length){ $("histTable").innerHTML='<div class="empty" style="padding:20px">אין עובדים להצגה בסינון הזה.</div>'; return; }
+
+  const head='<thead><tr><th class="nameCol">עובד</th>'+
+    days.map(d=>{ const p=d.split("-"); return `<th class="hd">${HIST_DOW[dowOf(d)]}<br><small>${p[2]}/${p[1]}</small></th>`; }).join("")+
+    '<th class="hd">ימי<br><small>נוכחות</small></th></tr></thead>';
+
+  const body='<tbody>'+rows.map(e=>{
+    let present=0;
+    const cells=days.map(d=>{ const s=byDay[d][e.uid]||"absent"; if(s==="present") present++;
+      const full=(STATUS[s]||STATUS.absent).l; const p=d.split("-");
+      return `<td class="cell ${(STATUS[s]||STATUS.absent).c}" title="${e.name} · ${p[2]}/${p[1]} · ${full}">${HIST_LBL[s]||"·"}</td>`; }).join("");
+    return `<tr><td class="nameCol">${e.name}${e.dept?`<br><small>${e.dept}</small>`:""}</td>${cells}<td class="cell" style="font-weight:700">${present}</td></tr>`;
+  }).join("")+
+  // שורת סיכום: כמה נוכחים בכל יום
+  '<tr class="totRow"><td class="nameCol">נוכחים ביום</td>'+
+    days.map(d=>{ let c=0; rows.forEach(e=>{ if((byDay[d][e.uid]||"absent")==="present") c++; }); return `<td>${c}</td>`; }).join("")+
+    '<td></td></tr></tbody>';
+
+  $("histTable").innerHTML=`<table class="histTbl">${head}${body}</table>`+
+    (capped?'<div class="muted" style="padding:8px 10px">מוצגים 45 ימי העבודה האחרונים בטווח.</div>':"");
+}
 
 function renderMap(){
   const img=$("mapImg"); if(img && !img.getAttribute("src")) img.src=window.PLAN_BG;
