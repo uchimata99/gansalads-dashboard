@@ -1,8 +1,9 @@
 {
-  "id": "gansalads-forecast",
-  "name": "חיזוי ייצור — סלטי גן",
-  "short_name": "חיזוי",
-  "start_url": "forecast.html",
+  "id": "gansalads-mgmt",
+  "name": "סלטי גן — ניהול",
+  "short_name": "סלטי גן",
+  "start_url": "dashboard_gansalads.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f4f0e8",
