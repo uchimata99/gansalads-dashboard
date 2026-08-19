@@ -385,7 +385,6 @@ body{background:#f5f2ec}
 <div class="topbar"><div class="brand"><span class="brand-i">📦</span><div><div class="brand-n">סלטי גן</div><div class="brand-s">הזמנות רכש</div></div></div><div class="range" id="hdrRange">קטלוג רכש</div></div>
 
 <div class="tabs">
- <div class="tab active" data-p="build">בניית הזמנה</div>
  <div class="tab" data-p="veg">🥬 מכרז ירקות</div>
  <div class="tab" data-p="peel">🥔 ירקות קלופים</div>
  <div class="tab" data-p="pack">📦 אריזות</div>
@@ -689,6 +688,7 @@ function startApp(){
  document.getElementById('hSearch').addEventListener('input',renderHist);
  document.getElementById('hSup').addEventListener('input',renderHist);
  renderItems();updateCartBar();
+ tab('pack');   // הטאב "בניית הזמנה" הוסר — ברירת המחדל היא "אריזות"
 }
 function setTxt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
 let buildCat='';   // הקטגוריה הנבחרת בבניית הזמנה ('' = הכל)
