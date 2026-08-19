@@ -1,9 +1,10 @@
 {
+  "id": "gansalads-attendance",
   "name": "נוכחות עובדים — סלטי גן",
   "short_name": "נוכחות",
   "description": "לוח נוכחות עובדים — מי נוכח, מי בחופשה, ומפת מפעל",
   "start_url": "attendance.html",
-  "scope": "./",
+  "scope": "attendance.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#166534",

@@ -1,6 +1,6 @@
 // Service worker לאפליקציית הנוכחות (PWA). מטמין את מעטפת האפליקציה כדי שתיפתח
 // מהר וגם ללא רשת. לעולם לא מיירט קריאות ל-Google (התחברות/גיליון) — הן תמיד מהרשת.
-const CACHE = 'att-shell-v5';
+const CACHE = 'att-shell-v6';
 const ASSETS = ['attendance.html', 'gs-tomato-192.png', 'gs-tomato-512.png', 'attendance.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -19,13 +19,14 @@ self.addEventListener('fetch', e => {
   // ה-HTML של האפליקציה — תמיד רשת קודם (כדי לקבל את הגרסה העדכנית),
   // נפילה למטמון רק כשאין אינטרנט. כך עדכוני עיצוב מופיעים בלי לתקוע גרסה ישנה.
   const isDoc = e.request.mode === 'navigate' ||
-                (u.origin === location.origin && u.pathname.endsWith('attendance.html'));
+                (u.origin === location.origin &&
+                 (u.pathname.endsWith('attendance.html') || u.pathname.endsWith('attendance.webmanifest')));
   if (isDoc) {
     e.respondWith(
       fetch(e.request).then(resp => {
-        if (resp && resp.ok) { const cp = resp.clone(); caches.open(CACHE).then(c => c.put('attendance.html', cp)); }
+        if (resp && resp.ok) { const cp = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); }
         return resp;
-      }).catch(() => caches.match('attendance.html'))
+      }).catch(() => caches.match(e.request).then(c => c || caches.match('attendance.html')))
     );
     return;
   }
