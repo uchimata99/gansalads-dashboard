@@ -191,6 +191,46 @@
     .latebtn{background:transparent;border:1px dashed #cfc9c0;color:#8a827a;border-radius:8px;padding:2px 8px;font-size:11.5px;font-weight:600;cursor:pointer}
     .latetag{display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#b45309;border-radius:999px;padding:2px 3px 2px 8px;font-size:11.5px;font-weight:700}
     .latetag button{background:transparent;border:none;color:#b45309;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+    /* בורר מצב בצפי */
+    .planModes{display:flex;gap:8px;margin:2px 2px 12px;flex-wrap:wrap}
+    .planModes .pm{border:1.5px solid var(--stone200);background:#fff;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
+    .planModes .pm.on{background:var(--green);border-color:var(--green);color:#fff}
+    .planBar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 2px 12px}
+    .planBar label{font-size:14px}
+    .planBar select{border:1.5px solid var(--stone200);border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit;background:#fff}
+    .empNav{display:inline-flex;align-items:center;gap:10px}.empNav b{font-size:15px;min-width:120px;text-align:center}
+    /* לוח חודשי לעובד */
+    .emcal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .emhd{text-align:center;font-weight:700;font-size:12px;color:var(--stone500);padding:2px}
+    .emcell{border:1px solid var(--stone200);border-radius:10px;min-height:74px;padding:5px;background:#fff;display:flex;flex-direction:column;gap:4px}
+    .emcell.empad{border:none;background:transparent}
+    .emcell.emsat{background:var(--stone100)}
+    .emcell.emhol{border-color:#fcd34d;background:#fffbeb}
+    .emd{font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+    .emhname{font-size:9.5px;font-weight:600;color:#b45309;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:74px}
+    .emsel{width:100%;border:1px solid var(--stone200);border-radius:8px;padding:4px;font-size:12px;font-family:inherit;font-weight:600;cursor:pointer}
+    .emsel.s-present{background:#fff;color:var(--stone800)}
+    .emsatx{font-size:11px;color:var(--stone500);text-align:center;margin-top:auto}
+    .emnote{font-size:10.5px;color:#4338ca}
+    @media(max-width:640px){ .emcell{min-height:58px}.emhname{display:none} }
+    /* גאנט שנתי */
+    .gantt{min-width:820px}
+    .grow{display:flex;align-items:stretch;border-bottom:1px solid var(--stone100)}
+    .gname{flex:0 0 116px;padding:7px 8px;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;position:sticky;right:0;z-index:2;border-inline-start:1px solid var(--stone200)}
+    .gtrack{position:relative;flex:1 1 auto;height:26px}
+    .grow.ghead .gruler{position:relative;flex:1 1 auto;height:30px}
+    .gruler{position:relative}
+    .gmline{position:absolute;top:16px;bottom:0;width:1px;background:var(--stone200);z-index:0}
+    .grow .gtrack{background:#fff}
+    .grow:nth-child(even) .gtrack{background:var(--stone50)}
+    .grow .gtrack .gspan{position:absolute;top:5px;height:16px;border-radius:4px;opacity:.92;z-index:1}
+    .gspan.s-vacation{background:#f59e0b}.gspan.s-sick{background:#f43f5e}.gspan.s-reserve{background:#0ea5e9}
+    .gmlabel{position:absolute;top:1px;font-size:10.5px;color:var(--stone500);transform:translateX(50%);white-space:nowrap}
+    .ghol{position:absolute;top:16px;bottom:0;width:2px;background:#d6d3d1;z-index:1}
+    .ghol.gholN{background:#16a34a;width:3px}
+    .gtoday{position:absolute;top:0;bottom:0;width:2px;background:#dc2626;z-index:3}
+    .glg{width:14px;height:14px;border-radius:3px;display:inline-block}
+    .glg.ghol{position:static;background:#d6d3d1;width:6px;height:15px}.glg.gholN{position:static;background:#16a34a;width:6px;height:15px}
   </style>
 </head>
 <body>
@@ -275,9 +315,42 @@
   </div>
 
   <div id="planSection" style="display:none">
-    <div class="muted" style="margin:0 2px 6px">תכנון שבוע הבא — מי בחופשה, מחלה, מילואים, ומי צפוי לאחר. הסימון נשמר וגם משפיע על הנוכחות בפועל כשהיום מגיע. סימון "חופשה" נמשך לימים הבאים עד שמסמנים "מגיע".</div>
-    <div id="planSummary" class="planSummary"></div>
-    <div id="planWrap" class="histWrap"></div>
+    <div class="planModes">
+      <button class="pm on" id="pmWeek" onclick="setPlanMode('week')">📆 שבוע הבא</button>
+      <button class="pm" id="pmEmp" onclick="setPlanMode('emp')">👤 לפי עובד</button>
+      <button class="pm" id="pmGantt" onclick="setPlanMode('gantt')">📊 גאנט שנתי</button>
+    </div>
+
+    <div id="pmWeekView">
+      <div class="muted" style="margin:0 2px 6px">תכנון שבוע הבא — מי בחופשה, מחלה, מילואים, ומי צפוי לאחר. הסימון נשמר וגם משפיע על הנוכחות בפועל כשהיום מגיע. כל יום מסומן בנפרד.</div>
+      <div id="planSummary" class="planSummary"></div>
+      <div id="planWrap" class="histWrap"></div>
+    </div>
+
+    <div id="pmEmpView" style="display:none">
+      <div class="planBar">
+        <label>עובד:&nbsp;<select id="empSel" onchange="onEmpSel()"></select></label>
+        <span class="empNav">
+          <button class="btn-soft" onclick="empMonthShift(-1)">‹ קודם</button>
+          <b id="empMonthLbl"></b>
+          <button class="btn-soft" onclick="empMonthShift(1)">הבא ›</button>
+        </span>
+      </div>
+      <div id="empMonthWrap"></div>
+    </div>
+
+    <div id="pmGanttView" style="display:none">
+      <div class="planBar">
+        <span class="empNav">
+          <button class="btn-soft" onclick="ganttYearShift(-1)">‹</button>
+          <b id="ganttYearLbl"></b>
+          <button class="btn-soft" onclick="ganttYearShift(1)">›</button>
+        </span>
+        <input class="search" id="ganttSearch" style="flex:1 1 200px;margin-top:0" placeholder="🔍 סינון עובד…" oninput="renderGantt()">
+      </div>
+      <div class="histWrap" id="ganttWrap"></div>
+      <div class="histLegend" id="ganttLegend" style="margin-top:8px"></div>
+    </div>
   </div>
 
   <div class="cols">
@@ -744,7 +817,7 @@ function render(){
   $("tabPlan").classList.toggle("vtab-on", planOn);
   if(mapOn) renderMap();
   if(histOn) renderHist();
-  if(planOn) renderPlan();
+  if(planOn) renderPlanActive();
 }
 
 function setView(v){ view=v; mapOpenDept=null; render(); }
@@ -826,6 +899,117 @@ async function planClearLate(uid,date){
   const o=((notesByDate[date]=notesByDate[date]||{})[uid]=notesByDate[date][uid]||{}); o.late=''; renderPlan();
   try{ await sheetAppend(T_NOTES,[[nowTs(),date,uid,"clear",""]]); }
   catch(e){ alert("השמירה נכשלה: "+e.message); }
+}
+
+// ===== לוח חגים ומועדים (מחושב מהלוח העברי, 2026–2028) =====
+const HOLIDAYS=[["2026-02-02","ט״ו בשבט",0],["2026-03-02","תענית אסתר",0],["2026-03-03","פורים",0],["2026-03-04","שושן פורים",0],["2026-04-02","פסח",1],["2026-04-03","פסח",0],["2026-04-04","פסח",0],["2026-04-05","פסח",0],["2026-04-06","פסח",0],["2026-04-07","פסח",0],["2026-04-08","פסח",1],["2026-04-14","יום השואה",0],["2026-04-21","יום הזיכרון",0],["2026-04-22","יום העצמאות",1],["2026-05-01","פסח שני",0],["2026-05-05","ל״ג בעומר",0],["2026-05-15","יום ירושלים",0],["2026-05-22","שבועות",1],["2026-07-02","י״ז בתמוז",0],["2026-07-23","ט׳ באב",0],["2026-07-29","ט״ו באב",0],["2026-09-12","ראש השנה",1],["2026-09-13","ראש השנה",1],["2026-09-14","צום גדליה",0],["2026-09-21","יום כיפור",1],["2026-09-26","סוכות",1],["2026-09-27","סוכות",0],["2026-09-28","סוכות",0],["2026-09-29","סוכות",0],["2026-09-30","סוכות",0],["2026-10-01","סוכות",0],["2026-10-02","סוכות",0],["2026-10-03","שמיני עצרת",1],["2026-12-05","חנוכה",0],["2026-12-06","חנוכה",0],["2026-12-07","חנוכה",0],["2026-12-08","חנוכה",0],["2026-12-09","חנוכה",0],["2026-12-10","חנוכה",0],["2026-12-11","חנוכה",0],["2026-12-12","חנוכה",0],["2026-12-20","י׳ בטבת",0],["2027-01-23","ט״ו בשבט",0],["2027-02-21","פורים קטן",0],["2027-03-22","תענית אסתר",0],["2027-03-23","פורים",0],["2027-03-24","שושן פורים",0],["2027-04-22","פסח",1],["2027-04-23","פסח",0],["2027-04-24","פסח",0],["2027-04-25","פסח",0],["2027-04-26","פסח",0],["2027-04-27","פסח",0],["2027-04-28","פסח",1],["2027-05-04","יום השואה",0],["2027-05-11","יום הזיכרון",0],["2027-05-12","יום העצמאות",1],["2027-05-21","פסח שני",0],["2027-05-25","ל״ג בעומר",0],["2027-06-04","יום ירושלים",0],["2027-06-11","שבועות",1],["2027-07-22","י״ז בתמוז",0],["2027-08-12","ט׳ באב",0],["2027-08-18","ט״ו באב",0],["2027-10-02","ראש השנה",1],["2027-10-03","ראש השנה",1],["2027-10-04","צום גדליה",0],["2027-10-11","יום כיפור",1],["2027-10-16","סוכות",1],["2027-10-17","סוכות",0],["2027-10-18","סוכות",0],["2027-10-19","סוכות",0],["2027-10-20","סוכות",0],["2027-10-21","סוכות",0],["2027-10-22","סוכות",0],["2027-10-23","שמיני עצרת",1],["2027-12-25","חנוכה",0],["2027-12-26","חנוכה",0],["2027-12-27","חנוכה",0],["2027-12-28","חנוכה",0],["2027-12-29","חנוכה",0],["2027-12-30","חנוכה",0],["2027-12-31","חנוכה",0],["2028-01-01","חנוכה",0],["2028-01-09","י׳ בטבת",0],["2028-02-12","ט״ו בשבט",0],["2028-03-09","תענית אסתר",0],["2028-03-12","פורים",0],["2028-03-13","שושן פורים",0],["2028-04-11","פסח",1],["2028-04-12","פסח",0],["2028-04-13","פסח",0],["2028-04-14","פסח",0],["2028-04-15","פסח",0],["2028-04-16","פסח",0],["2028-04-17","פסח",1],["2028-04-24","יום השואה",0],["2028-05-01","יום הזיכרון",0],["2028-05-02","יום העצמאות",1],["2028-05-10","פסח שני",0],["2028-05-14","ל״ג בעומר",0],["2028-05-24","יום ירושלים",0],["2028-05-31","שבועות",1],["2028-07-11","י״ז בתמוז",0],["2028-08-01","ט׳ באב",0],["2028-08-07","ט״ו באב",0],["2028-09-21","ראש השנה",1],["2028-09-22","ראש השנה",1],["2028-09-24","צום גדליה",0],["2028-09-30","יום כיפור",1],["2028-10-05","סוכות",1],["2028-10-06","סוכות",0],["2028-10-07","סוכות",0],["2028-10-08","סוכות",0],["2028-10-09","סוכות",0],["2028-10-10","סוכות",0],["2028-10-11","סוכות",0],["2028-10-12","שמיני עצרת",1],["2028-12-13","חנוכה",0],["2028-12-14","חנוכה",0],["2028-12-15","חנוכה",0],["2028-12-16","חנוכה",0],["2028-12-17","חנוכה",0],["2028-12-18","חנוכה",0],["2028-12-19","חנוכה",0],["2028-12-20","חנוכה",0],["2028-12-28","י׳ בטבת",0]];
+const HOL_MAP=(function(){ const m={}; HOLIDAYS.forEach(h=>{ m[h[0]]=m[h[0]]||h; }); return m; })();
+function holAt(ds){ return HOL_MAP[ds]||null; }   // [date,name,nowork] או null
+
+// סטטוס עובד ליום בודד (מכבד עבר/עתיד כמו buildState) — לתצוגות עובד/גאנט
+function empStatusAt(uid,date){
+  const p=(punchesByDate[date]||{})[uid]; if(p) return "present";
+  const todayStr=today();
+  if(date>todayStr){ const s=(overridesByDate[date]||{})[uid]; if(s) return s; }
+  else {
+    let ov=null; for(const d in overridesByDate){ if(d<=date){ const s=overridesByDate[d][uid]; if(s!=null&&(!ov||d>ov.d)) ov={d,s}; } }
+    let pk=null; for(const d in punchesByDate){ if(d<=date&&punchesByDate[d][uid]){ if(!pk||d>pk) pk=d; } }
+    const s=(ov&&(!pk||pk<ov.d))?ov.s:null; if(s) return s;
+  }
+  if(isAlwaysPresent(uid,(empMeta[uid]&&empMeta[uid].name)||roster[uid])) return "present";
+  return "absent";
+}
+
+// ---- בורר מצב בטאב "צפי" ----
+let planMode="week";                 // week | emp | gantt
+let empSelUid="", empMonth="";       // תצוגת עובד
+let ganttYear=0;                     // תצוגת גאנט
+function setPlanMode(m){
+  planMode=m;
+  $("pmWeekView").style.display  = m==="week"?"":"none";
+  $("pmEmpView").style.display   = m==="emp"?"":"none";
+  $("pmGanttView").style.display = m==="gantt"?"":"none";
+  ["week","emp","gantt"].forEach(k=>$("pm"+k[0].toUpperCase()+k.slice(1)).classList.toggle("on",k===m));
+  renderPlanActive();
+}
+function renderPlanActive(){ if(planMode==="emp") renderEmpMonth(); else if(planMode==="gantt") renderGantt(); else renderPlan(); }
+
+// ---- תצוגת עובד: לוח חודשי ----
+function monthAdd(ym,delta){ const p=ym.split("-").map(Number); const d=new Date(p[0],p[1]-1+delta,1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function empMonthShift(delta){ empMonth=monthAdd(empMonth||today().slice(0,7),delta); renderEmpMonth(); }
+function renderEmpMonth(){
+  const emps=planEmployees();
+  if(!empMonth) empMonth=(($("date").value||today()).slice(0,7));
+  // בורר עובד
+  const cur=empSelUid||(emps[0]&&emps[0].uid)||"";
+  empSelUid=cur;
+  $("empSel").innerHTML=emps.map(e=>'<option value="'+e.uid+'"'+(e.uid===cur?' selected':'')+'>'+e.name+'</option>').join("");
+  if(!emps.length){ $("empMonthWrap").innerHTML='<div class="empty">אין עובדים</div>'; $("empMonthLbl").textContent=""; return; }
+  const [y,mo]=empMonth.split("-").map(Number);
+  const MON=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+  $("empMonthLbl").textContent=MON[mo-1]+" "+y;
+  const first=new Date(y,mo-1,1), startDow=first.getDay(), dim=new Date(y,mo,0).getDate();
+  const z=n=>String(n).padStart(2,"0");
+  let cells='<div class="emcal"><div class="emhd">א</div><div class="emhd">ב</div><div class="emhd">ג</div><div class="emhd">ד</div><div class="emhd">ה</div><div class="emhd">ו</div><div class="emhd">ש</div>';
+  for(let i=0;i<startDow;i++) cells+='<div class="emcell empad"></div>';
+  for(let day=1;day<=dim;day++){
+    const ds=y+"-"+z(mo)+"-"+z(day), dow=new Date(y,mo-1,day).getDay();
+    const st=empStatusAt(cur,ds), hol=holAt(ds), nt=(notesByDate[ds]||{})[cur]||{};
+    const sat=dow===6;
+    const sel='<select class="emsel s-'+st+'" onchange="planSet(\''+cur+'\',\''+ds+'\',this.value)">'+
+      ['present','vacation','sick','reserve'].map(s=>'<option value="'+s+'"'+(s===st?' selected':'')+'>'+STATUS[s].l+'</option>').join('')+'</select>';
+    cells+='<div class="emcell'+(sat?' emsat':'')+(hol?' emhol':'')+'"><div class="emd">'+day+
+      (hol?'<span class="emhname" title="'+hol[1]+'">🎉'+hol[1]+'</span>':'')+'</div>'+
+      (sat?'<div class="emsatx">שבת</div>':sel)+
+      (nt.late?'<div class="emnote">🕐'+nt.late+'</div>':'')+(nt.early?'<div class="emnote">🚪'+nt.early+'</div>':'')+'</div>';
+  }
+  cells+='</div>';
+  $("empMonthWrap").innerHTML=cells;
+}
+function onEmpSel(){ empSelUid=$("empSel").value; renderEmpMonth(); }
+
+// ---- תצוגת גאנט שנתי ----
+function daysInYear(y){ return ((y%4===0&&y%100!==0)||y%400===0)?366:365; }
+function doy(ds){ const p=ds.split("-").map(Number); const a=new Date(p[0],0,1), b=new Date(p[0],p[1]-1,p[2]);
+  return Math.round((b-a)/86400000); }
+function ganttYearShift(delta){ ganttYear+=delta; renderGantt(); }
+function renderGantt(){
+  if(!ganttYear) ganttYear=Number((($("date").value||today()).slice(0,4)));
+  const y=ganttYear, total=daysInYear(y), yStr=String(y);
+  $("ganttYearLbl").textContent=y;
+  const flt=($("ganttSearch")?$("ganttSearch").value:"").trim();
+  const emps=planEmployees().filter(e=>e.name.includes(flt));
+  const MONS=["ינו","פבר","מרץ","אפר","מאי","יונ","יול","אוג","ספט","אוק","נוב","דצמ"];
+  // סרגל חודשים + מועדים
+  let ruler='<div class="gruler">';
+  for(let m=0;m<12;m++){ const l=doy(y+"-"+String(m+1).padStart(2,"0")+"-01")/total*100;
+    ruler+='<div class="gmline" style="right:'+l+'%"></div><div class="gmlabel" style="right:'+l+'%">'+MONS[m]+'</div>'; }
+  HOLIDAYS.forEach(h=>{ if(h[0].slice(0,4)===yStr){ const l=doy(h[0])/total*100;
+    ruler+='<div class="ghol'+(h[2]?' gholN':'')+'" style="right:'+l+'%" title="'+h[1]+' · '+h[0]+'"></div>'; } });
+  const tStr=today(); if(tStr.slice(0,4)===yStr) ruler+='<div class="gtoday" style="right:'+(doy(tStr)/total*100)+'%"></div>';
+  ruler+='</div>';
+  // שורה פר עובד עם מקטעי היעדרות
+  let body="";
+  emps.forEach(e=>{
+    // איסוף ימי היעדרות בשנה + מיזוג רצפים
+    const marks=[];
+    for(const d in overridesByDate){ if(d.slice(0,4)===yStr){ const s=overridesByDate[d][e.uid];
+      if(s==='vacation'||s==='sick'||s==='reserve') marks.push([d,s]); } }
+    marks.sort((a,b)=>a[0]<b[0]?-1:1);
+    const spans=[]; marks.forEach(mk=>{ const last=spans[spans.length-1];
+      if(last&&last.s===mk[1]&&dateAdd(last.end,1)===mk[0]) last.end=mk[0];
+      else spans.push({start:mk[0],end:mk[0],s:mk[1]}); });
+    let track="";
+    spans.forEach(sp=>{ const l=doy(sp.start)/total*100, w=(doy(sp.end)-doy(sp.start)+1)/total*100;
+      track+='<div class="gspan s-'+sp.s+'" style="right:'+l+'%;width:'+w+'%" title="'+e.name+' · '+STATUS[sp.s].l+' '+sp.start+'→'+sp.end+'"></div>'; });
+    body+='<div class="grow"><div class="gname">'+e.name+'</div><div class="gtrack">'+track+'</div></div>';
+  });
+  if(!emps.length) body='<div class="empty" style="padding:16px">אין עובדים בסינון</div>';
+  $("ganttWrap").innerHTML='<div class="gantt"><div class="grow ghead"><div class="gname"></div>'+ruler+'</div>'+body+'</div>';
+  $("ganttLegend").innerHTML='<span class="hl"><i class="hc s-vacation"></i>חופשה</span><span class="hl"><i class="hc s-sick"></i>מחלה</span>'+
+    '<span class="hl"><i class="hc s-reserve"></i>מילואים</span><span class="hl"><i class="glg gholN"></i>חג (יום חופש)</span>'+
+    '<span class="hl"><i class="glg ghol"></i>מועד/צום</span>';
 }
 
 // ---- טאב היסטוריה: נוכחות לאורך זמן, סינון לפי עובד ולפי טווח תאריכים ----
