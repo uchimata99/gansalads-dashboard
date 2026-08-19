@@ -772,11 +772,8 @@ function planEmployees(){
   out.sort((a,b)=>a.name.localeCompare(b.name,"he"));
   return out;
 }
-function planStatusAt(uid,date){   // סטטוס "דביק" לתאריך עתידי (חופשה/מחלה/מילואים), אחרת "מגיע"
-  let ov=null; for(const d in overridesByDate){ if(d<=date){ const s=overridesByDate[d][uid];
-    if(s!=null && (!ov||d>ov.d)) ov={d,s}; } }
-  let pk=null; for(const d in punchesByDate){ if(d<=date && punchesByDate[d][uid]){ if(!pk||d>pk) pk=d; } }
-  const s=(ov && (!pk||pk<ov.d))?ov.s:null;
+function planStatusAt(uid,date){   // תכנון עתידי: רק סימון מפורש שנקבע *לאותו יום* — בלי "דביקות"
+  const s=(overridesByDate[date]||{})[uid];   // כך חופשה של יומיים לא נמרחת על כל השבוע
   return (s==='vacation'||s==='sick'||s==='reserve')?s:'present';
 }
 function renderPlan(){
