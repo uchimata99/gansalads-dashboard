@@ -11,7 +11,7 @@
   "lang": "he",
   "dir": "rtl",
   "icons": [
-    { "src": "att-hr-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "att-hr-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "gs-tomato-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "gs-tomato-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

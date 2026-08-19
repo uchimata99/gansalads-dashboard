@@ -1,7 +1,7 @@
 // Service worker לאפליקציית הנוכחות (PWA). מטמין את מעטפת האפליקציה כדי שתיפתח
 // מהר וגם ללא רשת. לעולם לא מיירט קריאות ל-Google (התחברות/גיליון) — הן תמיד מהרשת.
-const CACHE = 'att-shell-v4';
-const ASSETS = ['attendance.html', 'att-hr-192.png', 'att-hr-512.png', 'attendance.webmanifest'];
+const CACHE = 'att-shell-v5';
+const ASSETS = ['attendance.html', 'gs-tomato-192.png', 'gs-tomato-512.png', 'attendance.webmanifest'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
