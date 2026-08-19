@@ -95,11 +95,24 @@
     .daynote { font-size:12px; border-radius:8px; padding:1px 7px; white-space:nowrap; margin-inline-start:6px; }
     .dn-late { background:#fef3c7; color:#b45309; }
     .dn-early { background:#e0e7ff; color:#4338ca; }
-    .dayedit { margin-top:8px; padding:8px; background:var(--stone100); border-radius:10px; display:flex; flex-direction:column; gap:8px; }
-    .de-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .de-lbl { font-size:13px; font-weight:600; min-width:56px; }
-    .de-row input { padding:5px 7px; border:1px solid var(--stone300,#d6d3d1); border-radius:8px; font-size:13px; }
-    .de-foot { justify-content:space-between; }
+    .dayedit { margin-top:10px; padding:14px; background:#fff; border:1px solid var(--stone200); border-radius:14px;
+               box-shadow:0 8px 24px rgba(0,0,0,.08); display:flex; flex-direction:column; gap:14px; }
+    .de-emp { font-weight:800; font-size:15px; display:flex; align-items:center; gap:7px; }
+    .de-sec { border:1px solid var(--stone200); border-radius:12px; padding:12px; background:var(--stone50); }
+    .de-h { font-weight:700; font-size:14px; margin-bottom:10px; }
+    .de-types { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .de-type { flex:1 1 90px; text-align:center; border:1.5px solid var(--stone200); border-radius:999px;
+               padding:9px 6px; font-size:14px; font-weight:600; cursor:pointer; background:#fff; user-select:none; transition:.12s; }
+    .de-type input { position:absolute; opacity:0; pointer-events:none; }
+    .de-type:has(input:checked) { border-color:var(--green); background:var(--green); color:#fff; box-shadow:0 2px 8px rgba(21,128,61,.25); }
+    .de-dates { display:flex; gap:10px; flex-wrap:wrap; }
+    .de-dates label { display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:var(--stone500); flex:1 1 130px; }
+    .de-dates input { padding:10px 10px; border:1.5px solid var(--stone200); border-radius:10px; font-size:15px; background:#fff; }
+    .de-save { width:100%; margin-top:12px; padding:12px; font-size:15px; border-radius:11px; }
+    .de-btns { display:flex; gap:8px; flex-wrap:wrap; }
+    .de-btns .btn-soft { flex:1 1 auto; padding:11px 10px; font-size:14px; border-radius:10px; }
+    .de-foot { display:flex; justify-content:flex-end; }
+    .de-foot .btn-soft { padding:9px 20px; }
     .selall { margin-inline-start:8px; font-size:12px; padding:2px 8px; border:1px solid var(--stone300,#d6d3d1); border-radius:8px; background:#fff; cursor:pointer; }
     .viewtabs { display:flex; gap:8px; margin:14px 0 10px; }
     .vtab { flex:1; padding:9px; border:1px solid var(--stone300,#d6d3d1); background:#fff; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; color:var(--stone700,#44403c); }
@@ -464,6 +477,7 @@ async function loadData(){
 function buildState(date){
   const punch=punchesByDate[date]||{}, notes=notesByDate[date]||{};
   const dow=dowOf(date);
+  const todayStr=today();
   // סטטוס נקבע כך: (1) הבקר קובע — מי שהחתים היום = נוכח; (2) סימון ידני (חופשה וכו')
   // "דביק" — נשאר עד שהעובד שוב מחתים בבקר; (3) גאולה/אברהם/אריאל ברירת-מחדל נוכחים; (4) אחרת נעדר.
   // לכן מחשבים לכל עובד את הסימון האחרון וההחתמה האחרונה עד לתאריך הנבחר.
@@ -483,16 +497,20 @@ function buildState(date){
     const nt=notes[uid]||{};
     const alwaysP=isAlwaysPresent(uid,name);
     const ov=ovLatest[uid], pk=pkLatest[uid];
-    // סימון "דביק" תקף רק אם לא בוטל בהחתמה מאוחרת יותר בבקר
+    // עבר/היום: סימון "דביק" — נשאר עד שהעובד שוב מחתים בבקר.
     const stickyOv=(ov && (!pk || pk<ov.d)) ? ov.s : null;
+    // עתיד: אין החתמות עדיין, ולכן לא "מדביקים" קדימה — מציגים רק סימון מפורש שנקבע *לאותו יום*
+    // (חופשה מתוכננת). כך חופשה של יומיים בשבוע הבא לא נמרחת על כל השבוע.
+    const futureOv=(overridesByDate[date]||{})[uid]||null;
+    const ovApplied=(date>todayStr) ? futureOv : stickyOv;
     let status;
     if(p) status="present";               // הבקר: החתים היום → נוכח (מנקה חופשה — "חזר")
-    else if(stickyOv) status=stickyOv;     // חופשה/סטטוס ידני נשאר עד שיחתים שוב
+    else if(ovApplied) status=ovApplied;   // חופשה/סטטוס ידני
     else if(alwaysP) status="present";     // גאולה/אברהם/אריאל — לא מחתימים, נוכחים כברירת מחדל
     else status="absent";
     // עובד "מחוק" (active=0) מוסתר — אלא אם הופיע בבקר היום (חזר) או שהוא ברירת-מחדל-נוכח.
     if(!active && !p && !alwaysP){ hidden.push({uid,name,dept}); return; }
-    const tracked=!!p || !!stickyOv || alwaysP || !!(nt.late||nt.early);
+    const tracked=!!p || !!ovApplied || alwaysP || !!(nt.late||nt.early);
     employees.push({uid,name,dept,status,note:nt,tracked,
       first_in:p?p.first_in:null, last_out:p?p.last_out:null});
   });
@@ -563,9 +581,11 @@ function datesBetween(from,to){   // רשימת תאריכי YYYY-MM-DD כולל
 }
 async function saveVacation(uid){
   const f=$("vacFrom_"+uid)?.value, t=$("vacTo_"+uid)?.value;
-  if(!f){ alert("בחרי תאריך התחלה לחופש"); return; }
+  if(!f){ alert("בחרי תאריך התחלה"); return; }
+  const sel=document.querySelector('input[name="atype_'+uid+'"]:checked');
+  const type=(sel&&sel.value)||"vacation";
   const days=datesBetween(f,t||f), ts=nowTs(), rows=[];
-  days.forEach(d=>{ (overridesByDate[d]=overridesByDate[d]||{})[uid]="vacation"; rows.push([ts,d,uid,"vacation"]); });
+  days.forEach(d=>{ (overridesByDate[d]=overridesByDate[d]||{})[uid]=type; rows.push([ts,d,uid,type]); });
   dayEdit=null; render();
   try{ await sheetAppend(T_OVER, rows); }catch(e){ alert("השמירה נכשלה: "+e.message); }
 }
@@ -626,19 +646,38 @@ function empRow(e, depts){
 }
 function dayPanel(e){
   const d=$("date").value||today();
+  const u=e.uid;
   return `<div class="dayedit">
-    <div class="de-row"><span class="de-lbl">🌴 חופש:</span>
-      <input type="date" id="vacFrom_${e.uid}" value="${d}"><span>עד</span>
-      <input type="date" id="vacTo_${e.uid}" value="${d}">
-      <button class="btn-soft" onclick="saveVacation('${e.uid}')">שמור חופש</button></div>
-    <div class="de-row"><span class="de-lbl">⏰ ליום:</span>
-      <input type="date" id="noteDate_${e.uid}" value="${d}">
-      <input type="time" id="noteTime_${e.uid}">
-      <button class="btn-soft" onclick="saveNote('${e.uid}','late')">מגיע מאוחר</button>
-      <button class="btn-soft" onclick="saveNote('${e.uid}','early')">יוצא מוקדם</button></div>
-    <div class="de-row de-foot">
-      <button class="btn-soft" onclick="clearDay('${e.uid}')">נקה איחור/יציאה ליום המוצג</button>
-      <button class="btn-soft" onclick="openDay('${e.uid}')">סגור</button></div>
+    <div class="de-emp">📅 ${e.name}</div>
+
+    <div class="de-sec">
+      <div class="de-h">🌴 היעדרות מתוכננת</div>
+      <div class="de-types">
+        <label class="de-type"><input type="radio" name="atype_${u}" value="vacation" checked>חופשה</label>
+        <label class="de-type"><input type="radio" name="atype_${u}" value="sick">מחלה</label>
+        <label class="de-type"><input type="radio" name="atype_${u}" value="reserve">מילואים</label>
+      </div>
+      <div class="de-dates">
+        <label>מתאריך<input type="date" id="vacFrom_${u}" value="${d}"></label>
+        <label>עד תאריך<input type="date" id="vacTo_${u}" value="${d}"></label>
+      </div>
+      <button class="btn-green de-save" onclick="saveVacation('${u}')">💾 שמור היעדרות</button>
+    </div>
+
+    <div class="de-sec">
+      <div class="de-h">⏰ איחור / יציאה מוקדמת</div>
+      <div class="de-dates">
+        <label>תאריך<input type="date" id="noteDate_${u}" value="${d}"></label>
+        <label>שעה<input type="time" id="noteTime_${u}"></label>
+      </div>
+      <div class="de-btns" style="margin-top:10px">
+        <button class="btn-soft" onclick="saveNote('${u}','late')">⏰ מגיע מאוחר</button>
+        <button class="btn-soft" onclick="saveNote('${u}','early')">🚪 יוצא מוקדם</button>
+        <button class="btn-soft" onclick="clearDay('${u}')">✖ נקה ליום זה</button>
+      </div>
+    </div>
+
+    <div class="de-foot"><button class="btn-soft" onclick="openDay('${u}')">סגור</button></div>
   </div>`;
 }
 
