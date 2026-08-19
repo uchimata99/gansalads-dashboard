@@ -14,7 +14,21 @@
   <link rel="apple-touch-icon" href="gs-tomato-192.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="gs-tomato-192.png" />
   <link rel="shortcut icon" type="image/png" href="gs-tomato-192.png" />
-  <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('attendance-sw.js').catch(function(){});});}</script>
+  <script>
+  /* בידוד אפליקציית הנוכחות: רושמים Service Worker בהיקף attendance.html בלבד,
+     ומסירים רישומים ישנים בהיקף רחב (שורש האתר) — הם הגורם ש"אפליקציה אחת" בלעה
+     דפים שכנים. לא נוגעים ברישומי הרכש/מחשבון (היקף .html משלהם). */
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){
+   var reg=function(){navigator.serviceWorker.register('attendance-sw.js',{scope:'./attendance.html'}).catch(function(){});};
+   navigator.serviceWorker.getRegistrations().then(function(regs){
+    var mine=null;
+    regs.forEach(function(r){ var sc=r.scope||'';
+     if(sc.indexOf('attendance.html')>=0){ mine=r; }
+     else if(sc.indexOf('.html')<0){ r.unregister(); } });
+    if(!mine)reg();
+   }).catch(reg);
+  });}
+  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>document.documentElement.classList.add('locked')</script>
   <style>
