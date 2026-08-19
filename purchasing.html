@@ -591,6 +591,18 @@ const PEELED_ITEMS=[{k:'70574',n:"גזר ג'וליאן"},{k:'70621',n:'גזר פ
 // ספק קבוע לכל ירק קלוף (לפי מיכל) — דורס נתוני ספק שגויים בקטלוג (למשל "טלזר 019"/"בר-מן"):
 // כרובים=טרי לי(20246) · גזר/תפו"א/בטטה/קולורבי=ירקות קלופים שיווק ישראל(20615) · בצל מקולף=פאר לי(20100)
 const PEEL_SUP={'70574':['20615'],'70621':['20615'],'PEEL_CHIPS':['20615'],'70572':['20615'],'70569':['20615'],'70719':['20615'],'70564':['20246'],'70566':['20246'],'70581':['20246'],'70562':['20100']};
+// ספקי הירקות הקלופים — בכל פריט קלוף מוצג בורר בין שלושת הספקים האלה בלבד (בקשת מיכל).
+// ברירת המחדל פר פריט: הבחירה האחרונה שנשמרה ← הספק הקבוע של מיכל מ-PEEL_SUP ← הראשון.
+const PEEL_SUPPLIERS=[...new Set(Object.values(PEEL_SUP).flat())];   // 20615=ירקות קלופים שיווק ישראל · 20246=טרי לי · 20100=פאר לי
+let PEEL_PICK={};   // מפתח פריט קלוף -> ספק שנבחר לאחרונה (נשמר ב-localStorage להזמנה הבאה)
+try{PEEL_PICK=JSON.parse(localStorage.getItem('gsPeelSup')||'{}')||{};}catch(e){PEEL_PICK={};}
+// רשימת הספקים לפריט קלוף, כשברירת המחדל (הבחירה האחרונה / הספק הקבוע) ראשונה בבורר
+function peelSups(k){
+ k=String(k);
+ const def=PEEL_PICK[k]||((PEEL_SUP[k]||[])[0]);
+ if(!def)return PEEL_SUPPLIERS.slice();
+ return [def,...PEEL_SUPPLIERS.filter(x=>x!==def)];
+}
 // יחידות מידה במכרז: קלופים=ק"ג; במכרז הירקות — חציל/פלפל אדום/פלפל ירוק חריף/עגבניות/לימון=משטחים, השאר=קרטונים
 const VEG_PALLET=[/חציל/, /פלפל.*אדום/, /אדום.*פלפל/, /פלפל.*חריף/, /חריף.*פלפל/, /עגבני/, /לימון/];
 function aucUnit(a,it){
@@ -671,10 +683,11 @@ function startApp(){
  // מכרז טרי — רשימה נעולה בסדר שנקבע
  ITEMS_VEG=VEG_ITEMS.map(k=>ITEM_BY_K[k]).filter(Boolean);
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
- ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:(PEEL_SUP[d.k]||(b?b.s:[])),sp:(b?b.sp:null)};});
- // דריסת ספק הקלופים גם ב-ITEM_BY_K — כדי שההזמנה שנכתבת ל-ORDER_QUEUE וה-PDF ישתמשו בספק הנכון
- // (למשל ירקות קלופים שיווק ישראל 20615) ולא בספק המזוהם שבקטלוג (טלזר 019 וכו'). onQty/orderBySupplier קוראים מכאן.
- ITEMS_PEEL.forEach(it=>{const b=ITEM_BY_K[it.k];if(b){b.s=(PEEL_SUP[it.k]||b.s);}else{ITEM_BY_K[it.k]=it;}});
+ // כל פריט קלוף מקבל בורר בין שלושת ספקי הירקות (peelSups), עם ברירת המחדל/הבחירה-האחרונה ראשונה
+ ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:peelSups(d.k),sp:(b?b.sp:null)};});
+ // דריסת ספקי הקלופים גם ב-ITEM_BY_K — כדי שההזמנה שנכתבת ל-ORDER_QUEUE וה-PDF ישתמשו בספק הנכון
+ // (ולא בספק המזוהם שבקטלוג כמו טלזר 019). onQty/orderBySupplier קוראים מכאן; s[0] = ברירת המחדל.
+ ITEMS_PEEL.forEach(it=>{const b=ITEM_BY_K[it.k];if(b){b.s=it.s.slice();}else{ITEM_BY_K[it.k]=it;}});
  AUC.veg.items=ITEMS_VEG; AUC.veg.byK={}; ITEMS_VEG.forEach(it=>AUC.veg.byK[it.k]=it);
  AUC.peel.items=ITEMS_PEEL; AUC.peel.byK={}; ITEMS_PEEL.forEach(it=>AUC.peel.byK[it.k]=it);
  renderCatChips();   // קטגוריות כטאבים (chips)
@@ -845,6 +858,11 @@ function onSup(e){
  const k=e.target.dataset.sup;
  if(ORDER[k])ORDER[k].sup=e.target.value;
  else ORDER[k]={qty:0,sup:e.target.value};
+ // ירק קלוף — לשמור את הבחירה כברירת מחדל להזמנה הבאה
+ if(PEEL_KEYS.has(String(k))){
+  PEEL_PICK[String(k)]=e.target.value;
+  try{localStorage.setItem('gsPeelSup',JSON.stringify(PEEL_PICK));}catch(err){}
+ }
 }
 function updateCartBar(){
  const lines=Object.keys(ORDER).filter(k=>ORDER[k].qty>0);
