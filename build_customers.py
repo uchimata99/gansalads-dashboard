@@ -458,13 +458,20 @@ def load_prod_rev(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("file", help="קובץ הגלם C_xxxx.xlsx")
+    ap.add_argument("files", nargs="+", help="קבצי גלם C_xxxx.xlsx (אחד או יותר — התנועות מצורפות)")
     ap.add_argument("--out", help="נתיב לכתיבת אובייקט D (JSON)")
     ap.add_argument("--production", help="seed_payload.json של הייצור (להצלבת כיסוי)")
     ap.add_argument("--flags-csv", help="נתיב לשמירת הדגלים האדומים כ-CSV")
     a = ap.parse_args()
 
-    rows = load_rows(a.file)
+    # D מצטבר — מצרפים את התנועות מכל קובצי השבוע (המלא + כל השבועיים אחריו).
+    # זיהוי פריט/לקוח/שבוע לפי מפתח, כך שאין כפילות כל עוד התקופות אינן חופפות.
+    rows = []
+    for f in a.files:
+        fr = load_rows(f)
+        wks = sorted({r["week"] for r in fr})
+        print(f"  ↳ {os.path.basename(f)}: {len(fr):,} שורות, שבועות {wks[0]}–{wks[-1]}")
+        rows += fr
     prod_rev = load_prod_rev(a.production) if a.production else None
     D = build_D(rows, prod_rev)
 
