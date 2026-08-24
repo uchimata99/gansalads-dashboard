@@ -489,8 +489,10 @@ function gsAfterToken(){
 // ---- קריאה/כתיבה לגיליון ----
 async function sheetGet(tab){
   const range=encodeURIComponent(tab+'!A:J');   // רחב — חלק מהשורות "הוזזו" ימינה; rowAt מאתר את ההתחלה
+  // cache:'no-store' — מכריח קריאה טרייה מגוגל בכל רענון (אחרת הדפדפן עלול להחזיר עותק ישן
+  // ולא להראות עובדים שזה עתה החתימו בבקר).
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+ATT_SHEET_ID+'/values/'+range,
-    {headers:{Authorization:'Bearer '+attToken}});
+    {headers:{Authorization:'Bearer '+attToken}, cache:'no-store'});
   if(r.status===400) return [];   // לשונית עדיין לא קיימת — נחשב כריקה
   if(!r.ok) throw new Error('get '+tab+' '+r.status);
   const j=await r.json(); return j.values||[];
@@ -529,7 +531,7 @@ async function loadData(){
   ]);
   roster={}; punchesByDate={}; empMeta={}; overridesByDate={}; notesByDate={}; mapPos={}; lastPull="";
   dropHeader(rs,'uid').forEach(r=>{ if(r[0]) roster[r[0]]=r[1]||r[0]; });
-  dropHeader(ps,'date').forEach(r=>{ const d=r[0],uid=r[1]; if(!d||!uid) return;
+  dropHeader(ps,'date').forEach(r0=>{ const r=rowAt(r0); const d=r[0],uid=r[1]; if(!d||!uid) return;   // rowAt — עמיד לשורות מוזזות
     (punchesByDate[d]=punchesByDate[d]||{})[uid]={first_in:r[2]||null,last_out:r[3]||null};
     if(d>lastPull) lastPull=d; });
   dropHeader(ms,'timestamp').forEach(r0=>{ const r=rowAt(r0); const uid=r[1]; if(!uid) return;   // last per uid wins
