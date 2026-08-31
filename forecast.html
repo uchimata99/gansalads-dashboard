@@ -271,7 +271,8 @@ function startDashboard(){
       fcApplyHolidayBoost(FORECAST);
       const ha=FORECAST.holiday_applied;
       const holBanner=ha
-        ? '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', והגדלתי את כל התחזית אוטומטית ב-<b>'+Math.round(ha.uplift*100)+'%</b> לפי העלייה ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'
+        ? (function(){ var pos=ha.uplift>=0, pc=Math.round(Math.abs(ha.uplift)*100);
+            return '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', ו'+(pos?'הגדלתי':'הקטנתי')+' את כל התחזית אוטומטית ב-<b>'+pc+'%</b> לפי ה'+(pos?'עלייה':'ירידה')+' ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'; })()
         : '';
       document.getElementById('fcEmpty').innerHTML = holBanner + (FORECAST.computed
         ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
@@ -476,17 +477,40 @@ function fcCustomerOutFactor(name, totK, targetWeek){
 // התראה כך שמיכל תחליט להגדיל ידנית לשבוע הרלוונטי (כמו FC_NOTES —
 // למידה מונחית-אדם). uplift = העלייה המצרפית שנמדדה בשבוע שלפני החג.
 // התאריכים לפי הלוח העברי (חושבו מראש; מתעדכנים שנתית).
+// מקדמי עליית שבוע-לפני-חג — נמדדו על 7.5 שנים (2019–2026, מכירות בפועל).
+// חיוביים = ביקוש גבוה לפני החג; שליליים = צניחה (אחרי זינוק ראש השנה).
+// ראש השנה +40% (7/7), פסח +23% (6/7), עצמאות +11% (6/7), שבועות +5% (גבולי),
+// יום כיפור −22% (0/7 חיובי), סוכות −12%. פורים/חנוכה/ט"ב — לא מובהק, לא נכללים.
 const FC_HOLIDAYS=[
-  {name:"ראש השנה",   date:"2026-09-12", uplift:0.37},
-  {name:"פסח",        date:"2026-04-02", uplift:0.16},
-  {name:"יום העצמאות",date:"2026-04-22", uplift:0.15},
-  {name:"ראש השנה",   date:"2027-10-02", uplift:0.37},
-  {name:"פסח",        date:"2027-04-22", uplift:0.16},
-  {name:"יום העצמאות",date:"2027-05-12", uplift:0.15},
-  {name:"ראש השנה",   date:"2028-09-21", uplift:0.37},
-  {name:"פסח",        date:"2028-04-11", uplift:0.16},
-  {name:"יום העצמאות",date:"2028-05-02", uplift:0.15}
+  {name:"ראש השנה",   date:"2026-09-12", uplift:0.40},
+  {name:"יום כיפור",  date:"2026-09-21", uplift:-0.22},
+  {name:"סוכות",      date:"2026-09-26", uplift:-0.12},
+  {name:"פסח",        date:"2026-04-02", uplift:0.23},
+  {name:"יום העצמאות",date:"2026-04-22", uplift:0.11},
+  {name:"שבועות",     date:"2026-05-22", uplift:0.05},
+  {name:"ראש השנה",   date:"2027-10-02", uplift:0.40},
+  {name:"יום כיפור",  date:"2027-10-11", uplift:-0.22},
+  {name:"סוכות",      date:"2027-10-16", uplift:-0.12},
+  {name:"פסח",        date:"2027-04-22", uplift:0.23},
+  {name:"יום העצמאות",date:"2027-05-12", uplift:0.11},
+  {name:"שבועות",     date:"2027-06-11", uplift:0.05},
+  {name:"ראש השנה",   date:"2028-09-21", uplift:0.40},
+  {name:"יום כיפור",  date:"2028-09-30", uplift:-0.22},
+  {name:"סוכות",      date:"2028-10-05", uplift:-0.12},
+  {name:"פסח",        date:"2028-04-11", uplift:0.23},
+  {name:"יום העצמאות",date:"2028-05-02", uplift:0.11},
+  {name:"שבועות",     date:"2028-05-31", uplift:0.05}
 ];
+// מדד עונתי חודשי (ינואר..דצמבר), נקי מהשפעת חגים (שבועות-חג הוחרגו מהחישוב)
+// כדי שלא ייווצר כפל מול מקדמי החגים. נמדד על 2019–2025 (יחידות שבועיות לא-חג).
+const FC_SEASONAL=[0.91,0.962,0.978,1.03,1.041,1.013,1.025,1.045,1.043,0.974,0.978,1.003];
+// מקדם עונתי לתאריך, יחסית לחודש הנוכחי (הבסיס משקף את העונה הנוכחית) — כך
+// שתכנון קדימה לחודש אחר מתוקן לפי העונה, בלי לגעת בחיזוי השבוע הקרוב.
+function fcSeasonalFactor(dateObj){
+  const m=new Date(dateObj).getMonth();               // 0..11
+  const base=new Date().getMonth();
+  const b=FC_SEASONAL[base]||1; return b?((FC_SEASONAL[m]||1)/b):1;
+}
 // מחזיר את החג הקרוב שהשבוע העסקי הבא הוא "השבוע שלפניו" (עד ~12 ימים קדימה),
 // או null. השבוע העסקי מתחיל ביום ראשון (א'–ה').
 function fcHolidayPreWeek(){
@@ -732,10 +756,11 @@ function calcCompute(){
   while(d<=end && guard++<400){
     const dayName=DAYS[d.getDay()];   // ראשון..שישי ; שבת (getDay()==6) → undefined
     const hol=dayName?fcDateUplift(d):null; const up=hol?hol.uplift:0;
+    const sf=dayName?fcSeasonalFactor(d):1;   // מקדם עונתי חודשי (יחסי לחודש הנוכחי)
     const rowK={}, rowP={};
     if(dayName) sel.forEach(p=>{
-      const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up);
-      const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up);
+      const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up)*sf;
+      const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up)*sf;
       rowK[p.name]=bk; rowP[p.name]=bp; perKg[p.name]+=bk; perPkg[p.name]+=bp; totKg+=bk; totPkg+=bp;
     });
     if(hol) holsHit[hol.name]=hol.uplift;

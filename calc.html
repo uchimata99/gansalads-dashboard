@@ -89,7 +89,7 @@ const SHEET_ID='1_rJ8lLYNme8RM83ws1pFOGij0HPAVAUFefBDYl2_B5A';
 const FC_SCOPE='https://www.googleapis.com/auth/spreadsheets.readonly';
 const FC_TOKEN_KEY='gsGoogleToken';   // מפתח סשן משותף — לא צריך להתחבר פעמיים
 let fcTokenClient=null, fcAccessToken=null, PRODDATA=null, FORECAST=null, PRODUCTS=[];
-let FC_NOTES=[], FC_CUSTOMER_OUT=[], FC_HOLIDAYS=[];
+let FC_NOTES=[], FC_CUSTOMER_OUT=[], FC_HOLIDAYS=[], FC_SEASONAL=[1,1,1,1,1,1,1,1,1,1,1,1];
 let fcMetric='kg';
 
 function gsShowErr(m){ const e=document.getElementById('gsLockErr'); if(e) e.textContent=m||''; }
@@ -135,7 +135,12 @@ async function fcLoadRules(){
     FC_NOTES=grab(/const FC_NOTES\s*=\s*(\[[\s\S]*?\]);/)||[];
     FC_CUSTOMER_OUT=grab(/const FC_CUSTOMER_OUT\s*=\s*(\[[\s\S]*?\]);/)||[];
     FC_HOLIDAYS=grab(/const FC_HOLIDAYS\s*=\s*(\[[\s\S]*?\]);/)||[];
+    FC_SEASONAL=grab(/const FC_SEASONAL\s*=\s*(\[[\s\S]*?\]);/)||FC_SEASONAL;
   }catch(e){ /* אם נכשל — החישוב ירוץ בלי הכללים */ }
+}
+function fcSeasonalFactor(dateObj){
+  const m=new Date(dateObj).getMonth(), base=new Date().getMonth();
+  const b=FC_SEASONAL[base]||1; return b?((FC_SEASONAL[m]||1)/b):1;
 }
 
 // ════════════════ חישוב החיזוי (זהה ל-forecast.html) ════════════════
@@ -261,8 +266,9 @@ function calcCompute(){
   while(d<=end && guard++<400){
     const dayName=DAYS[d.getDay()];
     const hol=dayName?fcDateUplift(d):null; const up=hol?hol.uplift:0;
+    const sf=dayName?fcSeasonalFactor(d):1;
     const rowK={}, rowP={};
-    if(dayName) sel.forEach(p=>{ const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up); const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up);
+    if(dayName) sel.forEach(p=>{ const bk=((p.daily_kg||{})[dayName]||0)/(1+applied)*(1+up)*sf; const bp=((p.daily_pkg||{})[dayName]||0)/(1+applied)*(1+up)*sf;
       rowK[p.name]=bk; rowP[p.name]=bp; perKg[p.name]+=bk; perPkg[p.name]+=bp; totKg+=bk; totPkg+=bp; });
     if(hol) holsHit[hol.name]=hol.uplift;
     dates.push({idx:gi, d:new Date(d), dn:dayName||'שבת', hol:hol?hol.name:null, active:!!dayName});
