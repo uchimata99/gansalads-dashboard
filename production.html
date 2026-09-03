@@ -49,6 +49,7 @@ html.locked #gsLock{display:flex!important}
 </style>
 <script>try{if(localStorage.getItem('gsHideFin')==='1')document.documentElement.classList.add('nofin')}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="name_map.js"></script>
 <style>
 :root{
   --navy:#1a3a5c;--blue:#2563a8;--lblue:#4a90d9;--sky:#e8f2fb;
@@ -1021,13 +1022,15 @@ function getProdData(name){
 }
 let prodCurrent='';
 function prodNames(){return (prodMode==='item'?Object.keys(PROD_DETAIL):Object.keys(BASE_MEMBERS)).sort((a,b)=>a.localeCompare(b,'he'));}
+// תצוגת שם: במצב 'פריט' השם הקנוני מהמיפוי (לפי קוד); במצב 'בסיס' שם מוצר-הבסיס כבר קנוני.
+function prodDisp(n){return (prodMode==='item'&&window.gsName)?gsName(n):n;}
 function renderProdPanel(filter){
   const panel=document.getElementById('prod-panel');
   const f=(filter||'').trim();
-  const names=prodNames().filter(n=>!f||n.includes(f));
+  const names=prodNames().filter(n=>!f||n.includes(f)||prodDisp(n).includes(f));
   panel.innerHTML='';
   names.forEach(n=>{
-    const o=document.createElement('div');o.className='prod-opt';o.textContent=n;
+    const o=document.createElement('div');o.className='prod-opt';o.textContent=prodDisp(n);o.dataset.key=n;
     o.onpointerdown=e=>{e.preventDefault();chooseProd(n);};
     panel.appendChild(o);
   });
@@ -1037,15 +1040,15 @@ function renderProdPanel(filter){
 function openProdPanel(showAll){renderProdPanel(showAll?'':document.getElementById('prod-select').value);}
 function chooseProd(n){
   prodCurrent=n;
-  const inp=document.getElementById('prod-select');inp.value=n;
+  const inp=document.getElementById('prod-select');inp.value=prodDisp(n);
   closeProdPanel();inp.blur();updateProdDetail();
 }
 function closeProdPanel(){document.getElementById('prod-panel').classList.remove('open');}
-function closeProdPanelSoon(){setTimeout(()=>{closeProdPanel();const inp=document.getElementById('prod-select');if(inp.value!==prodCurrent)inp.value=prodCurrent;},150);}
+function closeProdPanelSoon(){setTimeout(()=>{closeProdPanel();const inp=document.getElementById('prod-select');if(inp.value!==prodDisp(prodCurrent))inp.value=prodDisp(prodCurrent);},150);}
 function prodPanelKey(e){
   if(e.key==='Enter'){
     const first=document.querySelector('#prod-panel .prod-opt');
-    if(first&&first.style.cursor!=='default')chooseProd(first.textContent);
+    if(first&&first.style.cursor!=='default')chooseProd(first.dataset.key);
     e.preventDefault();
   }else if(e.key==='Escape')closeProdPanel();
 }
@@ -1055,13 +1058,13 @@ function initProdSelection(){
   let best=names[0],bestR=-1;
   names.forEach(n=>{const d=getProdData(n);let r=0;for(const w in d)for(const i in d[w])r+=d[w][i][2];if(r>bestR){bestR=r;best=n;}});
   prodCurrent=best;
-  document.getElementById('prod-select').value=best;
+  document.getElementById('prod-select').value=prodDisp(best);
   updateProdDetail();
 }
 function setProdMode(m,btn){prodMode=m;document.querySelectorAll('[id^="prod-mode-"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');initProdSelection();}
 function setProdMetric(m,btn){prodMetric=m;document.querySelectorAll('[id^="prod-btn-"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateProdDetail();}
 function updateProdDetail(){
-  const d=getProdData(document.getElementById('prod-select').value);if(!d)return;
+  const d=getProdData(prodCurrent);if(!d)return;
   let tp=0,tk=0,tr=0,nw=0,nd=0;const dayOf={};ALLWEEKS.forEach(w=>dayOf[w.w]=w.days);
   for(const w in d){if(!selWeeks.has(+w))continue;nw++;nd+=dayOf[w]||0;for(const i in d[w]){tp+=d[w][i][0];tk+=d[w][i][1];tr+=d[w][i][2];}}
   const den=avgMode==='day'?(nd||1):(nw||1),aLbl=avgMode==='day'?'ממוצע/יום':'ממוצע שבועי';
@@ -1078,7 +1081,7 @@ function updateProdDetail(){
   drawProdDaily();
 }
 function drawProdDaily(){
-  const d=getProdData(document.getElementById('prod-select').value);if(!d)return;
+  const d=getProdData(prodCurrent);if(!d)return;
   const wsel=document.getElementById('prod-weekSelect').value;
   const mi=PROD_MI[prodMetric];
   const vals=DAYS.map((_,di)=>{
@@ -1213,7 +1216,9 @@ function recompute(){
   DAYS.forEach(d=>{let p=0,k=0;WEEKS.forEach(w=>{const c=DAILY[w.w]&&DAILY[w.w][d];if(c){p+=c.p;k+=c.k;}});DAYS_TOTAL[d]={p:Math.round(p*10)/10,k:Math.round(k*10)/10};});
   DAY_WEEKS=DAYS.map(d=>WEEKS.filter(w=>DAILY[w.w]&&DAILY[w.w][d]&&DAILY[w.w][d].p>0).length);
   PRODUCTS=recomputeProducts();
-  BASE_MEMBERS={};for(const n in PROD_UNI){(BASE_MEMBERS[PROD_UNI[n]]=BASE_MEMBERS[PROD_UNI[n]]||[]).push(n);}
+  // צבירה למוצר בסיס דרך המיפוי (name_map.js): כל שם פריט → שם מוצר-הבסיס הקנוני.
+  // מקיף את כל הפריטים בנתונים (לא רק מה שהיה ב-PROD_UNI). מקור האמת: name_map.json.
+  BASE_MEMBERS={};for(const n in PROD_DETAIL){const b=(window.gsBaseName?gsBaseName(n):(PROD_UNI[n]||n));(BASE_MEMBERS[b]=BASE_MEMBERS[b]||[]).push(n);}
 }
 
 function agg(){const s={pkg:0,kg:0,rev:0,htp:0,otp:0,htk:0,otk:0,htr:0,otr:0,days:0};
@@ -1342,7 +1347,7 @@ function buildDistChart(){const el=document.getElementById('distChart');if(!el)r
 // (הצגה מאוחדת), ומתחת שני מניעי-התמהיל שמסבירים את הפער שנשאר בין הקווים.
 // שבוע 1 מוחרג — שבוע קצר (יומיים) שמעוות את הנרמול. המוצרים מקובצים למוצר בסיס לפי PROD_UNI
 // כך שגדלים/שמות שונים של אותו מוצר נספרים יחד (למשל שני גדלי חמוצים אסיאתיים).
-function divBase(name){return (PROD_UNI&&PROD_UNI[name])?PROD_UNI[name]:name;}
+function divBase(name){return window.gsBaseName?gsBaseName(name):((PROD_UNI&&PROD_UNI[name])?PROD_UNI[name]:name);}
 function buildDivergence(){
   const el=document.getElementById('divChart');if(!el)return;
   const txt=document.getElementById('divText');
