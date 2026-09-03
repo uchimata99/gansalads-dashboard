@@ -917,7 +917,7 @@ function renderProductionPlan(){
   // לשונית PLAN מהמנוע אם קיימת; אחרת חישוב צד-לקוח: ההתניות של מיכל + חיזוי לשאר המוצרים
   const plan=(PLAN&&PLAN.days&&PLAN.days.length)?PLAN:computePlanFromForecast();
   if(!plan||!plan.days||!plan.days.length){ host.innerHTML=''; return; }
-  // דגל חריגה/חוסר — ברמה השבועית פר מוצר: תוכנית שבועית מול חיזוי שבועי (מאוחד לבסיס), סף 20 ק"ג
+  // דגל חריגה/חוסר — ברמה השבועית פר מוצר: תוכנית שבועית מול חיזוי שבועי (מקובץ למוצר בסיס), סף 20 ק"ג
   const baseFc={}; (PRODUCTS||[]).forEach(p=>{ const b=planBaseOf(p.name); baseFc[b]=(baseFc[b]||0)+num(p.kg); });
   const flagOf={};
   MY_PLAN.forEach(p=>{ const wp=PLAN_DAYS.reduce((a,d)=>a+(p.d[d]||0),0); const fcv=Math.round(baseFc[p.b]||0); const dev=Math.round(wp-fcv);

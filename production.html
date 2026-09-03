@@ -546,7 +546,7 @@ window.addEventListener('load', ()=>{
           <div id="prod-panel"></div>
         </span>
         <button class="ctrl-btn active" id="prod-mode-item" onclick="setProdMode('item',this)">כל המוצרים</button>
-        <button class="ctrl-btn" id="prod-mode-uni" onclick="setProdMode('unified',this)">מוצרים מאוחדים</button>
+        <button class="ctrl-btn" id="prod-mode-base" onclick="setProdMode('base',this)">מוצרי בסיס</button>
         <span style="color:var(--border)">|</span>
         <button class="ctrl-btn active" id="prod-btn-pkg" onclick="setProdMetric('pkg',this)">אריזות</button>
         <button class="ctrl-btn" id="prod-btn-kg" onclick="setProdMetric('kg',this)">ק"ג</button>
@@ -675,7 +675,7 @@ let PRODUCTS=[];
 let PROD_DETAIL={};
 
 
-// מיפוי פריט ← סוג מאוחד (מקור: עמודת העזר בגיליון "דשבורד" באקסל)
+// מיפוי פריט ← מוצר בסיס (מקור: עמודת העזר בגיליון "דשבורד" באקסל). מפתח המטען נשאר PROD_UNI.
 let PROD_UNI={};
 let COSTS={};   // {שם מוצר: עלות לאריזה} — נטען מהגיליון המוגבל (רגיש, פרטי)
 
@@ -1009,10 +1009,10 @@ const PROD_LBL={pkg:'אריזות',kg:'ק"ג',rev:'הכנסות ₪'};
 const prodFmtV=v=>prodMetric==='rev'?rev(v):fmtF(v);
 // מספר השבועות שבהם כל יום היה יום עבודה בפועל (לחישוב ממוצע יומי)
 let DAY_WEEKS=[];
-let UNIFIED_MEMBERS={};
+let BASE_MEMBERS={};
 function getProdData(name){
   if(prodMode==='item')return PROD_DETAIL[name];
-  const members=UNIFIED_MEMBERS[name];if(!members)return null;
+  const members=BASE_MEMBERS[name];if(!members)return null;
   const out={};
   members.forEach(m=>{const d=PROD_DETAIL[m];if(!d)return;
     for(const w in d){const tw=out[w]=out[w]||{};
@@ -1020,7 +1020,7 @@ function getProdData(name){
   return out;
 }
 let prodCurrent='';
-function prodNames(){return (prodMode==='item'?Object.keys(PROD_DETAIL):Object.keys(UNIFIED_MEMBERS)).sort((a,b)=>a.localeCompare(b,'he'));}
+function prodNames(){return (prodMode==='item'?Object.keys(PROD_DETAIL):Object.keys(BASE_MEMBERS)).sort((a,b)=>a.localeCompare(b,'he'));}
 function renderProdPanel(filter){
   const panel=document.getElementById('prod-panel');
   const f=(filter||'').trim();
@@ -1213,7 +1213,7 @@ function recompute(){
   DAYS.forEach(d=>{let p=0,k=0;WEEKS.forEach(w=>{const c=DAILY[w.w]&&DAILY[w.w][d];if(c){p+=c.p;k+=c.k;}});DAYS_TOTAL[d]={p:Math.round(p*10)/10,k:Math.round(k*10)/10};});
   DAY_WEEKS=DAYS.map(d=>WEEKS.filter(w=>DAILY[w.w]&&DAILY[w.w][d]&&DAILY[w.w][d].p>0).length);
   PRODUCTS=recomputeProducts();
-  UNIFIED_MEMBERS={};for(const n in PROD_UNI){(UNIFIED_MEMBERS[PROD_UNI[n]]=UNIFIED_MEMBERS[PROD_UNI[n]]||[]).push(n);}
+  BASE_MEMBERS={};for(const n in PROD_UNI){(BASE_MEMBERS[PROD_UNI[n]]=BASE_MEMBERS[PROD_UNI[n]]||[]).push(n);}
 }
 
 function agg(){const s={pkg:0,kg:0,rev:0,htp:0,otp:0,htk:0,otk:0,htr:0,otr:0,days:0};
@@ -1340,9 +1340,9 @@ function buildDistChart(){const el=document.getElementById('distChart');if(!el)r
 // ═══════ ניתוח הפער בין אריזות / ק"ג / הכנסות ═══════
 // הזהות: הכנסות = אריזות × (ק"ג לאריזה) × (₪ לק"ג). שלושת המדדים מנורמלים לממוצע=100
 // (הצגה מאוחדת), ומתחת שני מניעי-התמהיל שמסבירים את הפער שנשאר בין הקווים.
-// שבוע 1 מוחרג — שבוע קצר (יומיים) שמעוות את הנרמול. המוצרים מאוחדים לפי PROD_UNI
+// שבוע 1 מוחרג — שבוע קצר (יומיים) שמעוות את הנרמול. המוצרים מקובצים למוצר בסיס לפי PROD_UNI
 // כך שגדלים/שמות שונים של אותו מוצר נספרים יחד (למשל שני גדלי חמוצים אסיאתיים).
-function divUnify(name){return (PROD_UNI&&PROD_UNI[name])?PROD_UNI[name]:name;}
+function divBase(name){return (PROD_UNI&&PROD_UNI[name])?PROD_UNI[name]:name;}
 function buildDivergence(){
   const el=document.getElementById('divChart');if(!el)return;
   const txt=document.getElementById('divText');
@@ -1382,10 +1382,10 @@ function buildDivergence(){
   const corr=(a,b)=>{const ma=mean(a),mb=mean(b);let s=0,sa=0,sb=0;for(let i=0;i<a.length;i++){const da=a[i]-ma,db=b[i]-mb;s+=da*db;sa+=da*da;sb+=db*db;}return(sa&&sb)?s/Math.sqrt(sa*sb):0;};
   const cvKpp=cv(kpp), cvVpk=cv(vpk), cKgPkg=corr(pkg,kg), cRevPkg=corr(pkg,rev), cDrivers=corr(kpp,vpk);
   let ext=null;ws.forEach((w,i)=>{const gap=iR[i]-iP[i];if(!ext||Math.abs(gap)>Math.abs(ext.gap))ext={w:w.w,gap};});
-  // ── ניתוח מוצרים ספציפיים (מאוחד לפי PROD_UNI) ──
+  // ── ניתוח מוצרים ספציפיים (מקובץ למוצר בסיס לפי PROD_UNI) ──
   const wset=new Set(ws.map(w=>String(w.w)));
-  const agg={};   // בסיס מאוחד → {pkg,kg,rev}
-  for(const name in PROD_DETAIL){const b=divUnify(name);const wk=PROD_DETAIL[name];const a=agg[b]||(agg[b]={pkg:0,kg:0,rev:0});
+  const agg={};   // מוצר בסיס → {pkg,kg,rev}
+  for(const name in PROD_DETAIL){const b=divBase(name);const wk=PROD_DETAIL[name];const a=agg[b]||(agg[b]={pkg:0,kg:0,rev:0});
     for(const w in wk){if(!wset.has(String(w)))continue;const dd=wk[w];for(const di in dd){a.pkg+=(dd[di][0]||0);a.kg+=(dd[di][1]||0);a.rev+=(dd[di][2]||0);}}}
   let TP=0,TK=0,TR=0;for(const b in agg){TP+=agg[b].pkg;TK+=agg[b].kg;TR+=agg[b].rev;}
   const aggKpp=TP?TK/TP:0, aggVpk=TK?TR/TK:0;
