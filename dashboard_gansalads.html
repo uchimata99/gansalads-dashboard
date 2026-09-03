@@ -1069,7 +1069,7 @@ function toggleWeekly(key) {
 async function loadHummusTahiniTab() {
   try {
     const [reportRows, batchRows, packRows, uniqueRows] = await Promise.all([
-      fetchPkgSheet(PKG_SHEET_ID, 'דיווח').catch(()=>[]),
+      fetchReportRows(),
       fetchPkgSheet(PKG_SHEET_ID, 'אצוות').catch(()=>[]),
       fetchPkgSheet(PKG_SHEET_ID, 'אריזות').catch(()=>[]),
       fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים').catch(()=>[]),
@@ -1631,6 +1631,16 @@ async function fetchPkgSheet(sheetId, name) {
   return json.table.rows.map(r => r.c.map(c => (c ? c.v : null)));
 }
 
+// לשונית הדיווחים שונתה שם ל-"דיווח אריזה - סלטי גן" (27/8) ושברה את המשיכה שחיפשה "דיווח".
+// מנסה את השם הנוכחי, ואם ריק — נופל לשם הישן. כך הדף עמיד לשינוי-שם עתידי לכל כיוון.
+const PKG_REPORT_TABS = ['דיווח אריזה - סלטי גן', 'דיווח'];
+async function fetchReportRows() {
+  for (const nm of PKG_REPORT_TABS) {
+    try { const r = await fetchPkgSheet(PKG_SHEET_ID, nm); if (r && r.length) return r; } catch (e) {}
+  }
+  return [];
+}
+
 function parseDate(v) {
   if (!v) return null;
   let d = null;
@@ -1664,7 +1674,7 @@ function fmtTime(v) {
 async function loadPackagingData() {
   try {
     const [reportRows, batchRows, packRows, uniqueRows] = await Promise.all([
-      fetchPkgSheet(PKG_SHEET_ID, 'דיווח').catch(()=>[]),
+      fetchReportRows(),
       fetchPkgSheet(PKG_SHEET_ID, 'אצוות').catch(()=>[]),
       fetchPkgSheet(PKG_SHEET_ID, 'אריזות').catch(()=>[]),
       fetchPkgSheet(PRODUCTS_SHEET_ID, 'מוצרים_יחודיים').catch(()=>[]),
