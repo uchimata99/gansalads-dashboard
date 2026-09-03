@@ -1521,22 +1521,23 @@ async function loadLiveData() {
       else                   byDate[key].pending.push(entry);
     });
 
-    // בניית מערך ימים ממוין
+    // בניית מערך ימים — כל ימי הייצור של השבוע (א׳–ו׳), כולל ימים ללא נתונים,
+    // כדי שחיצי הימים תמיד יאפשרו לנווט ולא ייתקעו בשבוע דליל (שבת מוחרגת).
     const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-    const newDays = Object.values(byDate)
-      .filter(d => d.date >= wkStart && d.date <= wkEnd)
-      .sort((a,b) => a.date - b.date)
-      .map(d => {
-        const dn = dayNames[d.date.getDay()];
-        const isToday = isCur && d.date.getTime() === actualToday.getTime();
-        return {
-          name: `יום ${dn}`,
-          date: d.dateStr,
-          isToday,
-          done:    d.done,
-          pending: d.pending,
-        };
+    const newDays = [];
+    for (let cur = new Date(wkStart); cur <= wkEnd; cur.setDate(cur.getDate()+1)) {
+      if (cur.getDay() === 6) continue;                       // שבת — אין ייצור
+      const dd = new Date(cur); dd.setHours(0,0,0,0);
+      const rec = byDate[fmtDate(dd) + '/' + dd.getFullYear()];
+      const isToday = isCur && dd.getTime() === actualToday.getTime();
+      newDays.push({
+        name: `יום ${dayNames[dd.getDay()]}`,
+        date: rec ? rec.dateStr : `${dd.getDate()}/${dd.getMonth()+1}/${dd.getFullYear()}`,
+        isToday,
+        done:    rec ? rec.done : [],
+        pending: rec ? rec.pending : [],
       });
+    }
 
     // שומר את היום שנצפה כדי לא לקפוץ בזמן רענון אוטומטי
     const prevDate = DAYS[currentDayIdx] ? DAYS[currentDayIdx].date : null;
@@ -1558,7 +1559,13 @@ async function loadLiveData() {
       let idx = -1;
       if (gotoDateProc) { idx = DAYS.findIndex(d => d.date === gotoDateProc); gotoDateProc = null; }
       if (idx < 0 && prevDate) idx = DAYS.findIndex(d => d.date === prevDate);
-      if (idx < 0) idx = isCur ? DAYS.findIndex(d => d.isToday) : DAYS.length - 1;
+      if (idx < 0 && isCur) {
+        // בשבוע הנוכחי: היום אם יש בו ייצור, אחרת היום האחרון בשבוע שיש בו ייצור
+        const hasData = d => (d.done.length || d.pending.length);
+        const t = DAYS.findIndex(d => d.isToday && hasData(d));
+        if (t >= 0) idx = t;
+        else for (let i = DAYS.length - 1; i >= 0; i--) { if (hasData(DAYS[i])) { idx = i; break; } }
+      }
       if (idx < 0) idx = DAYS.length - 1;
       currentDayIdx = idx;
     }
