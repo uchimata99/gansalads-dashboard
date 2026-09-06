@@ -756,7 +756,7 @@ function fcNum(x){const n=parseFloat(x);return isNaN(n)?0:n;}
 function fcNote(name){for(const n of FC_NOTES){if(n.p===name)return n;}return null;}
 function fcIsOneOff(name,w){for(const n of FC_NOTES){if(n.type==='one_off'&&n.p===name&&+n.w===+w)return true;}return false;}
 function fcCustomerOutFactor(name,totK,tw){const e=FC_CUSTOMER_OUT.find(x=>x.p===name);if(!e)return 1;if(e.from!=null&&tw!=null&&tw<e.from)return 1;if(!(totK>0))return 1;return Math.max(0,(totK-e.kg)/totK);}
-function fcHolidayPreWeek(){const now=new Date();now.setHours(0,0,0,0);const sun=new Date(now);sun.setDate(now.getDate()-((now.getDay())%7));const coming=new Date(sun);coming.setDate(sun.getDate()+7);let best=null;for(const h of FC_HOLIDAYS){const hd=new Date(h.date+'T00:00:00');if(isNaN(hd))continue;const days=Math.round((hd-coming)/864e5);if(days>=0&&days<=12){if(!best||days<best.days)best={name:h.name,uplift:h.uplift,days};}}return best;}
+function fcHolidayPreWeek(){const now=new Date();now.setHours(0,0,0,0);const sun=new Date(now);sun.setDate(now.getDate()-((now.getDay())%7));const coming=new Date(sun);let best=null;/* שבוע-היעד=השבוע הנוכחי (נתונים שבוע אחורה) — כך שבוע לפני ר"ה מקבל מקדם */for(const h of FC_HOLIDAYS){const hd=new Date(h.date+'T00:00:00');if(isNaN(hd))continue;const days=Math.round((hd-coming)/864e5);if(days>=0&&days<=12){if(!best||days<best.days)best={name:h.name,uplift:h.uplift,days};}}return best;}
 // {pkg,kg,rev} לשבוע הבא — ממוצע נע 4 שבועות פר-מוצר עם הכללים (זהה ל-forecast.html)
 function computeWeekForecastTotals(){
   if(!fcRulesLoaded || !PROD_DETAIL || !ALLWEEKS.length) return null;

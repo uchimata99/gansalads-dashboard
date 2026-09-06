@@ -255,17 +255,10 @@ function fcWeekNum(v){ if(v==null) return null; if(typeof v==='number') return v
 function startDashboard(){
   const go=()=>{
     try{ if(window.Chart) Chart.defaults.font.family="'Segoe UI',Arial,sans-serif"; }catch(e){}
-    // תחזית רשמית (לשונית FORECAST) שנכתבה לשבוע שכבר הסתיים היא ישנה — הנתונים כבר
-    // כוללים שבוע מאוחר יותר. דורסים אותה ומחשבים תחזית טרייה לשבוע הבא מ-DATA, עד
-    // שהמנוע יכתוב את התחזית הבאה (יום חמישי). כך העלאת נתונים ביום ראשון מרעננת מיד.
-    const _fwn = FORECAST ? fcWeekNum(FORECAST.week_num!=null?FORECAST.week_num:FORECAST.week) : null;
-    const _mdw = fcMaxDataWeek();
-    if(FORECAST && _fwn!=null && _mdw!=null && _fwn<=_mdw) FORECAST=null;   // תחזית ישנה — נחשב מחדש
-    // אם אין תחזית רשמית עדכנית בלשונית FORECAST — מחשבים תחזית זמנית מנתוני DATA
-    if(!(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null))){
-      const c=computeForecastFromData(PRODDATA);
-      if(c) FORECAST=c;
-    }
+    // *** מודל חיזוי אחד ויחיד *** — מחושב תמיד בצד הלקוח מנתוני DATA (ממוצע 4 שבועות
+    // פר-מוצר + כללי מיכל + מקדם חג), זהה בדיוק לעמודה הכתומה שב-production.html.
+    // לשונית FORECAST של המנוע אינה בשימוש יותר (מקור אמת אחד, בלי כפילות/סטייה).
+    { const c=computeForecastFromData(PRODDATA); if(c) FORECAST=c; }
     if(FORECAST && (FORECAST.products||FORECAST.daily||FORECAST.total_kg!=null)){
       document.getElementById('fcBody').style.display='';
       fcApplyHolidayBoost(FORECAST);
@@ -275,7 +268,7 @@ function startDashboard(){
             return '<div class="ins" style="margin-bottom:12px;background:#fff7ed;border-color:#fdba74;color:#9a3412">🎉 <b>עשיתי את התיקון לפי החג — '+ha.name+'</b> ('+ha.date+'). השבוע הקרוב הוא לפני '+ha.name+', ו'+(pos?'הגדלתי':'הקטנתי')+' את כל התחזית אוטומטית ב-<b>'+pc+'%</b> לפי ה'+(pos?'עלייה':'ירידה')+' ההיסטורית שנמדדה בשבוע שלפני החג. המספרים למטה כבר כוללים את התיקון.</div>'; })()
         : '';
       document.getElementById('fcEmpty').innerHTML = holBanner + (FORECAST.computed
-        ? '<div class="ins a" style="margin-bottom:18px">⚠️ <b>תחזית זמנית</b> — מחושבת אוטומטית מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+'), פר מוצר ופר יום. זו הערכה בלבד; התחזית הרשמית של יום חמישי תחליף אותה אוטומטית ברגע שתיכתב לגיליון.</div>'
+        ? '<div class="ins" style="margin-bottom:18px;background:#f0f9f4;border-color:#86efac;color:#166534">📈 <b>תחזית לשבוע הקרוב</b> — מחושבת מממוצע ארבעת שבועות הייצור האחרונים ('+(FORECAST.based_on||'')+') פר מוצר ופר יום, כולל התאמות מיכל ומקדמי חג. זהו המודל היחיד (זהה לעמודה בדף ייצור שבועי).</div>'
         : '');
       prepareForecast();
       renderHeader();
@@ -516,7 +509,9 @@ function fcSeasonalFactor(dateObj){
 function fcHolidayPreWeek(){
   const now=new Date(); now.setHours(0,0,0,0);
   const sun=new Date(now); sun.setDate(now.getDate()-((now.getDay())%7)); // יום ראשון של השבוע הנוכחי
-  const coming=new Date(sun); coming.setDate(sun.getDate()+7);            // ראשון של השבוע הקרוב (תחזית)
+  // שבוע-היעד של התחזית = השבוע הנוכחי (הנתונים תמיד שבוע אחורה — קולטים בראשון את השבוע שהסתיים).
+  // לכן בודקים את החג מול ראשון של השבוע הנוכחי; כך השבוע שלפני ראש השנה מקבל את המקדם.
+  const coming=new Date(sun);
   let best=null;
   for(const h of FC_HOLIDAYS){
     const hd=new Date(h.date+'T00:00:00'); if(isNaN(hd)) continue;
