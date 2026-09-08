@@ -343,6 +343,13 @@ window.addEventListener('load', ()=>{
     <div class="ins" id="sumIns"></div>
   </div>
   <div class="card">
+    <div class="card-title">קצב שבועי מתגלגל <span class="card-badge">סכום נע · 6 ימי ייצור</span></div>
+    <div style="text-align:center;font-size:12px;color:var(--muted);margin:0 0 10px">סך המכירות בכל <b>6 ימי-ייצור רצופים</b> (ראשון–שישי), מחליק יום-אחר-יום מתחילת השנה. שבת ללא ייצור — מדולגת. כך רואים אם הקצב נשמר גם באמצע שבוע.</div>
+    <div id="rollKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"></div>
+    <div class="cw t"><canvas id="rolling6Chart"></canvas></div>
+    <div class="ins" id="rollIns"></div>
+  </div>
+  <div class="card">
     <div class="card-title">מאיפה נובע ההבדל בין אריזות, ק"ג והכנסות <span class="card-badge">הצגה מאוחדת + ניתוח</span></div>
     <div class="cw t"><canvas id="divChart"></canvas></div>
     <div style="text-align:center;font-size:12px;color:var(--muted);margin:2px 0 10px">שלושת המדדים מנורמלים לממוצע=100 — כך רואים אם הם נעים יחד או מתפצלים</div>
@@ -726,7 +733,7 @@ let currentMetric='pkg';
 function toggleMetric(m){
   currentMetric=m;
   ['pkg','kg','rev'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===m));
-  buildWeeklyTrendChart(); buildGroupStackChart(); buildDistChart();
+  buildWeeklyTrendChart(); buildRolling6(); buildGroupStackChart(); buildDistChart();
 }
 // עזרי מטריקה — צבע/תווית/ערך לפי הבורר (אריזות=ירוק, ק"ג=טורקיז, הכנסות=כחול; שמורים בכל הגרפים)
 function mCol(){return currentMetric==='pkg'?'#16a34a':currentMetric==='kg'?'#0d9488':'#2563a8';}
@@ -735,7 +742,7 @@ function mVal(w){return currentMetric==='pkg'?w.pkg:currentMetric==='kg'?w.kg:w.
 function mHt(w){return currentMetric==='pkg'?w.ht_pkg:currentMetric==='kg'?w.ht_kg:w.ht_rev;}
 function mOt(w){return currentMetric==='pkg'?w.ot_pkg:currentMetric==='kg'?w.ot_kg:w.ot_rev;}
 function mAxis(v){return currentMetric==='rev'?'₪'+fmt(v):fmt(v);}
-function initSummary(){buildWeeklyTrendChart();buildDivergence();buildRevenueChangeTable();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
+function initSummary(){buildWeeklyTrendChart();buildRolling6();buildDivergence();buildRevenueChangeTable();buildGroupStackChart();buildRevenueChart();buildWeeklyTable();}
 // ═══════ חיזוי לשבוע הבא — עמודת "חיזוי" בגרף המגמה הראשי ═══════
 // *** מקור האמת של כללי החיזוי הוא forecast.html *** — FC_NOTES / FC_CUSTOMER_OUT /
 // FC_HOLIDAYS נטענים ממנו בזמן ריצה (אותו origin) כדי שהעמודה כאן תהיה זהה
@@ -819,6 +826,52 @@ function buildWeeklyTrendChart(){
   makeChart('weeklyTrendChart',{type:'bar',data:{labels,datasets:[{label,data,backgroundColor:bg,borderColor:bc,borderWidth:2,borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,onClick:weekBarClick,plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{label:c=>{const u=currentMetric==='rev'?'₪':'';return c.label==='השבוע הקרוב'?(' חיזוי לשבוע הקרוב: '+u+fmt(c.raw)+(fc&&fc.holiday?(' (כולל תיקון חג — '+fc.holiday+')'):'')):(' '+u+fmt(c.raw));}}}},
       scales:{x:{grid:{display:false},ticks:tickOpts},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>currentMetric==='rev'?'₪'+fmt(v):fmt(v)}}}}});
+}
+// ── קצב שבועי מתגלגל: סכום נע של 6 ימי-ייצור רצופים ──────────────────────────
+// בונה סדרת ימי-ייצור רציפה (ראשון–שישי לכל שבוע, שבת מדולגת) ומחשב לכל 6 ימים
+// רצופים את סך המכירות. עוגן תאריכים: ראשון של שבוע 27 = 28/6/2026.
+function rollVal(o){return currentMetric==='pkg'?o.pkg:currentMetric==='kg'?o.kg:o.rev;}
+function buildDaySeries(){
+  const byWD={};
+  for(const name in PROD_DETAIL){const wk=PROD_DETAIL[name];
+    for(const w in wk){const dd=wk[w];
+      for(const di in dd){const i=+di; if(i<0||i>5)continue;
+        const a=byWD[w+'|'+i]||(byWD[w+'|'+i]=[0,0,0]);
+        a[0]+=dd[di][0]||0; a[1]+=dd[di][1]||0; a[2]+=dd[di][2]||0;}}}
+  const wks=ALLWEEKS.map(w=>w.w).sort((a,b)=>a-b);
+  const WK27=Date.UTC(2026,5,28), MS=864e5, ser=[];
+  wks.forEach(w=>{for(let i=0;i<6;i++){const a=byWD[w+'|'+i]; if(!a)continue;
+    ser.push({wk:w,di:i,day:DAYS[i],date:new Date(WK27+((w-27)*7+i)*MS),pkg:a[0],kg:a[1],rev:a[2]});}});
+  return ser;
+}
+function buildRolling6Data(){
+  const ser=buildDaySeries(), out=[];
+  for(let i=5;i<ser.length;i++){let p=0,k=0,r=0;
+    for(let j=i-5;j<=i;j++){p+=ser[j].pkg;k+=ser[j].kg;r+=ser[j].rev;}
+    out.push({start:ser[i-5],end:ser[i],pkg:p,kg:k,rev:r});}
+  return out;
+}
+function rDstr(d){return d.getUTCDate()+'/'+(d.getUTCMonth()+1);}
+function buildRolling6(){
+  const el=document.getElementById('rolling6Chart'); if(!el) return;
+  const R=buildRolling6Data();
+  const ins=document.getElementById('rollIns'), kp=document.getElementById('rollKpis');
+  if(R.length<2){ if(ins)ins.textContent='אין מספיק ימי-ייצור לניתוח מתגלגל.'; if(kp)kp.innerHTML=''; return; }
+  const vals=R.map(rollVal), mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const labels=R.map(o=>rDstr(o.end.date)), col=mCol();
+  makeChart('rolling6Chart',{type:'line',data:{labels,datasets:[
+    {label:'סך 6 ימים ('+mLbl()+')',data:vals,borderColor:col,backgroundColor:col+'20',fill:true,tension:.3,borderWidth:2,pointRadius:R.map((_,i)=>i===R.length-1?4:0),pointBackgroundColor:col},
+    {label:'ממוצע התקופה',data:vals.map(()=>mean),borderColor:'#f59e0b',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}},tooltip:{...ttip,callbacks:{title:it=>{const o=R[it[0].dataIndex];return rDstr(o.start.date)+'–'+rDstr(o.end.date);},label:c=>c.datasetIndex===1?(' ממוצע: '+mAxis(Math.round(c.raw))):(' '+mAxis(Math.round(c.raw)))}}},
+    scales:{x:{grid:{display:false},ticks:{...tickOpts,maxTicksLimit:14}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>mAxis(v)}}}}});
+  const cur=vals[vals.length-1], diff=cur-mean, pct=mean?Math.round(diff/mean*100):0, last=R[R.length-1];
+  const rng=rDstr(last.start.date)+'–'+rDstr(last.end.date);
+  kp.innerHTML=
+    kc('g','הקצב הנוכחי ('+rng+')',mAxis(Math.round(cur)),'6 ימי-ייצור אחרונים')+
+    kc('t','ממוצע התקופה',mAxis(Math.round(mean)),R.length+' חלונות')+
+    kc(diff>=0?'a':'n','פער מהממוצע',(diff>=0?'+':'')+pct+'%',mAxis(Math.round(Math.abs(diff)))+(diff>=0?' מעל':' מתחת'));
+  const dir=Math.abs(pct)<3?'<b>בקצב הרגיל</b>':(pct>0?'<b>מעל</b> הקצב הרגיל ב-<b>'+pct+'%</b>':'<b>מתחת</b> לקצב הרגיל ב-<b>'+Math.abs(pct)+'%</b>');
+  ins.innerHTML='6 ימי-הייצור האחרונים ('+rng+') הניבו <b>'+mAxis(Math.round(cur))+'</b> — '+dir+' (ממוצע התקופה: '+mAxis(Math.round(mean))+'). כל נקודה בגרף = סך 6 ימי-ייצור רצופים שמסתיימים באותו תאריך, כך שהקצב מתעדכן יום-אחר-יום ואפשר לבדוק אותו גם באמצע שבוע.';
 }
 function buildGroupStackChart(){
   makeChart('groupStackChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),
