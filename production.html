@@ -196,7 +196,7 @@ function gsSignIn(){
 }
 
 function gsAfterToken(){
-  Promise.all([loadProdData(), fcLoadRules()]).then(()=>{   // fcLoadRules אף פעם לא דוחה (עוטף try)
+  Promise.all([loadProdData(), fcLoadRules(), loadLiveWeek()]).then(()=>{   // fcLoadRules/loadLiveWeek אף פעם לא דוחים (עוטפים try)
     document.documentElement.classList.remove('locked');
     const l=document.getElementById('gsLock'); if(l) l.style.display='none';
     startDashboard();
@@ -222,6 +222,22 @@ async function loadProdData(){
   PROD_DETAIL=obj.PROD_DETAIL||{}; PROD_UNI=obj.PROD_UNI||{};
   COSTS=obj.COSTS||{};
   selWeeks=new Set(ALLWEEKS.map(w=>w.w));
+}
+
+// לשונית LIVE — שבוע-רץ חלקי (אמצע-שבוע), רק לניתוח הקצב המתגלגל. אף פעם לא דוחה
+// (כמו fcLoadRules): אם ריקה/חסרה/נכשלת — פשוט אין שבוע-רץ, והניתוח רץ על השבועות המלאים.
+async function loadLiveWeek(){
+  try{
+    const range=encodeURIComponent('LIVE!A:A');
+    const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PROD_SHEET_ID+'/values/'+range,
+      {headers:{Authorization:'Bearer '+prodAccessToken}});
+    if(!r.ok) return;
+    const j=await r.json();
+    const cells=(j.values||[]).map(row=>(row&&row.length?row[0]:'')).filter(x=>x!==''&&x!=null);
+    if(!cells.length) return;
+    const o=JSON.parse(cells.join(''));
+    if(o&&o.w&&o.days) LIVE=o;
+  }catch(e){ LIVE=null; }
 }
 
 // אתחול הדשבורד (זהה להיום) — רץ רק אחרי שהנתונים נטענו וה-DOM מוכן
@@ -686,6 +702,9 @@ let PROD_DETAIL={};
 // מיפוי פריט ← מוצר בסיס (מקור: עמודת העזר בגיליון "דשבורד" באקסל). מפתח המטען נשאר PROD_UNI.
 let PROD_UNI={};
 let COSTS={};   // {שם מוצר: עלות לאריזה} — נטען מהגיליון המוגבל (רגיש, פרטי)
+// שבוע-רץ חלקי (אמצע-שבוע) מלשונית LIVE — קורא אותו *רק* ניתוח הקצב המתגלגל.
+// לא נכנס ל-WEEKS/DAILY/PROD_DETAIL כדי לא לעוות את גרף המגמה והחיזוי (שמצפים לשבוע מלא).
+let LIVE=null;
 
 // ═══════════════════════════════ UTILS ═══════════════════════════════
 const fmt=n=>Math.round(n).toLocaleString('he-IL');
@@ -838,10 +857,21 @@ function buildDaySeries(){
       for(const di in dd){const i=+di; if(i<0||i>5)continue;
         const a=byWD[w+'|'+i]||(byWD[w+'|'+i]=[0,0,0]);
         a[0]+=dd[di][0]||0; a[1]+=dd[di][1]||0; a[2]+=dd[di][2]||0;}}}
-  const wks=ALLWEEKS.map(w=>w.w).sort((a,b)=>a-b);
+  // שבוע-רץ חלקי מלשונית LIVE — מצורף רק אם השבוע עדיין לא קיים ב-DATA (מניעת ספירה כפולה
+  // כשמשלימים לשבוע מלא ביום שני). מסומן live:true כדי שהתובנה תציין שהוא עדיין רץ.
+  const liveWks=new Set();
+  if(LIVE&&LIVE.w&&LIVE.days&&!ALLWEEKS.some(w=>w.w===+LIVE.w)){
+    const lw=+LIVE.w;
+    for(const di in LIVE.days){const i=+di; if(i<0||i>5)continue;
+      const v=LIVE.days[di]; if(!v||(!v[0]&&!v[1]&&!v[2]))continue;
+      const a=byWD[lw+'|'+i]||(byWD[lw+'|'+i]=[0,0,0]);
+      a[0]+=v[0]||0; a[1]+=v[1]||0; a[2]+=v[2]||0;}
+    liveWks.add(lw);
+  }
+  const wks=[...new Set([...ALLWEEKS.map(w=>w.w),...liveWks])].sort((a,b)=>a-b);
   const WK27=Date.UTC(2026,5,28), MS=864e5, ser=[];
   wks.forEach(w=>{for(let i=0;i<6;i++){const a=byWD[w+'|'+i]; if(!a)continue;
-    ser.push({wk:w,di:i,day:DAYS[i],date:new Date(WK27+((w-27)*7+i)*MS),pkg:a[0],kg:a[1],rev:a[2]});}});
+    ser.push({wk:w,di:i,day:DAYS[i],date:new Date(WK27+((w-27)*7+i)*MS),pkg:a[0],kg:a[1],rev:a[2],live:liveWks.has(w)});}});
   return ser;
 }
 function buildRolling6Data(){
@@ -871,7 +901,8 @@ function buildRolling6(){
     kc('t','ממוצע התקופה',mAxis(Math.round(mean)),R.length+' חלונות')+
     kc(diff>=0?'a':'n','פער מהממוצע',(diff>=0?'+':'')+pct+'%',mAxis(Math.round(Math.abs(diff)))+(diff>=0?' מעל':' מתחת'));
   const dir=Math.abs(pct)<3?'<b>בקצב הרגיל</b>':(pct>0?'<b>מעל</b> הקצב הרגיל ב-<b>'+pct+'%</b>':'<b>מתחת</b> לקצב הרגיל ב-<b>'+Math.abs(pct)+'%</b>');
-  ins.innerHTML='6 ימי-הייצור האחרונים ('+rng+') הניבו <b>'+mAxis(Math.round(cur))+'</b> — '+dir+' (ממוצע התקופה: '+mAxis(Math.round(mean))+'). כל נקודה בגרף = סך 6 ימי-ייצור רצופים שמסתיימים באותו תאריך, כך שהקצב מתעדכן יום-אחר-יום ואפשר לבדוק אותו גם באמצע שבוע.';
+  const liveNote=(LIVE&&last.end&&last.end.live)?' <b>⚡ כולל את השבוע הרץ (חלקי)</b> — הימים שהוזנו עד כה בשבוע '+LIVE.w+', כדי לבדוק אם אנחנו בקצב כבר באמצע השבוע.':'';
+  ins.innerHTML='6 ימי-הייצור האחרונים ('+rng+') הניבו <b>'+mAxis(Math.round(cur))+'</b> — '+dir+' (ממוצע התקופה: '+mAxis(Math.round(mean))+').'+liveNote+' כל נקודה בגרף = סך 6 ימי-ייצור רצופים שמסתיימים באותו תאריך, כך שהקצב מתעדכן יום-אחר-יום ואפשר לבדוק אותו גם באמצע שבוע.';
 }
 function buildGroupStackChart(){
   makeChart('groupStackChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),
