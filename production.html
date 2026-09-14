@@ -359,7 +359,7 @@ window.addEventListener('load', ()=>{
     <div class="ins" id="sumIns"></div>
   </div>
   <div class="card">
-    <div class="card-title">קצב שבועי מתגלגל <span class="card-badge">סכום נע · 6 ימי ייצור</span></div>
+    <div class="card-title">קצב שבועי מתגלגל <span class="card-badge">סכום נע · 6 ימי ייצור</span> <span class="card-badge g" id="rollUnit">אריזות</span></div>
     <div style="text-align:center;font-size:12px;color:var(--muted);margin:0 0 10px">סך המכירות בכל <b>6 ימי-ייצור רצופים</b> (ראשון–שישי), מחליק יום-אחר-יום מתחילת השנה. שבת ללא ייצור — מדולגת. כך רואים אם הקצב נשמר גם באמצע שבוע.</div>
     <div id="rollKpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"></div>
     <div class="cw t"><canvas id="rolling6Chart"></canvas></div>
@@ -896,13 +896,17 @@ function buildRolling6(){
     scales:{x:{grid:{display:false},ticks:{...tickOpts,maxTicksLimit:14}},y:{grid:gridOpts,ticks:{...tickOpts,callback:v=>mAxis(v)}}}}});
   const cur=vals[vals.length-1], diff=cur-mean, pct=mean?Math.round(diff/mean*100):0, last=R[R.length-1];
   const rng=rDstr(last.start.date)+'–'+rDstr(last.end.date);
+  // תווית יחידה מפורשת בכל ערך (אריזות/ק"ג; הכנסות כבר עם ₪) — כדי שלא יהיה ספק לאיזה מדד
+  // המספרים שייכים, וכדי שיתחלף ברור עם בורר המדד. הבאדג' בכותרת מציג את המדד הפעיל.
+  const U=currentMetric==='pkg'?' אריזות':currentMetric==='kg'?' ק"ג':'';
+  const ub=document.getElementById('rollUnit'); if(ub)ub.textContent=mLbl();
   kp.innerHTML=
-    kc('g','הקצב הנוכחי ('+rng+')',mAxis(Math.round(cur)),'6 ימי-ייצור אחרונים')+
-    kc('t','ממוצע התקופה',mAxis(Math.round(mean)),R.length+' חלונות')+
-    kc(diff>=0?'a':'n','פער מהממוצע',(diff>=0?'+':'')+pct+'%',mAxis(Math.round(Math.abs(diff)))+(diff>=0?' מעל':' מתחת'));
+    kc('g','הקצב הנוכחי ('+rng+')',mAxis(Math.round(cur))+U,'6 ימי-ייצור אחרונים')+
+    kc('t','ממוצע התקופה',mAxis(Math.round(mean))+U,R.length+' חלונות')+
+    kc(diff>=0?'a':'n','פער מהממוצע',(diff>=0?'+':'')+pct+'%',mAxis(Math.round(Math.abs(diff)))+U+(diff>=0?' מעל':' מתחת'));
   const dir=Math.abs(pct)<3?'<b>בקצב הרגיל</b>':(pct>0?'<b>מעל</b> הקצב הרגיל ב-<b>'+pct+'%</b>':'<b>מתחת</b> לקצב הרגיל ב-<b>'+Math.abs(pct)+'%</b>');
   const liveNote=(LIVE&&last.end&&last.end.live)?' <b>⚡ כולל את השבוע הרץ (חלקי)</b> — הימים שהוזנו עד כה בשבוע '+LIVE.w+', כדי לבדוק אם אנחנו בקצב כבר באמצע השבוע.':'';
-  ins.innerHTML='6 ימי-הייצור האחרונים ('+rng+') הניבו <b>'+mAxis(Math.round(cur))+'</b> — '+dir+' (ממוצע התקופה: '+mAxis(Math.round(mean))+').'+liveNote+' כל נקודה בגרף = סך 6 ימי-ייצור רצופים שמסתיימים באותו תאריך, כך שהקצב מתעדכן יום-אחר-יום ואפשר לבדוק אותו גם באמצע שבוע.';
+  ins.innerHTML='6 ימי-הייצור האחרונים ('+rng+') הניבו <b>'+mAxis(Math.round(cur))+U+'</b> — '+dir+' (ממוצע התקופה: '+mAxis(Math.round(mean))+U+').'+liveNote+' כל נקודה בגרף = סך 6 ימי-ייצור רצופים שמסתיימים באותו תאריך, כך שהקצב מתעדכן יום-אחר-יום ואפשר לבדוק אותו גם באמצע שבוע. המדד (אריזות/ק"ג/הכנסות) נקבע לפי הבורר שמעל גרף המגמה.';
 }
 function buildGroupStackChart(){
   makeChart('groupStackChart',{type:'bar',data:{labels:WEEKS.map(w=>wLabel(w.w)),
