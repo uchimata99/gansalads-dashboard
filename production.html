@@ -752,7 +752,7 @@ let currentMetric='pkg';
 function toggleMetric(m){
   currentMetric=m;
   ['pkg','kg','rev'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',x===m));
-  buildWeeklyTrendChart(); buildRolling6(); buildGroupStackChart(); buildDistChart();
+  renderSummaryKpis(); buildWeeklyTrendChart(); buildRolling6(); buildGroupStackChart(); buildDistChart();
 }
 // עזרי מטריקה — צבע/תווית/ערך לפי הבורר (אריזות=ירוק, ק"ג=טורקיז, הכנסות=כחול; שמורים בכל הגרפים)
 function mCol(){return currentMetric==='pkg'?'#16a34a':currentMetric==='kg'?'#0d9488':'#2563a8';}
@@ -1322,6 +1322,26 @@ function maxBy(f){return WEEKS.reduce((b,w)=>!b||w[f]>b[f]?w:b,null);}
 function minBy(f){return WEEKS.reduce((b,w)=>!b||w[f]<b[f]?w:b,null);}
 function kc(cls,lbl,val,sub){return '<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+(sub||'')+'</div></div>';}
 
+// פס ה-KPI של הסיכום — מתעדכן לפי בורר המדד (אריזות/ק"ג/הכנסות), כדי שהוא ישתנה
+// עם הבורר ולא יציג את שלושת המדדים בו-זמנית. כרטיסי הכנסה מסומנים fin (מוסתרים
+// במצב "הסתר כספים", שם ממילא אי אפשר לבחור מדד הכנסות).
+function renderSummaryKpis(s){
+  s=s||agg();
+  const c=currentMetric==='pkg'?{t:'pkg',ht:'htp',ot:'otp',lbl:'אריזות',u:' אריזות'}
+        :currentMetric==='kg' ?{t:'kg', ht:'htk',ot:'otk',lbl:'ק"ג',  u:' ק"ג'}
+        :                      {t:'rev',ht:'htr',ot:'otr',lbl:'הכנסות',u:''};
+  const rv=currentMetric==='rev', V=x=>rv?rev(x):fmtF(x)+c.u, fin=rv?' fin':'';
+  const peak=maxBy(c.t), low=minBy(c.t);
+  const hol=w=>w&&w.hol&&w.hol!=='—'?w.hol:'';
+  const el=document.getElementById('sumKpis'); if(!el)return;
+  el.innerHTML=
+    kc('g'+fin,'סה"כ '+c.lbl,V(s[c.t]),s.n+' שבועות')+
+    kc('g'+fin,c.lbl+' — '+s.avgLbl,V(s.avg(c.t)),'לשבוע')+
+    kc('a'+fin,'שיא — שבוע '+(peak?peak.w:'-'),peak?V(peak[c.t]):'-',hol(peak))+
+    kc('r'+fin,'שפל — שבוע '+(low?low.w:'-'),low?V(low[c.t]):'-',hol(low))+
+    kc(fin,'חומוס/טחינה — '+c.lbl,V(s.avg(c.ht)),pct(s[c.ht],s[c.t])+' מהסה"כ')+
+    kc(fin,'אחרים — '+c.lbl,V(s.avg(c.ot)),pct(s[c.ot],s[c.t])+' מהסה"כ');
+}
 function renderAllKPIs(){
   const s=agg();
   const setH=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
@@ -1332,13 +1352,7 @@ function renderAllKPIs(){
     '<div class="hkpi fin"><div class="hkpi-lbl">סה"כ הכנסות</div><div class="hkpi-val">'+rev(s.rev)+'</div></div>'+
     '<div class="hkpi fin"><div class="hkpi-lbl">'+s.avgLbl+' (₪)</div><div class="hkpi-val">'+rev(s.avg('rev'))+'</div></div>');
   setT('hdrSub',weekRangeText());
-  setH('sumKpis',
-    kc('g','אריזות — '+s.avgLbl,fmtF(s.avg('pkg')),'סה"כ '+fmtF(s.pkg))+
-    kc('t','ק"ג — '+s.avgLbl,fmtF(s.avg('kg')),'סה"כ '+fmtF(s.kg))+
-    kc('a fin','הכנסות — '+s.avgLbl,rev(s.avg('rev')),'סה"כ '+rev(s.rev))+
-    kc('n fin','₪ לק"ג ממוצע',s.kg?'₪'+(s.rev/s.kg).toFixed(2):'—','כולל כל המוצרים')+
-    kc('','חומוס/טחינה — '+s.avgLbl,fmtF(s.avg('htp')),'סה"כ '+fmtF(s.htp)+' | '+pct(s.htp,s.pkg))+
-    kc('','אחרים — '+s.avgLbl,fmtF(s.avg('otp')),'סה"כ '+fmtF(s.otp)+' | '+pct(s.otp,s.pkg)));
+  renderSummaryKpis(s);
   const pkPeak=maxBy('pkg'),pkLow=minBy('pkg');
   setH('pkgW-kpis',
     kc('g','סה"כ אריזות',fmtF(s.pkg),s.n+' שבועות')+
