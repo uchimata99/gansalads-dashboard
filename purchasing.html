@@ -610,8 +610,12 @@ const VEG_ITEMS=['70526','70520','70523','70527','70528','70538','70541','70542'
 const VEG_SIDE=[
  {sk:'20755', title:'🍄 פטריות', items:['70539']},
  {sk:'20732', title:'🌿 ירק', items:['70541','70533','70532','70542','70535']}   // פטרוזיליה · סלרי · שמיר · כוסברה · נענע
+ // ממתין למפתח פריט + מפתח ספק ממיכל: פלפל הבנרו מ"שר החריפים". פריט שאינו בקטלוג נכתב כ-{k,n}:
+ // ,{sk:'<מפתח ספק>', title:'🌶️ פלפל הבנרו', items:[{k:'<מפתח פריט>', n:'פלפל הבנרו'}]}
 ];
-const VEG_SIDE_KEYS=new Set(VEG_SIDE.flatMap(g=>g.items));
+// פריט בחלון הצדדי: מפתח (מחרוזת) לפריט מהקטלוג, או {k,n} לפריט שעדיין אינו בקטלוג
+const vsKey=x=>String(typeof x==='object'?x.k:x);
+const VEG_SIDE_KEYS=new Set(VEG_SIDE.flatMap(g=>g.items.map(vsKey)));
 const PEELED_ITEMS=[{k:'70574',n:"גזר ג'וליאן"},{k:'70621',n:'גזר פרוס'},{k:'PEEL_CHIPS',n:"גזר צ'יפס",p:null},{k:'70572',n:'תפוח אדמה קוביות'},{k:'70569',n:'בטטה קוביות'},{k:'70719',n:'קולורבי'},{k:'70564',n:'כרוב לבן'},{k:'70566',n:'כרוב אדום'},{k:'70581',n:'כרוב לבן גס'},{k:'70562',n:'בצל מקולף'}];
 // ספק קבוע לכל ירק קלוף (לפי מיכל) — דורס נתוני ספק שגויים בקטלוג (למשל "טלזר 019"/"בר-מן"):
 // כרובים=טרי לי(20246) · גזר/תפו"א/בטטה/קולורבי=ירקות קלופים שיווק ישראל(20615) · בצל מקולף=פאר לי(20100)
@@ -676,7 +680,7 @@ const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{mini
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 // שמות גיבוי לספקים שאולי חסרים באינדקס הספקים של הקטלוג (לפי מיכל)
-const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ','20755':'ספק פטריות','20732':'ספק ירק'};
+const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ','20755':'פטריות ושורשים','20732':'ע תבלינים'};
 function supName(k){return (CAT&&CAT.suppliers&&CAT.suppliers[k])?CAT.suppliers[k]:(SUP_NAME_FALLBACK[k]||('ספק '+k));}
 function catName(c){return (CAT&&CAT.cats&&CAT.cats[c])?CAT.cats[c]:('קוד '+c);}
 
@@ -709,6 +713,8 @@ function startApp(){
  ITEMS_PACK.sort((a,b)=>{const ra=pRank(a.k),rb=pRank(b.k);return ra!==rb?ra-rb:a.n.localeCompare(b.n,'he');});
  // מכרז טרי — רשימה נעולה בסדר שנקבע
  ITEMS_VEG=VEG_ITEMS.filter(k=>!VEG_SIDE_KEYS.has(k)).map(k=>ITEM_BY_K[k]).filter(Boolean);   // פריטי החלון הצדדי לא במכרז
+ // פריט בחלון הצדדי שאינו בקטלוג ({k,n}) — נרשם כדי שאפשר יהיה להזמין אותו (סל, PDF, וואטסאפ)
+ VEG_SIDE.forEach(g=>g.items.forEach(x=>{if(typeof x==='object'&&!ITEM_BY_K[x.k])ITEM_BY_K[x.k]={k:String(x.k),n:x.n,c:'206',p:null,pd:'',s:[g.sk]};}));
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
  // כל פריט קלוף מקבל בורר בין שלושת ספקי הירקות (peelSups), עם ברירת המחדל/הבחירה-האחרונה ראשונה
  ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:peelSups(d.k),sp:(b?b.sp:null)};});
@@ -1503,7 +1509,7 @@ function renderVegSide(){
  const box=document.getElementById('vegSide');if(!box)return;
  let h='';
  VEG_SIDE.forEach(g=>{
-  const items=g.items.map(k=>ITEM_BY_K[k]).filter(Boolean).filter(it=>!HIDDEN.has(String(it.k)));
+  const items=g.items.map(x=>ITEM_BY_K[vsKey(x)]).filter(Boolean).filter(it=>!HIDDEN.has(String(it.k)));
   h+='<div class="vside-g"><div class="vside-h"><span>'+esc(g.title)+'</span><span class="vside-sup">'+esc(supName(g.sk))+'</span></div><div class="srows">';
   if(!items.length)h+='<div class="empty">אין פריטים</div>';
   items.forEach(it=>{
