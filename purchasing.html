@@ -314,6 +314,10 @@ body{background:#f5f2ec}
 .vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid var(--purple);background:var(--purple-l);color:var(--purple)}
 /* כמות · יחידה · מחיר — אותו רוחב, גובה, גופן, גודל ומשקל (בקשת מיכל); רק הצבע מבדיל ביניהם */
 .vqty,.vr-off,.vr-unit{box-sizing:border-box;width:72px;height:32px;padding:0 4px;font-family:inherit;font-size:14px;font-weight:700;line-height:1;text-align:center;text-align-last:center}
+/* שלוש הקוביות (כמות · יחידה · מחיר) בקבוצה אחת שלא נשברת: עוברות שורה רק יחד,
+   ובעמודה צרה מתכווצות יחד (באותו רוחב) במקום שהמחיר ירד לבד לשורה נפרדת */
+.qu-grp{flex:0 1 auto;min-width:0}
+.qu-grp>.vqty,.qu-grp>.vr-unit,.qu-grp>.vr-off{flex:0 1 auto;min-width:44px}
 /* חלון צדדי במכרז הירקות (פטריות / ירק) — ליד המכרז במחשב, מתחתיו בנייד */
 .vegwrap{display:grid;gap:10px}
 @media(min-width:1000px){.vegwrap{grid-template-columns:minmax(0,1fr) 380px;align-items:start}.vegside{position:sticky;top:10px}}
@@ -1248,8 +1252,8 @@ function aucRender(a){
    h+='<div class="vrow'+(chosen?' vchosen':'')+(lastBuy?' vlastbuy':'')+'" data-vk="'+esc(vk)+'" data-col="'+i+'">'+
       '<span class="vr-name">'+esc(it.n)+(lastBuy?' <span class="vbuy">🛒</span>':'')+'</span>'+
       '<span class="vr-last'+(lp.src==='catalog'?' vcat':'')+'">'+lastTxt+'</span>'+
-      '<span class="qu-grp"><input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+unitSel+'</span>'+
-      '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר">'+
+      '<span class="qu-grp"><input class="vqty" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+((a.qty[vk]&&a.qty[vk][i]>0)?a.qty[vk][i]:'')+'" placeholder="כמות" title="כמות'+(i===0?' · מועתק לשאר':'')+'">'+unitSel+
+      '<input class="voff vr-off" type="text" inputmode="decimal" data-vk="'+esc(vk)+'" data-col="'+i+'" value="'+(off!==''?off:'')+'" placeholder="מחיר"></span>'+
       '<label class="vpick"><input type="checkbox" data-vk="'+esc(vk)+'" data-col="'+i+'"'+(chosen?' checked':'')+'> נבחר</label>'+
       '</div>';
   });
