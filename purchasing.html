@@ -580,7 +580,8 @@ let UNITMAP={};   // מפתח פריט -> יחידת מידה שמיכל בחר�
 const UNIT_OPTS=['קרטון','קופסה','משטח','ק"ג','ליטר','שק','דלי',"יח'"];
 // שני מכרזים (טרי + קלופים) — אותו מנגנון, קונפיג נפרד לכל אחד
 const AUC={
- veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20615','20546']), items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
+ // extra = ספקים שמופיעים תמיד בבורר גם אם אינם משויכים לירק בקטלוג (בקשת מיכל): אצ · ירקות קלופים שיווק ישראל · סגלוביץ
+ veg:{box:'vegTab', selKey:'gsVegSuppliers', tab:'VEG_AUCTION', empty:'אין ירקות במכרז.', exclude:new Set(['20026','20565','20546']), extra:['20696','20615','20404'], items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null},
  peel:{box:'peelTab', selKey:'gsPeelSuppliers', tab:'PEEL_AUCTION', empty:'אין פריטים במכרז הקלופים.', exclude:null, items:[], byK:{}, off:{}, qty:{}, qov:{}, chosen:{}, last:{}, lastbuy:{}, hist:null}
 };
 /* כמות במכרז: a.qty[פריט]={עמודה:כמות} — הקלדה אצל הספק הראשון מועתקת
@@ -650,7 +651,9 @@ function grpLabel(g,m){
 const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
-function supName(k){return (CAT&&CAT.suppliers&&CAT.suppliers[k])?CAT.suppliers[k]:('ספק '+k);}
+// שמות גיבוי לספקים שאולי חסרים באינדקס הספקים של הקטלוג (לפי מיכל)
+const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ'};
+function supName(k){return (CAT&&CAT.suppliers&&CAT.suppliers[k])?CAT.suppliers[k]:(SUP_NAME_FALLBACK[k]||('ספק '+k));}
 function catName(c){return (CAT&&CAT.cats&&CAT.cats[c])?CAT.cats[c]:('קוד '+c);}
 
 function tab(p){
@@ -1164,7 +1167,7 @@ function aucRemoveCol(a,j){
 }
 function aucSetCols(a,c){try{localStorage.setItem(a.selKey,JSON.stringify(c));}catch(e){}}
 // רשימת הספקים לבורר (משויכים לפריטי המכרז), פחות ספקים שהוחרגו, ממוינת לפי שם
-function aucSupList(a){const v=new Set();a.items.forEach(it=>(it.s||[]).forEach(s=>v.add(s)));return [...v].filter(k=>!(a.exclude&&a.exclude.has(k))).map(k=>({k,n:supName(k)})).sort((x,y)=>x.n.localeCompare(y.n,'he'));}
+function aucSupList(a){const v=new Set();a.items.forEach(it=>(it.s||[]).forEach(s=>v.add(s)));(a.extra||[]).forEach(s=>v.add(s));return [...v].filter(k=>!(a.exclude&&a.exclude.has(k))).map(k=>({k,n:supName(k)})).sort((x,y)=>x.n.localeCompare(y.n,'he'));}
 async function aucLoad(a,force){
  if(a.hist&&!force){aucBuildLast(a);return;}
  try{
