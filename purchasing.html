@@ -610,8 +610,8 @@ const VEG_ITEMS=['70526','70520','70523','70527','70528','70538','70541','70542'
 const VEG_SIDE=[
  {sk:'20755', title:'🍄 פטריות', items:['70539']},
  {sk:'20732', title:'🌿 ירק', items:['70541','70533','70532','70542','70535']}   // פטרוזיליה · סלרי · שמיר · כוסברה · נענע
- // ממתין למפתח פריט + מפתח ספק ממיכל: פלפל הבנרו מ"שר החריפים". פריט שאינו בקטלוג נכתב כ-{k,n}:
- // ,{sk:'<מפתח ספק>', title:'🌶️ פלפל הבנרו', items:[{k:'<מפתח פריט>', n:'פלפל הבנרו'}]}
+ // פלפל הבנרו (70592) משר החריפים (20810) — עדיין לא בקטלוג הרכש, לכן נכתב כ-{k,n}
+ ,{sk:'20810', title:'🌶️ פלפל הבנרו', items:[{k:'70592', n:'פלפל הבנרו'}]}
 ];
 // פריט בחלון הצדדי: מפתח (מחרוזת) לפריט מהקטלוג, או {k,n} לפריט שעדיין אינו בקטלוג
 const vsKey=x=>String(typeof x==='object'?x.k:x);
@@ -680,7 +680,7 @@ const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{mini
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 // שמות גיבוי לספקים שאולי חסרים באינדקס הספקים של הקטלוג (לפי מיכל)
-const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ','20755':'פטריות ושורשים','20732':'ע תבלינים'};
+const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ','20755':'פטריות ושורשים','20732':'ע תבלינים','20810':'שר החריפים'};
 function supName(k){return (CAT&&CAT.suppliers&&CAT.suppliers[k])?CAT.suppliers[k]:(SUP_NAME_FALLBACK[k]||('ספק '+k));}
 function catName(c){return (CAT&&CAT.cats&&CAT.cats[c])?CAT.cats[c]:('קוד '+c);}
 
