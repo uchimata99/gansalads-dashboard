@@ -49,8 +49,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
   #veg .vrow,#peel .vrow{padding:10px 15px;gap:9px}
   #veg .vr-name,#peel .vr-name{font-size:16.5px}
   #veg .vr-last,#peel .vr-last{font-size:13px}
-  #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off{padding:8px 8px;font-size:16px}
-  #veg .vr-unit,#peel .vr-unit{padding:8px 4px;font-size:16px;width:92px}
+  #veg .vqty,#peel .vqty,#veg .vr-off,#peel .vr-off,#veg .vr-unit,#peel .vr-unit{width:74px;height:38px;padding:0 4px;font-size:15px}
+  #veg .vrow,#peel .vrow{gap:7px;padding:8px 12px}
   #veg .vpick,#peel .vpick{font-size:13.5px}
   #veg .scol-h select,#peel .scol-h select{font-size:16.5px;padding:10px 12px}
   #veg .note,#peel .note{font-size:13.5px;padding:11px 16px}
@@ -312,6 +312,19 @@ body{background:#f5f2ec}
 .vr-off::placeholder{color:#8a6608;opacity:.7}
 .vr-off:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,14,.2)}
 .vr-unit{width:66px;flex:0 0 auto;padding:3px 4px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid var(--purple);background:var(--purple-l);color:var(--purple)}
+/* כמות · יחידה · מחיר — אותו רוחב, גובה, גופן, גודל ומשקל (בקשת מיכל); רק הצבע מבדיל ביניהם */
+.vqty,.vr-off,.vr-unit{box-sizing:border-box;width:72px;height:32px;padding:0 4px;font-family:inherit;font-size:14px;font-weight:700;line-height:1;text-align:center;text-align-last:center}
+/* חלון צדדי במכרז הירקות (פטריות / ירק) — ליד המכרז במחשב, מתחתיו בנייד */
+.vegwrap{display:grid;gap:10px}
+@media(min-width:1000px){.vegwrap{grid-template-columns:minmax(0,1fr) 380px;align-items:start}.vegside{position:sticky;top:10px}}
+.vside-g+.vside-g{margin-top:16px}
+.vside-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;font-size:15px;padding-bottom:7px;margin-bottom:9px;border-bottom:1px solid var(--border)}
+.vside-sup{font-size:12px;font-weight:600;color:var(--muted)}
+.vrow.vside-on{border-color:var(--green);background:var(--green-l)}
+/* בחלון הצדדי: מחיר אחרון מתחת לשם, כך שכמות + יחידה נשארות באותה שורה */
+.vegside .vrow{flex-wrap:nowrap}
+.vside-nm{flex-direction:column;align-items:flex-start;gap:2px}
+.vside-n{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .vrow .vpick{margin:0;flex:0 0 auto;display:flex;gap:3px;align-items:center;font-size:10.5px;white-space:nowrap}
 .vrow.vcheap{background:linear-gradient(90deg,rgba(45,106,63,.13),rgba(45,106,63,.02));border-color:var(--green)}
 .vrow.vcheap .vr-last{color:var(--green);font-weight:800}
@@ -428,12 +441,16 @@ body{background:#f5f2ec}
 
  <!-- ============ מכרז ירקות יומי ============ -->
  <div class="page" id="veg">
-  <div class="card">
-   <div class="scroll" id="vegTab"><div class="empty">טוען…</div></div>
-   <div class="cartbar">
-    <button class="btn blue" onclick="saveVeg()">💾 שמור מכרז</button>
-    <button class="btn ghost sm" onclick="aucAddCol(AUC.veg)">➕ הוסף ספק</button>
+  <div class="vegwrap">
+   <div class="card">
+    <div class="scroll" id="vegTab"><div class="empty">טוען…</div></div>
+    <div class="cartbar">
+     <button class="btn blue" onclick="saveVeg()">💾 שמור מכרז</button>
+     <button class="btn ghost sm" onclick="aucAddCol(AUC.veg)">➕ הוסף ספק</button>
+    </div>
    </div>
+   <!-- חלון צדדי: פטריות / ירק — ספק קבוע, כמות + יחידה, מחיר קנייה אחרון (בלי הצעת מחיר) -->
+   <aside class="card vegside" id="vegSide"><div class="empty">טוען…</div></aside>
   </div>
  </div>
 
@@ -588,6 +605,13 @@ const AUC={
    לשאר; שינוי ידני אצל ספק אחר (a.qov) מקבע אותו ולא נדרס יותר. */
 // רשימות המכרז — נעולות, בסדר שמיכל ביקשה
 const VEG_ITEMS=['70526','70520','70523','70527','70528','70538','70541','70542','70532','70533','70545','70539','70521','70522','70535'];
+// חלון צדדי במכרז הירקות (בקשת מיכל): קבוצות עם ספק קבוע — כמות + יחידה + מחיר קנייה אחרון,
+// בלי הצעות מחיר. הפריטים האלה יוצאים מרשימת המכרז הראשית. הכמות נכנסת ישר לסל, לספק הקבוע.
+const VEG_SIDE=[
+ {sk:'20755', title:'🍄 פטריות', items:['70539']},
+ {sk:'20732', title:'🌿 ירק', items:['70541','70533','70532','70542','70535']}   // פטרוזיליה · סלרי · שמיר · כוסברה · נענע
+];
+const VEG_SIDE_KEYS=new Set(VEG_SIDE.flatMap(g=>g.items));
 const PEELED_ITEMS=[{k:'70574',n:"גזר ג'וליאן"},{k:'70621',n:'גזר פרוס'},{k:'PEEL_CHIPS',n:"גזר צ'יפס",p:null},{k:'70572',n:'תפוח אדמה קוביות'},{k:'70569',n:'בטטה קוביות'},{k:'70719',n:'קולורבי'},{k:'70564',n:'כרוב לבן'},{k:'70566',n:'כרוב אדום'},{k:'70581',n:'כרוב לבן גס'},{k:'70562',n:'בצל מקולף'}];
 // ספק קבוע לכל ירק קלוף (לפי מיכל) — דורס נתוני ספק שגויים בקטלוג (למשל "טלזר 019"/"בר-מן"):
 // כרובים=טרי לי(20246) · גזר/תפו"א/בטטה/קולורבי=ירקות קלופים שיווק ישראל(20615) · בצל מקולף=פאר לי(20100)
@@ -652,7 +676,7 @@ const P2=n=>(n==null||n==='')?'—':'₪'+Number(n).toLocaleString('en-US',{mini
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 // שמות גיבוי לספקים שאולי חסרים באינדקס הספקים של הקטלוג (לפי מיכל)
-const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ'};
+const SUP_NAME_FALLBACK={'20696':'אצ','20615':'ירקות קלופים שיווק ישראל','20404':'סגלוביץ','20755':'ספק פטריות','20732':'ספק ירק'};
 function supName(k){return (CAT&&CAT.suppliers&&CAT.suppliers[k])?CAT.suppliers[k]:(SUP_NAME_FALLBACK[k]||('ספק '+k));}
 function catName(c){return (CAT&&CAT.cats&&CAT.cats[c])?CAT.cats[c]:('קוד '+c);}
 
@@ -684,7 +708,7 @@ function startApp(){
  const pRank=k=>{const i=PACK_ORDER.indexOf(String(k));return i<0?999:i;};
  ITEMS_PACK.sort((a,b)=>{const ra=pRank(a.k),rb=pRank(b.k);return ra!==rb?ra-rb:a.n.localeCompare(b.n,'he');});
  // מכרז טרי — רשימה נעולה בסדר שנקבע
- ITEMS_VEG=VEG_ITEMS.map(k=>ITEM_BY_K[k]).filter(Boolean);
+ ITEMS_VEG=VEG_ITEMS.filter(k=>!VEG_SIDE_KEYS.has(k)).map(k=>ITEM_BY_K[k]).filter(Boolean);   // פריטי החלון הצדדי לא במכרז
  // מכרז קלופים — תוויות מיכל, מחיר/ספקים מהקטלוג (207) היכן שיש
  // כל פריט קלוף מקבל בורר בין שלושת ספקי הירקות (peelSups), עם ברירת המחדל/הבחירה-האחרונה ראשונה
  ITEMS_PEEL=PEELED_ITEMS.map(d=>{const b=ITEM_BY_K[d.k];return {k:d.k,n:d.n,c:'207',p:(d.p!==undefined?d.p:(b?b.p:null)),pd:(b?b.pd:''),s:peelSups(d.k),sp:(b?b.sp:null)};});
@@ -1467,7 +1491,43 @@ async function saveMapSup(){
 }
 
 /* עטיפות תאימות — מכרז טרי (veg) ומכרז קלופים (peel) */
-function renderVeg(){aucRender(AUC.veg);}
+function renderVeg(){aucRender(AUC.veg);renderVegSide();}
+// מחיר קנייה אחרון לחלון הצדדי: מהספק הקבוע אם יש (קובץ השיוך), אחרת המחיר האחרון של הפריט
+function vegSideLast(it,sk){
+ if(it.sp&&it.sp[sk]&&it.sp[sk][0]>0)return it.sp[sk][0];
+ return (it.p!=null&&it.p>0)?it.p:null;
+}
+// חלון צדדי (פטריות / ירק): כמות + יחידה בלבד, ספק קבוע לכל קבוצה. הכמות נכנסת ישר לסל
+// במפתח מורכב 'פריט#ספק' (כמו במכרז), כך שאינה מתנגשת בהזמנה של אותו פריט מספק אחר.
+function renderVegSide(){
+ const box=document.getElementById('vegSide');if(!box)return;
+ let h='';
+ VEG_SIDE.forEach(g=>{
+  const items=g.items.map(k=>ITEM_BY_K[k]).filter(Boolean).filter(it=>!HIDDEN.has(String(it.k)));
+  h+='<div class="vside-g"><div class="vside-h"><span>'+esc(g.title)+'</span><span class="vside-sup">'+esc(supName(g.sk))+'</span></div><div class="srows">';
+  if(!items.length)h+='<div class="empty">אין פריטים</div>';
+  items.forEach(it=>{
+   const ok=it.k+'#'+g.sk, o=ORDER[ok], on=!!(o&&o.qty>0);
+   const u=itemUnit(it.k,it.n);
+   const uopts=UNIT_OPTS.concat(UNIT_OPTS.indexOf(u)<0?[u]:[]);
+   const lp=vegSideLast(it,g.sk);
+   h+='<div class="vrow'+(on?' vside-on':'')+'">'+
+      '<span class="vr-name vside-nm"><span class="vside-n">'+esc(it.n)+'</span><span class="vr-last">'+(lp==null?'אין מחיר אחרון':'אחרון '+P2(lp))+'</span></span>'+
+      '<span class="qu-grp"><input class="vqty vsq" type="text" inputmode="decimal" data-ok="'+esc(ok)+'" data-sk="'+esc(g.sk)+'" value="'+(on?o.qty:'')+'" placeholder="כמות">'+
+      '<select class="unitSel vr-unit" data-uk="'+esc(it.k)+'" title="יחידת מידה">'+uopts.map(x=>'<option'+(x===u?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></span>'+
+      '</div>';
+  });
+  h+='</div></div>';
+ });
+ box.innerHTML=h;
+ box.querySelectorAll('.vsq').forEach(inp=>inp.oninput=()=>{
+  const ok=inp.dataset.ok, v=parseFloat(inp.value);
+  if(v>0)ORDER[ok]={qty:v,sup:inp.dataset.sk};else delete ORDER[ok];
+  inp.closest('.vrow').classList.toggle('vside-on',v>0);
+  updateCartBar();
+ });
+ box.querySelectorAll('.unitSel').forEach(sel=>sel.addEventListener('change',e=>{onUnit(e);renderVegSide();}));
+}
 function loadVegHist(f){return aucLoad(AUC.veg,f);}
 function saveVeg(){return aucSave(AUC.veg);}
 // ירקות קלופים — רשימת הזמנה רגילה (לא מכרז): כמות + בורר ספק, זורם לסל
