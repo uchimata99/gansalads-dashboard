@@ -331,6 +331,12 @@ body{background:#f5f2ec}
 .deliv-row .deliv-txt{font-weight:600;color:var(--muted)}
 .deliv-row.deliv-adv{border-color:var(--gold);background:var(--gold-l)}
 .deliv-row.deliv-adv .deliv-txt{color:#8a6608;font-weight:800}
+/* תאריך אספקה בכרטיס של כל ספק */
+.sup-deliv{display:inline-flex;align-items:center;gap:5px;margin-inline-end:8px;padding:3px 7px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;vertical-align:middle}
+.sup-deliv input[type=date]{font:inherit;font-size:13.5px;padding:3px 5px;border:1px solid var(--blue);border-radius:6px;background:var(--blue-l);color:var(--blue)}
+.sup-deliv span{color:var(--muted);font-weight:600}
+.sup-deliv.deliv-adv{border-color:var(--gold);background:var(--gold-l)}
+.sup-deliv.deliv-adv span{color:#8a6608;font-weight:800}
 /* בחלון הצדדי: מחיר אחרון מתחת לשם, כך שכמות + יחידה נשארות באותה שורה */
 .vegside .vrow{flex-wrap:nowrap}
 .vside-nm{flex-direction:column;align-items:flex-start;gap:2px}
@@ -954,31 +960,40 @@ function renderCart(){
   if(none||(!ph&&!em)){chips='<span class="pill po">ללא פרטי קשר — לא יישלח לספק</span>';nNoContact+=lines.length;}
   else chips=(ph?'<span class="pill pb">📲 וואטסאפ</span> ':'')+(em?'<span class="pill pb">✉️ מייל</span>':'');
   const sendBtn='<button class="btn sm" style="margin-inline-start:8px" onclick="sendOrder(&#39;'+esc(sk)+'&#39;)">📤 שלח לספק זה</button>';
-  cards+='<div class="sup-card"><div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span><span>'+chips+sendBtn+'</span></div>'+
+  // תאריך אספקה לספק הזה — מודגש בזהב כשזו הזמנה מראש
+  const sIso=delivFor(sk), sAdv=sIso!==todayISO();
+  const dSel='<label class="sup-deliv'+(sAdv?' deliv-adv':'')+'" title="תאריך אספקה לספק הזה">📅 <input type="date" value="'+sIso+'" min="'+todayISO()+'" onchange="setDeliv(&#39;'+esc(sk)+'&#39;,this.value)"><span>'+(sAdv?'מראש':'היום')+'</span></label>';
+  cards+='<div class="sup-card"><div class="sup-head"><span class="sup-name">'+esc(nm)+' <span class="lbl" style="font-weight:600">· '+lines.length+' פריטים</span></span><span>'+dSel+chips+sendBtn+'</span></div>'+
      '<table><thead><tr><th>פריט</th><th>מפתח</th><th>כמות</th></tr></thead><tbody>';
   lines.forEach(l=>{cards+='<tr><td>'+esc(l.n)+'</td><td class="num">'+esc(l.k)+'</td><td class="num">'+fmtQty(l.qty)+'</td></tr>';});
   cards+='</tbody></table></div>';
  });
  const warn=nNoContact?(' <b>שימי לב:</b> '+nNoContact+' פריטים ללא ספק/פרטי קשר — ייכללו באקסל למשרד ובהזמנה למפעל, אך לא יישלחו לספק.'):'';
- const dIso=delivISO(), adv=dIso!==todayISO();
+ // סיכום תאריכי האספקה בסל: כמה ספקים מראש. השורה העליונה קובעת תאריך לכל הספקים בבת אחת
+ const nAdv=keys.filter(sk=>delivFor(sk)!==todayISO()).length;
+ const allIso=keys.every(sk=>delivFor(sk)===delivFor(keys[0]))?delivFor(keys[0]):'';
  const head='<div class="card"><div class="card-t"><span>סיכום ההזמנה — '+nItems+' פריטים · '+keys.length+' ספקים</span></div>'+
-   '<div class="deliv-row'+(adv?' deliv-adv':'')+'"><label for="delivDate">📅 תאריך אספקה</label>'+
-   '<input type="date" id="delivDate" value="'+dIso+'" min="'+todayISO()+'" onchange="DELIV_DATE=this.value;renderCart()">'+
-   '<span class="deliv-txt">'+(adv?('הזמנה מראש — הספק יקבל "לתאריך '+isoToDMY(dIso)+'"'):'היום')+'</span>'+
-   (adv?'<button class="btn ghost sm" type="button" onclick="DELIV_DATE=\'\';renderCart()">היום</button>':'')+'</div>'+
+   '<div class="deliv-row'+(nAdv?' deliv-adv':'')+'"><label for="delivAll">📅 תאריך אספקה לכל הספקים</label>'+
+   '<input type="date" id="delivAll" value="'+allIso+'" min="'+todayISO()+'" onchange="setDelivAll(this.value)">'+
+   '<span class="deliv-txt">'+(nAdv?(nAdv+' ספקים מראש · '+(keys.length-nAdv)+' להיום'):'כולם להיום')+' — אפשר לשנות לכל ספק בכרטיס שלו</span>'+
+   (nAdv?'<button class="btn ghost sm" type="button" onclick="setDelivAll(\'\')">הכול להיום</button>':'')+'</div>'+
    '<div class="note">אפשר לשלוח <b>כל ספק בנפרד</b> (כפתור "📤 שלח לספק זה" בכל כרטיס) או את <b>כל ההזמנה יחד</b> (כפתור "שלח הכל" למטה). כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד קובץ אקסל.'+warn+'</div>'+
-   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
+   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="sendOrder(undefined,true)" title="הכול נשלח אלייך בלבד — לא לספקים">🧪 שלח ניסיון</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
  wrap.innerHTML=head+cards;
 }
 const ORDER_TAB='ORDER_QUEUE';
 const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס','תאריך אספקה'];
 // תאריך אספקה (הזמנה מראש) — נבחר בסל, ברירת מחדל היום. נכתב לעמודה L בתור, והמנוע מכניס
 // אותו ל"לתאריך {{3}}" בוואטסאפ ומדגיש אותו במייל/PDF/משרד כשהוא שונה מיום השליחה.
-let DELIV_DATE='';   // yyyy-mm-dd (מבורר התאריך); ריק = היום
+// תאריך אספקה לכל ספק בנפרד (חלק מהספקים להיום, חלק לימים אחרים): DELIV[מפתח ספק]=yyyy-mm-dd.
+// ספק בלי תאריך = היום. "לכולם" בראש הסל מעדכן את כל הספקים שבסל בבת אחת.
+let DELIV={};
+function delivFor(sk){const v=DELIV[sk];return (v&&v>=todayISO())?v:todayISO();}   // תאריך שעבר → היום
+function setDeliv(sk,v){if(v)DELIV[sk]=v;else delete DELIV[sk];renderCart();}
+function setDelivAll(v){Object.keys(orderBySupplier()).forEach(sk=>{if(v)DELIV[sk]=v;else delete DELIV[sk];});renderCart();}
 const pad2=n=>String(n).padStart(2,'0');
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
 function isoToDMY(s){const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[3]+'/'+m[2]+'/'+m[1]):'';}
-function delivISO(){return (DELIV_DATE&&DELIV_DATE>=todayISO())?DELIV_DATE:todayISO();}   // תאריך שעבר → היום
 // שליחה מיידית — כתובת שירות Cloud Run (מאזין תמיד, שולח בשניות). ריק = כבוי, ואז
 // ההזמנה רק ממתינה בתור וה-GitHub Action מפיץ אותה כל כמה דקות (התנהגות ישנה).
 // מלא = אחרי הכתיבה לתור, האפליקציה קוראת לשירות שמפיץ מיד. ראה DEPLOY_CLOUDRUN.md במנוע.
@@ -993,32 +1008,47 @@ async function triggerSend(token){
 }
 // שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
 // שליחה: בלי ארגומנט = כל הסל; עם onlySup = רק ההזמנה של ספק אחד (שליחה בנפרד)
-async function sendOrder(onlySup){
+// test=true — "🧪 שלח ניסיון": מזהה TEST…; שירות השליחה מנתב את כל היעדים (ספקים, מפעל, משרד)
+// למיכל בלבד (הפרטים שמורים במנוע הפרטי, לא כאן). הסל לא מתרוקן — אפשר לשלוח אחר כך באמת.
+async function sendOrder(onlySup,test){
  const map=orderBySupplier();
  let keys=Object.keys(map);
  if(onlySup!==undefined){ if(!map[onlySup]){toast('אין פריטים לספק זה');return;} keys=[onlySup]; }
  if(!keys.length){toast('הסל ריק');return;}
  let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
  const who=onlySup!==undefined?('לספק '+(onlySup==='__none__'?'ללא ספק':supName(onlySup))):('ל-'+keys.length+' ספקים');
- const dIso=delivISO(), dDMY=isoToDMY(dIso), adv=dIso!==todayISO();
- if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\n'+(adv?('📅 הזמנה מראש — לאספקה בתאריך '+dDMY+'\n'):'')+'כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
+ // תאריך אספקה לכל ספק (DD/MM/YYYY) + שורת סיכום להזמנות מראש בחלון האישור
+ const dOf={};keys.forEach(sk=>{dOf[sk]=isoToDMY(delivFor(sk));});
+ const advList=keys.filter(sk=>delivFor(sk)!==todayISO())
+   .map(sk=>(sk==='__none__'?'ללא ספק':supName(sk))+' — '+dOf[sk]);
+ const advTxt=advList.length?('📅 הזמנה מראש:\n   '+advList.join('\n   ')+'\n'):'';
+ if(test){
+  if(!confirm('🧪 שליחת ניסיון ('+keys.length+' ספקים, '+nItems+' פריטים)\n'+advTxt+'כל ההודעות — של כל ספק, של המפעל ושל המשרד — יגיעו אלייך בלבד.\nלא יישלח כלום לספקים. הסל יישאר כמו שהוא.'))return;
+ }else
+ if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\n'+advTxt+'כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
  const now=new Date();
  const pad=n=>String(n).padStart(2,'0');
  const ds=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
- const oid='ORD'+now.getTime();
+ const oid=(test?'TEST':'ORD')+now.getTime();
  const rows=[];
  keys.forEach(sk=>{
   const none=sk==='__none__';
-  const name=none?'':supName(sk), phone=none?'':waPhone(sk), email=none?'':supEmail(sk);
-  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending',dDMY]));
+  const name=none?'':supName(sk), phone=(none||test)?'':waPhone(sk), email=(none||test)?'':supEmail(sk);
+  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending',dOf[sk]]));
  });
  try{
   const token=await ensureWriteToken();
   await ensureTab(ORDER_TAB,ORDER_HEADER,token);
   await appendRaw(ORDER_TAB,rows,token);
+  if(test){
+   toast('🧪 ניסיון נשלח — מפיץ אלייך…');
+   triggerSend(token).then(now=>toast(now?'🧪 הניסיון יצא — בדקי וואטסאפ ומייל':'🧪 הניסיון נשמר — יגיע תוך דקות')).catch(()=>{});
+   return;   // בניסיון הסל נשאר כמו שהוא
+  }
   // ההזמנה נשמרה בתור — מנקים מיד את הסל ונותנים משוב מיידי, בלי להמתין 20 שניות
   // לסיום ההפצה (וגם מונע לחיצה כפולה ששולחת פעמיים). ההפצה רצה ברקע ומעדכנת את הטוסט.
   keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.ok||l.k]));
+  keys.forEach(sk=>delete DELIV[sk]);   // תאריך האספקה שייך להזמנה שנשלחה — לא נגרר להזמנה הבאה
   renderItems();renderPack();CAT_TABS.forEach(renderCatTab);updateCartBar();renderCart();
   toast('✓ ההזמנה נשלחה '+who+' — מפיצה עכשיו…');
   triggerSend(token).then(now=>toast(now?('✓ הופצה '+who+' — יצאה עכשיו')
@@ -1191,9 +1221,11 @@ async function ensureTab(tab,header,token){
   if(header)await appendRaw(tab,[header],token);
  }
 }
-async function appendRaw(tab,rows,token){
+// raw=true — הערכים נשמרים כטקסט כמו שהם (RAW). חובה לרשימות כמו "20615,20100": ב-USER_ENTERED
+// גוגל שיטס קורא את הפסיק כמפריד אלפים והופך את הרשימה למספר אחד (2061520100 / 2.06E+19).
+async function appendRaw(tab,rows,token,raw){
  const range=encodeURIComponent(tab+'!A1');
- const url='https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS';
+ const url='https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range+':append?valueInputOption='+(raw?'RAW':'USER_ENTERED')+'&insertDataOption=INSERT_ROWS';
  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({values:rows})});
  if(!r.ok)throw new Error('append '+r.status);
  return r.json();
@@ -1358,16 +1390,39 @@ const HID_HEADER=['תאריך','מפתח פריט','שם','מצב'];
 const UNIT_TAB='UNIT_MAP';
 const UNIT_HEADER=['תאריך','מפתח פריט','שם','יחידה'];
 let MAPOVR={}, mapSup=null, mapDirty=new Set();
+// פענוח רשימת ספקים מתא ב-SUP_MAP. מחזיר מערך מפתחות, או null אם התא פגום ואי אפשר לשחזר.
+// תיקון לאחור: שורות שנשמרו לפני המעבר ל-RAW הפכו בגיליון למספר אחד (הפסיק = מפריד אלפים),
+// למשל 20615,20100 → 2061520100. מפתחות הספקים הם 5 ספרות (2xxxx), לכן מפצלים חזרה לקבוצות
+// של 5. מספר שגדול מדי לדיוק (2.06E+19) — לא ניתן לשחזר: מחזירים null והשורה נזנחת.
+function parseSupList(v){
+ if(v==null)return [];
+ if(typeof v==='number'){
+  if(!Number.isSafeInteger(v))return null;
+  v=String(v);
+ }
+ const s=String(v).trim();
+ if(!s)return [];
+ if(/e\+/i.test(s))return null;
+ if(/^\d+$/.test(s)&&s.length>5){
+  if(s.length%5)return null;
+  const parts=s.match(/\d{5}/g);
+  return parts.every(p=>/^2\d{4}$/.test(p))?parts:null;
+ }
+ return s.split(/[,;\s]+/).map(x=>x.trim()).filter(x=>/^\d+$/.test(x));
+}
 async function loadSupMap(){
  try{
-  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+encodeURIComponent(MAP_TAB+'!A:D'),{headers:{Authorization:'Bearer '+purchToken}});
+  // UNFORMATTED_VALUE — כדי לקבל מספר מלא ולא תצוגה מקוצרת כמו 2.06152E+14
+  const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+encodeURIComponent(MAP_TAB+'!A:D')+'?valueRenderOption=UNFORMATTED_VALUE',{headers:{Authorization:'Bearer '+purchToken}});
   if(!r.ok)return;
   const vals=((await r.json()).values)||[];
   MAPOVR={};
   vals.forEach(row=>{
    if(!row||row.length<4)return;
-   const vk=String(row[1]||'').trim();if(!/^\d+$/.test(vk))return;
-   MAPOVR[vk]=String(row[3]||'').split(',').map(s=>s.trim()).filter(s=>/^\d+$/.test(s));
+   const vk=String(row[1]==null?'':row[1]).trim();if(!/^\d+$/.test(vk))return;
+   const list=parseSupList(row[3]);
+   if(list===null){console.warn('SUP_MAP: שורה פגומה לפריט',vk,row[3]);return;}   // השורה הקודמת/הקטלוג גוברים
+   MAPOVR[vk]=list;
   });
   Object.keys(MAPOVR).forEach(vk=>{const it=ITEM_BY_K[vk];if(it)it.s=MAPOVR[vk].slice();});
  }catch(e){console.error(e);}
@@ -1511,8 +1566,8 @@ async function saveMapSup(){
   const token=await ensureWriteToken();
   await ensureTab(MAP_TAB,MAP_HEADER,token);
   const rows=[...mapDirty].map(k=>{const it=ITEM_BY_K[k];return [ds,k,it?it.n:'',((it&&it.s)?it.s:[]).join(',')];});
-  await appendRaw(MAP_TAB,rows,token);
-  rows.forEach(r=>{MAPOVR[r[1]]=String(r[3]).split(',').map(s=>s.trim()).filter(s=>/^\d+$/.test(s));});
+  await appendRaw(MAP_TAB,rows,token,true);   // RAW — כדי שהרשימה תישמר כטקסט ולא תהפוך למספר
+  rows.forEach(r=>{MAPOVR[r[1]]=parseSupList(r[3])||[];});
   toast('נשמרו '+rows.length+' שיוכים לספק "'+supName(mapSup)+'"');
   mapDirty=new Set();
   renderItems();renderPack();renderMap();
@@ -1598,7 +1653,7 @@ async function loadHistory(force){
   document.getElementById('histTab').innerHTML='<div class="empty">לא ניתן לטעון היסטוריה (ייתכן שעדיין לא נשלחו הזמנות, או שאין הרשאת קריאה).</div>';
  }
 }
-function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
+function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(s==='test')return '<span class="pill pb">🧪 ניסיון</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
 function renderHist(){
  if(!HIST)return;
  const q=document.getElementById('hSearch').value.trim();
