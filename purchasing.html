@@ -967,7 +967,7 @@ function renderCart(){
    '<span class="deliv-txt">'+(adv?('הזמנה מראש — הספק יקבל "לתאריך '+isoToDMY(dIso)+'"'):'היום')+'</span>'+
    (adv?'<button class="btn ghost sm" type="button" onclick="DELIV_DATE=\'\';renderCart()">היום</button>':'')+'</div>'+
    '<div class="note">אפשר לשלוח <b>כל ספק בנפרד</b> (כפתור "📤 שלח לספק זה" בכל כרטיס) או את <b>כל ההזמנה יחד</b> (כפתור "שלח הכל" למטה). כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד קובץ אקסל.'+warn+'</div>'+
-   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
+   '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="sendOrder(undefined,true)" title="הכול נשלח אלייך בלבד — לא לספקים">🧪 שלח ניסיון</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
  wrap.innerHTML=head+cards;
 }
 const ORDER_TAB='ORDER_QUEUE';
@@ -993,7 +993,9 @@ async function triggerSend(token){
 }
 // שליחת ההזמנה כולה בלחיצה אחת — נכתבת לתור ORDER_QUEUE; ה-GitHub Action מפיץ (ספקים+מפעל+אקסל)
 // שליחה: בלי ארגומנט = כל הסל; עם onlySup = רק ההזמנה של ספק אחד (שליחה בנפרד)
-async function sendOrder(onlySup){
+// test=true — "🧪 שלח ניסיון": מזהה TEST…; שירות השליחה מנתב את כל היעדים (ספקים, מפעל, משרד)
+// למיכל בלבד (הפרטים שמורים במנוע הפרטי, לא כאן). הסל לא מתרוקן — אפשר לשלוח אחר כך באמת.
+async function sendOrder(onlySup,test){
  const map=orderBySupplier();
  let keys=Object.keys(map);
  if(onlySup!==undefined){ if(!map[onlySup]){toast('אין פריטים לספק זה');return;} keys=[onlySup]; }
@@ -1001,21 +1003,29 @@ async function sendOrder(onlySup){
  let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
  const who=onlySup!==undefined?('לספק '+(onlySup==='__none__'?'ללא ספק':supName(onlySup))):('ל-'+keys.length+' ספקים');
  const dIso=delivISO(), dDMY=isoToDMY(dIso), adv=dIso!==todayISO();
+ if(test){
+  if(!confirm('🧪 שליחת ניסיון ('+keys.length+' ספקים, '+nItems+' פריטים)\n'+(adv?('📅 לאספקה בתאריך '+dDMY+'\n'):'')+'כל ההודעות — של כל ספק, של המפעל ושל המשרד — יגיעו אלייך בלבד.\nלא יישלח כלום לספקים. הסל יישאר כמו שהוא.'))return;
+ }else
  if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\n'+(adv?('📅 הזמנה מראש — לאספקה בתאריך '+dDMY+'\n'):'')+'כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
  const now=new Date();
  const pad=n=>String(n).padStart(2,'0');
  const ds=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
- const oid='ORD'+now.getTime();
+ const oid=(test?'TEST':'ORD')+now.getTime();
  const rows=[];
  keys.forEach(sk=>{
   const none=sk==='__none__';
-  const name=none?'':supName(sk), phone=none?'':waPhone(sk), email=none?'':supEmail(sk);
+  const name=none?'':supName(sk), phone=(none||test)?'':waPhone(sk), email=(none||test)?'':supEmail(sk);
   map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending',dDMY]));
  });
  try{
   const token=await ensureWriteToken();
   await ensureTab(ORDER_TAB,ORDER_HEADER,token);
   await appendRaw(ORDER_TAB,rows,token);
+  if(test){
+   toast('🧪 ניסיון נשלח — מפיץ אלייך…');
+   triggerSend(token).then(now=>toast(now?'🧪 הניסיון יצא — בדקי וואטסאפ ומייל':'🧪 הניסיון נשמר — יגיע תוך דקות')).catch(()=>{});
+   return;   // בניסיון הסל נשאר כמו שהוא
+  }
   // ההזמנה נשמרה בתור — מנקים מיד את הסל ונותנים משוב מיידי, בלי להמתין 20 שניות
   // לסיום ההפצה (וגם מונע לחיצה כפולה ששולחת פעמיים). ההפצה רצה ברקע ומעדכנת את הטוסט.
   keys.forEach(sk=>map[sk].forEach(l=>delete ORDER[l.ok||l.k]));
@@ -1598,7 +1608,7 @@ async function loadHistory(force){
   document.getElementById('histTab').innerHTML='<div class="empty">לא ניתן לטעון היסטוריה (ייתכן שעדיין לא נשלחו הזמנות, או שאין הרשאת קריאה).</div>';
  }
 }
-function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
+function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(s==='test')return '<span class="pill pb">🧪 ניסיון</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
 function renderHist(){
  if(!HIST)return;
  const q=document.getElementById('hSearch').value.trim();
