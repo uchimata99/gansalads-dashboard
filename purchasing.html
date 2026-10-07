@@ -325,6 +325,12 @@ body{background:#f5f2ec}
 .vside-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;font-size:15px;padding-bottom:7px;margin-bottom:9px;border-bottom:1px solid var(--border)}
 .vside-sup{font-size:12px;font-weight:600;color:var(--muted)}
 .vrow.vside-on{border-color:var(--green);background:var(--green-l)}
+/* תאריך אספקה בסל — מודגש בזהב כשזו הזמנה מראש */
+.deliv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-weight:700}
+.deliv-row input[type=date]{font:inherit;font-size:15px;padding:6px 8px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-l);color:var(--blue)}
+.deliv-row .deliv-txt{font-weight:600;color:var(--muted)}
+.deliv-row.deliv-adv{border-color:var(--gold);background:var(--gold-l)}
+.deliv-row.deliv-adv .deliv-txt{color:#8a6608;font-weight:800}
 /* בחלון הצדדי: מחיר אחרון מתחת לשם, כך שכמות + יחידה נשארות באותה שורה */
 .vegside .vrow{flex-wrap:nowrap}
 .vside-nm{flex-direction:column;align-items:flex-start;gap:2px}
@@ -954,13 +960,25 @@ function renderCart(){
   cards+='</tbody></table></div>';
  });
  const warn=nNoContact?(' <b>שימי לב:</b> '+nNoContact+' פריטים ללא ספק/פרטי קשר — ייכללו באקסל למשרד ובהזמנה למפעל, אך לא יישלחו לספק.'):'';
+ const dIso=delivISO(), adv=dIso!==todayISO();
  const head='<div class="card"><div class="card-t"><span>סיכום ההזמנה — '+nItems+' פריטים · '+keys.length+' ספקים</span></div>'+
+   '<div class="deliv-row'+(adv?' deliv-adv':'')+'"><label for="delivDate">📅 תאריך אספקה</label>'+
+   '<input type="date" id="delivDate" value="'+dIso+'" min="'+todayISO()+'" onchange="DELIV_DATE=this.value;renderCart()">'+
+   '<span class="deliv-txt">'+(adv?('הזמנה מראש — הספק יקבל "לתאריך '+isoToDMY(dIso)+'"'):'היום')+'</span>'+
+   (adv?'<button class="btn ghost sm" type="button" onclick="DELIV_DATE=\'\';renderCart()">היום</button>':'')+'</div>'+
    '<div class="note">אפשר לשלוח <b>כל ספק בנפרד</b> (כפתור "📤 שלח לספק זה" בכל כרטיס) או את <b>כל ההזמנה יחד</b> (כפתור "שלח הכל" למטה). כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד קובץ אקסל.'+warn+'</div>'+
    '<div style="text-align:center;margin:16px 0 4px"><button class="btn" style="font-size:17px;padding:13px 32px" onclick="sendOrder()">📤 שלח הכל ('+keys.length+' ספקים)</button> &nbsp; <button class="btn ghost sm" onclick="clearOrder()">נקה סל</button></div></div>';
  wrap.innerHTML=head+cards;
 }
 const ORDER_TAB='ORDER_QUEUE';
-const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס'];
+const ORDER_HEADER=['מזהה הזמנה','תאריך','מפתח ספק','שם ספק','טלפון','מייל','מפתח פריט','שם פריט','כמות','יחידה','סטטוס','תאריך אספקה'];
+// תאריך אספקה (הזמנה מראש) — נבחר בסל, ברירת מחדל היום. נכתב לעמודה L בתור, והמנוע מכניס
+// אותו ל"לתאריך {{3}}" בוואטסאפ ומדגיש אותו במייל/PDF/משרד כשהוא שונה מיום השליחה.
+let DELIV_DATE='';   // yyyy-mm-dd (מבורר התאריך); ריק = היום
+const pad2=n=>String(n).padStart(2,'0');
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function isoToDMY(s){const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[3]+'/'+m[2]+'/'+m[1]):'';}
+function delivISO(){return (DELIV_DATE&&DELIV_DATE>=todayISO())?DELIV_DATE:todayISO();}   // תאריך שעבר → היום
 // שליחה מיידית — כתובת שירות Cloud Run (מאזין תמיד, שולח בשניות). ריק = כבוי, ואז
 // ההזמנה רק ממתינה בתור וה-GitHub Action מפיץ אותה כל כמה דקות (התנהגות ישנה).
 // מלא = אחרי הכתיבה לתור, האפליקציה קוראת לשירות שמפיץ מיד. ראה DEPLOY_CLOUDRUN.md במנוע.
@@ -982,7 +1000,8 @@ async function sendOrder(onlySup){
  if(!keys.length){toast('הסל ריק');return;}
  let nItems=0;keys.forEach(sk=>nItems+=map[sk].length);
  const who=onlySup!==undefined?('לספק '+(onlySup==='__none__'?'ללא ספק':supName(onlySup))):('ל-'+keys.length+' ספקים');
- if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\nכל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
+ const dIso=delivISO(), dDMY=isoToDMY(dIso), adv=dIso!==todayISO();
+ if(!confirm('לשלוח את ההזמנה '+who+'?\n'+nItems+' פריטים\n'+(adv?('📅 הזמנה מראש — לאספקה בתאריך '+dDMY+'\n'):'')+'כל ספק מקבל וואטסאפ+מייל, המפעל את ההזמנה המלאה, והמשרד אקסל.'))return;
  const now=new Date();
  const pad=n=>String(n).padStart(2,'0');
  const ds=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -991,7 +1010,7 @@ async function sendOrder(onlySup){
  keys.forEach(sk=>{
   const none=sk==='__none__';
   const name=none?'':supName(sk), phone=none?'':waPhone(sk), email=none?'':supEmail(sk);
-  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending']));
+  map[sk].forEach(l=>rows.push([oid,ds,none?'':sk,name,phone,email,l.k,l.n,l.qty,itemUnit(l.k,l.n),'pending',dDMY]));
  });
  try{
   const token=await ensureWriteToken();
