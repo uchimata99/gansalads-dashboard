@@ -593,8 +593,12 @@ const VEG_CAT='206';                     // קטגוריית הירקות למכ
 const CAT_TABS=[
  {p:'spice', c:'204', box:'spiceTab',  cnt:'spiceCount',  srch:'scSearch'},
  {p:'canned',c:'203', box:'cannedTab', cnt:'cannedCount', srch:'cnSearch'},
- {p:'cold',  c:'200', box:'coldTab',   cnt:'coldCount',   srch:'cdSearch'}
+ // extra = פריטים מקטגוריה אחרת שמוצגים גם בטאב (בקשת מיכל): אבוקדו קפוא 70255 רשום בקטלוג תחת "ביצים" (202)
+ {p:'cold',  c:'200', box:'coldTab',   cnt:'coldCount',   srch:'cdSearch', extra:['70255']}
 ];
+// תיקון ספקים לפריט שרשימת הספקים שלו בקטלוג מזוהמת (כמו בקלופים) — לפי כרטסת הרכש בפועל.
+// אבוקדו קפוא: גלידן איכות (20227, עיקר הרכש) · מוצרי תמיר (20714). שיוך שנשמר בטאב "שיוך ספקים" גובר.
+const ITEM_SUP_FIX={'70255':['20227','20714']};
 const CAT_TAB_CODES=new Set(CAT_TABS.map(t=>t.c));
 const VEG_SEL_KEY='gsVegSuppliers';      // 4 הספקים הנבחרים (נשמר במכשיר, נזכר למחר)
 const PO_HEADER=['תאריך','מזהה הזמנה','מפתח ספק','שם ספק','מפתח פריט','שם פריט','כמות','מחיר אחרון','הערכת עלות'];
@@ -718,6 +722,7 @@ function startApp(){
  const ALL=(CAT.items||[]).slice();
  ITEMS_ALL=ALL;
  ITEM_BY_K={};ALL.forEach(it=>{ITEM_BY_K[it.k]=it;});
+ Object.keys(ITEM_SUP_FIX).forEach(k=>{if(ITEM_BY_K[k])ITEM_BY_K[k].s=ITEM_SUP_FIX[k].slice();});   // ספקים נכונים לפי כרטסת הרכש
  // בניית הזמנה "הכל" — בלי ירקות, בלי אריזות, ובלי הקטגוריות שקיבלו טאב משלהן (תבלינים/שימורים/קירור)
  ITEMS=ALL.filter(it=>String(it.c)!==VEG_CAT&&String(it.c)!=='201'&&!CAT_TAB_CODES.has(String(it.c)));
  // טאב אריזות — רשימה מצומצמת לבקשת מיכל: קופסאות 4.5 / 2.5 / 2 גבוה / 250 / 500 / 3 ק"ג / 1 עגול + המכסים של כולן.
@@ -792,7 +797,8 @@ function renderPack(){
 // טאבי קטגוריה (תבלינים/שימורים/קירור) — אותם כרטיסים, מסוננים לפי קטגוריה + חיפוש
 function renderCatTab(t){
  const el=document.getElementById(t.srch);const q=(el&&el.value||'').trim();
- const arr=(ITEMS_ALL||[]).filter(it=>String(it.c)===t.c&&(!q||((it.n+' '+it.k).indexOf(q)>=0)))
+ const extra=new Set(t.extra||[]);   // פריטים מקטגוריה אחרת שמוצגים גם בטאב הזה
+ const arr=(ITEMS_ALL||[]).filter(it=>(String(it.c)===t.c||extra.has(String(it.k)))&&(!q||((it.n+' '+it.k).indexOf(q)>=0)))
    .sort((a,b)=>a.n.localeCompare(b.n,'he'));
  renderItemCards(arr,t.box,t.cnt);
 }
