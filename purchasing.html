@@ -1651,15 +1651,16 @@ async function loadHistory(force){
  const box=document.getElementById('histTab');box.innerHTML='<div class="empty">טוען…</div>';
  try{
   // ההיסטוריה נקראת מ-ORDER_QUEUE — שם נשמרות ההזמנות שנשלחו (עם סטטוס).
-  // עמודות: [מזהה, תאריך, מפתח ספק, שם ספק, טלפון, מייל, מפתח פריט, שם פריט, כמות, יחידה, סטטוס]
-  const range=encodeURIComponent(ORDER_TAB+'!A:K');
+  // עמודות: [מזהה, תאריך, מפתח ספק, שם ספק, טלפון, מייל, מפתח פריט, שם פריט, כמות, יחידה, סטטוס, תאריך אספקה, אישור ספק]
+  // M = "אושר DD/MM/YYYY HH:MM" — נכתב ע"י שירות השליחה כשהספק לוחץ "אישור הזמנה" בוואטסאפ (wa_webhook.py במנוע)
+  const range=encodeURIComponent(ORDER_TAB+'!A:M');
   const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+PURCH_SHEET_ID+'/values/'+range,{headers:{Authorization:'Bearer '+purchToken}});
   if(!r.ok)throw new Error('hist '+r.status);
   const j=await r.json();
   const vals=j.values||[];
   // דילוג על שורת כותרת (עמודת הכמות, אינדקס 8, לא-מספרית בכותרת)
   HIST=vals.filter(row=>row&&row.length>=9&&!isNaN(parseFloat(row[8]))).map(row=>({
-   oid:row[0]||'',date:row[1]||'',supK:row[2]||'',sup:row[3]||'',itemK:row[6]||'',item:row[7]||'',qty:row[8]||'',unit:row[9]||'',status:row[10]||''
+   oid:row[0]||'',date:row[1]||'',supK:row[2]||'',sup:row[3]||'',itemK:row[6]||'',item:row[7]||'',qty:row[8]||'',unit:row[9]||'',status:row[10]||'',conf:row[12]||''
   }));
   renderHist();
  }catch(err){
@@ -1667,7 +1668,7 @@ async function loadHistory(force){
   document.getElementById('histTab').innerHTML='<div class="empty">לא ניתן לטעון היסטוריה (ייתכן שעדיין לא נשלחו הזמנות, או שאין הרשאת קריאה).</div>';
  }
 }
-function statusLabel(s){s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(s==='test')return '<span class="pill pb">🧪 ניסיון</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
+function statusLabel(s,conf){if(conf)return '<span class="pill pg">✅ '+esc(conf)+'</span>';s=String(s||'').toLowerCase();if(s==='sent')return '<span class="pill pg">נשלח</span>';if(s==='pending')return '<span class="pill po">ממתין</span>';if(s==='test')return '<span class="pill pb">🧪 ניסיון</span>';if(!s)return '—';return '<span class="pill pb">'+esc(s)+'</span>';}
 function renderHist(){
  if(!HIST)return;
  const q=document.getElementById('hSearch').value.trim();
@@ -1677,7 +1678,7 @@ function renderHist(){
  if(sup)rows=rows.filter(r=>r.supK===sup);
  if(!rows.length){document.getElementById('histTab').innerHTML='<div class="empty">'+(HIST.length?'אין תוצאות לסינון':'עדיין אין הזמנות שנשלחו')+'</div>';return;}
  let h='<table><thead><tr><th>תאריך</th><th>הזמנה</th><th>ספק</th><th>פריט</th><th>מפתח</th><th>כמות</th><th>יחידה</th><th>סטטוס</th></tr></thead><tbody>';
- rows.forEach(r=>{h+='<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.oid)+'</td><td>'+esc(r.sup||'—')+'</td><td>'+esc(r.item)+'</td><td class="num">'+esc(r.itemK)+'</td><td class="num">'+esc(r.qty)+'</td><td>'+esc(r.unit)+'</td><td>'+statusLabel(r.status)+'</td></tr>';});
+ rows.forEach(r=>{h+='<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.oid)+'</td><td>'+esc(r.sup||'—')+'</td><td>'+esc(r.item)+'</td><td class="num">'+esc(r.itemK)+'</td><td class="num">'+esc(r.qty)+'</td><td>'+esc(r.unit)+'</td><td>'+statusLabel(r.status,r.conf)+'</td></tr>';});
  document.getElementById('histTab').innerHTML=h+'</tbody></table>';
 }
 
